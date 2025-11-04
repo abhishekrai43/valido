@@ -272,8 +272,18 @@ body {.result{margin-top:18px}
 }
 
 .card-icon {
-  font-size: 48px;
+  width: 48px;
+  height: 48px;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon svg {
+  width: 48px;
+  height: 48px;
+  stroke: var(--accent);
 }
 
 .card h2 {
@@ -552,8 +562,18 @@ body {.result{margin-top:18px}
 }
 
 .checkbox-icon {
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--accent);
 }
 
 .checkbox-title {
