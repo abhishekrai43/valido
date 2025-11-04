@@ -12,6 +12,8 @@ Notes:
 from typing import Tuple
 import io
 import shutil
+import os
+import time
 
 
 def _has_tesseract() -> bool:
@@ -47,6 +49,17 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
     if not pdf_bytes:
         return ""
 
+    # Feature flags / limits (env-driven for local user control)
+    OCR_ENABLED = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+    try:
+        MAX_PAGES_PER_PDF = int(os.getenv("MAX_PAGES_PER_PDF", "10"))
+    except Exception:
+        MAX_PAGES_PER_PDF = 10
+    try:
+        PAGE_OCR_SLEEP_MS = int(os.getenv("PAGE_OCR_SLEEP_MS", "0"))
+    except Exception:
+        PAGE_OCR_SLEEP_MS = 0
+
     text_chunks = []
 
     # Try PyMuPDF extraction first
@@ -54,7 +67,10 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
         import fitz  # PyMuPDF
 
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        for page in doc:
+        # Limit pages processed to avoid excessive CPU/memory use on user machines
+        total_pages = min(len(doc), MAX_PAGES_PER_PDF if MAX_PAGES_PER_PDF > 0 else len(doc))
+        for i in range(total_pages):
+            page = doc[i]
             page_text = page.get_text("text") or ""
             text_chunks.append(page_text)
 
@@ -62,19 +78,23 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
         if combined and len(combined) >= 20:
             return combined
 
-        # If extracted text is empty or very short, fall back to OCR if available
-        if _has_tesseract():
+        # If extracted text is empty or very short, fall back to OCR if available and enabled
+        if OCR_ENABLED and _has_tesseract():
             try:
                 from PIL import Image
                 import pytesseract
 
                 ocr_texts = []
-                for page in doc:
+                # Only OCR up to MAX_PAGES_PER_PDF pages to bound CPU and memory
+                for i in range(total_pages):
+                    page = doc[i]
                     pix = page.get_pixmap(dpi=200)
                     img_bytes = pix.tobytes("png")
                     img = Image.open(io.BytesIO(img_bytes))
                     ocr_page_text = pytesseract.image_to_string(img)
                     ocr_texts.append(ocr_page_text)
+                    if PAGE_OCR_SLEEP_MS > 0:
+                        time.sleep(PAGE_OCR_SLEEP_MS / 1000.0)
 
                 ocr_combined = "\n".join(ocr_texts).strip()
                 if ocr_combined:
