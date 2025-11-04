@@ -1,6 +1,13 @@
 FROM python:3.11-slim
 WORKDIR /app
 
+# Install system dependencies (Tesseract for OCR)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	tesseract-ocr \
+	libtesseract-dev \
+	poppler-utils \
+ && rm -rf /var/lib/apt/lists/*
+
 # Install minimal runtime dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
