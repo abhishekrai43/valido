@@ -69,7 +69,16 @@
     function handleFiles(files) {
       selectedFiles = Array.from(files);
       renderFilesList();
-      continueToRules.disabled = selectedFiles.length === 0;
+      const continueBtn = document.getElementById('continueToRules');
+      if (continueBtn) {
+        continueBtn.disabled = selectedFiles.length === 0;
+        // Add visual feedback
+        if (selectedFiles.length > 0) {
+          continueBtn.classList.add('btn-enabled');
+        } else {
+          continueBtn.classList.remove('btn-enabled');
+        }
+      }
     }
     
     function renderFilesList() {
@@ -112,7 +121,15 @@
           filesInput.files = dt.files;
           
           renderFilesList();
-          continueToRules.disabled = selectedFiles.length === 0;
+          const continueBtn = document.getElementById('continueToRules');
+          if (continueBtn) {
+            continueBtn.disabled = selectedFiles.length === 0;
+            if (selectedFiles.length > 0) {
+              continueBtn.classList.add('btn-enabled');
+            } else {
+              continueBtn.classList.remove('btn-enabled');
+            }
+          }
         });
       });
     }

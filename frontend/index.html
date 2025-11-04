@@ -107,9 +107,6 @@
             Simple Checks
           </button>
           <button type="button" data-tab="complex" class="tab-button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2C10 2 15 4 15 10C15 16 10 18 10 18C10 18 5 16 5 10C5 4 10 2 10 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
             Describe in Your Words
           </button>
         </div>
@@ -184,9 +181,6 @@
             <div class="ai-panel">
               <div class="ai-input-area">
                 <label for="aiPrompt" class="ai-label">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
                   Describe what you want to check
                 </label>
                 <textarea id="aiPrompt" placeholder="Example: I need to check that invoices are signed and extract the invoice number, date, total amount, and vendor name. Also verify that the total is greater than zero."></textarea>
@@ -195,15 +189,11 @@
 
               <div class="actions">
                 <button type="button" id="aiGenerate" class="btn btn-primary btn-large">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M10 2L12.5 7.5L18 10L12.5 12.5L10 18L7.5 12.5L2 10L7.5 7.5L10 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
                   Create Rules with AI
                 </button>
               </div>
 
               <div id="aiStatus" class="status-message"></div>
-              <div id="aiPreview" class="ai-preview" style="display:none"></div>
             </div>
           </div>
         </div>
@@ -329,6 +319,29 @@
           <div id="historyList" class="history-list"></div>
         </div>
       </section>
+
+      <!-- Save Ruleset Modal -->
+      <div id="saveRulesetModal" class="modal" style="display:none">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Save Validation Rules</h3>
+            <button type="button" class="modal-close" id="modalClose">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-description">Give your rules a name so you can reuse them later</p>
+            <input type="text" id="rulesetNameInput" class="modal-input" placeholder="e.g., Invoice Validation Rules" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" id="modalCancel">Cancel</button>
+            <button type="button" class="btn btn-primary" id="modalSave">Save Rules</button>
+          </div>
+        </div>
+      </div>
 
       <div class="footer-bar">
         <div class="footer-main">

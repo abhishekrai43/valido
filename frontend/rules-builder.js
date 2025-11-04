@@ -152,9 +152,9 @@
       if (Object.keys(payload.validations).length === 0) delete payload.validations;
       return payload;
     }
-    // complex: prefer aiPreview.dataset.json if present
+    // complex: prefer aiPrompt.dataset.json if present
     try{
-      const j = JSON.parse(aiPreview.dataset.json || '{}');
+      const j = JSON.parse(aiPrompt.dataset.json || '{}');
       return j;
     }catch(e){
       return {};
@@ -183,16 +183,15 @@
         return;
       }
       const j = await res.json();
-      // show preview and store JSON for preview tab
-      aiPreview.style.display = 'block';
-      const pretty = JSON.stringify(j, null, 2);
-      aiPreview.textContent = pretty;
-      aiPreview.dataset.json = JSON.stringify(j);
+      // Store JSON for building rules
+      if (aiPrompt.dataset) {
+        aiPrompt.dataset.json = JSON.stringify(j);
+      }
       aiStatus.textContent = '✓ Rules created successfully!';
       aiStatus.style.color = 'var(--success)';
       // switch to complex tab preview
-      document.querySelector('.tabs button[data-tab="complex"]').classList.add('active');
-      document.querySelector('.tabs button[data-tab="simple"]').classList.remove('active');
+      document.querySelector('.tabs button[data-tab="complex"]')?.classList.add('active');
+      document.querySelector('.tabs button[data-tab="simple"]')?.classList.remove('active');
       panels.forEach(p => p.style.display = (p.dataset.panel === 'complex') ? 'block' : 'none');
       buildRulesPreview();
     }catch(err){
@@ -218,22 +217,76 @@
   const saveBtn = document.getElementById('saveRulesetBtn');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const name = prompt('Give your rules a name so you can use them again later:');
-      if (!name) return;
-      const payload = getRulesPayload();
-      saveBtn.disabled = true;
-      try{
-        const res = await fetch('/api/v1/rulesets', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, rules: payload }) });
-        if (!res.ok) {
-          const txt = await res.text();
-          alert('Unable to save: ' + txt);
-        } else {
-          const j = await res.json();
-          alert('✓ Your rules have been saved as "' + j.name + '"');
+      const modal = document.getElementById('saveRulesetModal');
+      const nameInput = document.getElementById('rulesetNameInput');
+      const modalClose = document.getElementById('modalClose');
+      const modalCancel = document.getElementById('modalCancel');
+      const modalSave = document.getElementById('modalSave');
+      
+      if (!modal || !nameInput) return;
+      
+      // Show modal
+      modal.style.display = 'flex';
+      nameInput.value = '';
+      nameInput.focus();
+      
+      // Close handlers
+      const closeModal = () => {
+        modal.style.display = 'none';
+      };
+      
+      modalClose.onclick = closeModal;
+      modalCancel.onclick = closeModal;
+      modal.querySelector('.modal-overlay').onclick = closeModal;
+      
+      // Save handler
+      modalSave.onclick = async () => {
+        const name = nameInput.value.trim();
+        if (!name) {
+          nameInput.style.borderColor = 'var(--error)';
+          return;
         }
-      }catch(err){
-        alert('Error saving rules: ' + err.message);
-      } finally { saveBtn.disabled = false; }
+        
+        const payload = getRulesPayload();
+        modalSave.disabled = true;
+        modalSave.textContent = 'Saving...';
+        
+        try {
+          const res = await fetch('/api/v1/rulesets', { 
+            method: 'POST', 
+            headers: {'Content-Type':'application/json'}, 
+            body: JSON.stringify({ name, rules: payload }) 
+          });
+          
+          if (!res.ok) {
+            const txt = await res.text();
+            alert('Unable to save: ' + txt);
+          } else {
+            const j = await res.json();
+            closeModal();
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.className = 'success-toast';
+            successMsg.textContent = '✓ Rules saved successfully!';
+            document.body.appendChild(successMsg);
+            setTimeout(() => successMsg.remove(), 3000);
+          }
+        } catch(err) {
+          alert('Error saving rules: ' + err.message);
+        } finally {
+          modalSave.disabled = false;
+          modalSave.textContent = 'Save Rules';
+        }
+      };
+      
+      // Enter key to save
+      nameInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          modalSave.click();
+        } else if (e.key === 'Escape') {
+          closeModal();
+        }
+      };
     });
   }
   // programmatic reset for the builder
@@ -244,8 +297,10 @@
     if (chkDated) chkDated.checked = false;
     if (chkSignedAndDated) chkSignedAndDated.checked = false;
     if (newFieldInput) newFieldInput.value = '';
-    if (aiPrompt) aiPrompt.value = '';
-    if (aiPreview) { aiPreview.style.display = 'none'; aiPreview.textContent = ''; aiPreview.dataset.json = ''; }
+    if (aiPrompt) {
+      aiPrompt.value = '';
+      aiPrompt.dataset.json = '';
+    }
     if (aiStatus) { aiStatus.textContent = ''; }
     buildRulesPreview();
   }
