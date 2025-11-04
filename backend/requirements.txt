@@ -7,3 +7,9 @@ PyMuPDF>=1.22.0
 pytesseract>=0.3.10
 Pillow>=9.0.0
 pdfminer.six>=20221105
+celery>=5.2,<6
+redis>=4.0
+python-multipart>=0.0.5
+
+# Lightweight ORM for SQLite + FastAPI friendliness
+sqlmodel>=0.0.8

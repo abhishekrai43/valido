@@ -1,14 +1,45 @@
 version: '3.8'
+
 services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "9090:9090"
     volumes:
-      - ./backend/app:/app/app
+      - ./backend:/app/backend
     environment:
       - PYTHONUNBUFFERED=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:9090/healthz'); print(r.read())\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
-  # Placeholder for Redis / worker / db services in later phases
-  # redis:
-  #   image: redis:7
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    mem_limit: 512m
+
+  worker:
+    build: ./backend
+    depends_on:
+      - redis
+      - backend
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CELERY_WORKER_CONCURRENCY=2
+      - CELERY_TASK_ACKS_LATE=1
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=1
+      - CELERY_WORKER_MAX_TASKS_PER_CHILD=100
+    command: ["celery", "-A", "backend.celery_app.celery_app", "worker", "--loglevel=info", "--concurrency=${CELERY_WORKER_CONCURRENCY:-2}"]
+    volumes:
+      - ./backend:/app/backend
+    restart: unless-stopped
+    mem_limit: 512m

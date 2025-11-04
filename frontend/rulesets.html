@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ruleset Manager</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .ruleset { padding: 8px; border: 1px solid #ccc; margin-bottom: 6px; }
+      .active { background: #e6ffe6; }
+    </style>
+  </head>
+  <body>
+    <h1>Ruleset Manager</h1>
+
+    <section>
+      <h2>Create ruleset</h2>
+      <input id="rs-name" placeholder="Name" />
+      <br /><br />
+      <textarea id="rs-json" rows="6" cols="60" placeholder='{"rules": [...]}'></textarea>
+      <br />
+      <button id="create">Create</button>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Available rulesets</h2>
+      <div id="list"></div>
+    </section>
+
+    <script src="./rulesets.js"></script>
+  </body>
+</html>

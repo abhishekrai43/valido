@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Valido — Upload</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <div class="brand">Valido</div>
+          <div class="subtitle">Upload PDFs, apply rules, and download validation results</div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <button id="navUpload" class="btn btn-ghost" type="button">Upload</button>
+          <button id="navHistory" class="btn btn-ghost" type="button">History</button>
+        </div>
+      </div>
+
+      <section id="uploadSection">
+      <form id="uploadForm" class="card">
+        <div class="grid">
+          <div>
+            <label class="label">Files (PDF or ZIP, multiple allowed)</label>
+            <input id="files" name="files" type="file" multiple />
+          </div>
+
+  <section id="rulesBuilder" class="card full">
+        <h2>Rules</h2>
+        <p class="muted">Non-technical? No problem — choose a rule mode and we'll build the rules for you.</p>
+
+        <div class="tabs">
+          <button type="button" data-tab="simple" class="active">Simple</button>
+          <button type="button" data-tab="complex">Complex (AI)</button>
+        </div>
+
+        <div class="tab-panels">
+          <div class="panel" data-panel="simple">
+            <label><input type="checkbox" id="chk_validate_signed"> Validate document is signed</label>
+            <label><input type="checkbox" id="chk_validate_dated"> Validate document contains a date</label>
+            <label><input type="checkbox" id="chk_validate_signed_and_dated"> Validate signed AND dated</label>
+
+            <div id="fieldBuilder">
+              <label>Fields to extract (max 5)</label>
+              <div class="helper">Enter short field names (alphanumeric and underscores). Examples: <strong>invoice_number</strong>, <strong>date</strong>, <strong>total</strong>. You can click a suggestion to add.</div>
+              <div class="field-add">
+                <input id="newField" placeholder="e.g. invoice_number" aria-label="Field name" />
+                <button type="button" id="addFieldBtn">Add</button>
+              </div>
+              <div class="suggestions" aria-hidden="false" style="margin-top:8px">
+                <button type="button" class="chip suggestion">invoice_number</button>
+                <button type="button" class="chip suggestion">date</button>
+                <button type="button" class="chip suggestion">total</button>
+                <button type="button" class="chip suggestion">vendor</button>
+                <button type="button" class="chip suggestion">po_number</button>
+              </div>
+              <ul id="fieldList" class="chip-list" aria-live="polite"></ul>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="complex" style="display:none">
+            <label for="aiPrompt">Describe the validation/extraction rules in plain English</label>
+            <textarea id="aiPrompt" placeholder="e.g. Extract invoice number, invoice date, total amount. Ensure the document is signed."></textarea>
+            <div class="helper" style="margin-top:8px">Tip: be specific about fields and validations. We'll translate this into a ruleset for you.</div>
+            <div class="actions">
+              <button type="button" id="aiGenerate">Use AI to create rules</button>
+              <span id="aiStatus" class="muted"></span>
+            </div>
+            <div id="aiPreview" class="ai-preview muted" style="display:none"></div>
+          </div>
+        </div>
+
+        <h3>Summary</h3>
+        <div id="rulesPreview" class="helper">No rules selected yet.</div>
+        <div style="margin-top:8px">
+          <label><input id="showJsonToggle" type="checkbox"> Show raw JSON (for advanced users)</label>
+        </div>
+        <!-- Hidden textarea that will be submitted with the form -->
+        <textarea id="rules" name="rules" hidden></textarea>
+      </section>
+
+      <div class="card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div class="helper">Submit your files and the selected rules will be applied. We keep this local to your environment.</div>
+          <div>
+            <button id="submitBtn" class="btn btn-primary" type="submit">Submit</button>
+            <button id="saveRulesetBtn" type="button" class="btn btn-secondary">Save ruleset</button>
+            <button id="clearBtn" type="button" class="btn btn-ghost">Reset</button>
+          </div>
+        </div>
+      </div>
+    </form>
+    </section>
+
+    <section id="historySection" style="display:none">
+      <div class="card full">
+        <h2>History — previously scanned files</h2>
+        <div class="helper">We store recent submissions locally in your browser. Click Re-run to submit the same files/rules again.</div>
+        <div id="historyList" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="card task-card">
+        <h3>Task</h3>
+        <div id="taskInfo">No task submitted yet.</div>
+        <div id="downloadLink" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card task-card">
+        <h3>Logs / Result</h3>
+        <pre id="log">--</pre>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <div class="brand-badge">
+        <div class="brand-row"><span class="dot" aria-hidden="true"></span><strong>Valido</strong></div>
+        <div class="brand-sub muted">— Rules-driven document validation</div>
+      </div>
+      <div class="muted">Built for privacy • Local-first • © 2025</div>
+    </div>
+
+  <script src="/rules-builder.js"></script>
+  <script>
+      const form = document.getElementById('uploadForm');
+    const navUpload = document.getElementById('navUpload');
+    const navHistory = document.getElementById('navHistory');
+    const uploadSection = document.getElementById('uploadSection');
+    const historySection = document.getElementById('historySection');
+      const logEl = document.getElementById('log');
+      const taskInfo = document.getElementById('taskInfo');
+
+      function appendLog(msg) {
+        logEl.textContent = msg + '\n' + logEl.textContent;
+      }
+
+      async function pollTask(taskId) {
+        appendLog(`Polling task ${taskId}...`);
+        taskInfo.textContent = `Task ID: ${taskId} (polling)`;
+        let interval = 1500;
+        const maxAttempts = 200; // safety cap (~5 minutes)
+        let attempts = 0;
+
+        return new Promise((resolve) => {
+          const t = setInterval(async () => {
+            attempts += 1;
+            try {
+              const res = await fetch(`/api/v1/tasks/${taskId}`);
+              if (!res.ok) {
+                appendLog('Failed to fetch task status: ' + res.status);
+                return;
+              }
+              const json = await res.json();
+              appendLog('state: ' + json.state + (json.info && json.info.processed ? ` (${json.info.processed}/${json.info.total || '?'})` : ''));
+
+              if (json.state === 'SUCCESS' || json.state === 'FAILURE' || json.state === 'REVOKED') {
+                clearInterval(t);
+                taskInfo.textContent = `Task ID: ${taskId} — ${json.state}`;
+                resolve(json);
+              }
+            } catch (err) {
+              appendLog('poll error: ' + err.message);
+            }
+
+            if (attempts >= maxAttempts) {
+              clearInterval(t);
+              appendLog('Polling timed out');
+              resolve({ state: 'TIMEOUT' });
+            }
+          }, interval);
+        });
+      }
+
+    form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        logEl.textContent = '';
+        const files = document.getElementById('files').files;
+        const rulesEl = document.getElementById('rules');
+        // Prefer canonical JSON stored by the rules builder script (dataset.json). If missing,
+        // fall back to the textarea value (legacy/human-friendly). This ensures the backend
+        // receives valid JSON instead of a human summary string.
+        let rules = '';
+        try { rules = (rulesEl && rulesEl.dataset && rulesEl.dataset.json) ? rulesEl.dataset.json : (rulesEl?.value || '').trim(); } catch(e) { rules = (rulesEl?.value||'').trim(); }
+        if (!files || files.length === 0) {
+          appendLog('Please choose at least one file.');
+          return;
+        }
+
+        const fd = new FormData();
+        for (let i = 0; i < files.length; i++) fd.append('files', files[i]);
+        if (rules) fd.append('rules', rules);
+
+        appendLog('Submitting ' + files.length + ' file(s) to /api/v1/submit');
+
+        try {
+          const res = await fetch('/api/v1/submit', { method: 'POST', body: fd });
+          if (!res.ok) {
+            const text = await res.text();
+            appendLog('Submit failed: ' + res.status + ' ' + text);
+            return;
+          }
+          const j = await res.json();
+          appendLog('Task queued: ' + j.task_id);
+          taskInfo.textContent = `Task ID: ${j.task_id}`;
+
+          // record submission to local history
+          try{
+            const historyEntry = {
+              timestamp: Date.now(),
+              files: Array.from(files).map(f=>f.name),
+              mode: document.querySelector('.tabs button.active').dataset.tab,
+              prompt: document.getElementById('aiPrompt')?.value || null,
+              fields: (window.getHistoryFields && window.getHistoryFields()) || null,
+              validations: {
+                signed: !!document.getElementById('chk_validate_signed')?.checked,
+                dated: !!document.getElementById('chk_validate_dated')?.checked,
+                signed_and_dated: !!document.getElementById('chk_validate_signed_and_dated')?.checked,
+              },
+              rulesSummary: document.getElementById('rulesPreview')?.textContent || '',
+              task_id: j.task_id
+            };
+            window.pushHistory && window.pushHistory(historyEntry);
+          }catch(e){ /* non-fatal */ }
+
+          const out = await pollTask(j.task_id);
+          appendLog('Final result: ' + JSON.stringify(out, null, 2));
+
+          // Check for CSV result and show download link if available
+          const downloadEl = document.getElementById('downloadLink');
+          const csvUrl = `/api/v1/tasks/${j.task_id}/result.csv`;
+          try {
+            const head = await fetch(csvUrl, { method: 'HEAD' });
+            if (head.ok) {
+              downloadEl.innerHTML = `<a href="${csvUrl}" download>Download CSV results</a>`;
+            } else {
+              downloadEl.textContent = '';
+            }
+          } catch (err) {
+            appendLog('Download check failed: ' + err.message);
+          }
+        } catch (err) {
+          appendLog('Submit exception: ' + err.message);
+        }
+      });
+
+        // Reset helper (programmatic): clear builder state without reload
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            if (window.resetBuilder) window.resetBuilder();
+            // clear file input
+            const f = document.getElementById('files'); if (f) f.value = '';
+            appendLog('Form reset');
+          });
+        }
+
+      // nav: Upload / History
+      if (navUpload && navHistory && uploadSection && historySection) {
+        navUpload.addEventListener('click', () => { uploadSection.style.display='block'; historySection.style.display='none'; navUpload.classList.add('btn-primary'); navHistory.classList.remove('btn-primary'); window.renderHistory && window.renderHistory(); });
+        navHistory.addEventListener('click', () => { uploadSection.style.display='none'; historySection.style.display='block'; navHistory.classList.add('btn-primary'); navUpload.classList.remove('btn-primary'); window.renderHistory && window.renderHistory(); });
+        // default: upload active
+        navUpload.classList.add('btn-primary');
+      }
+    </script>
+  </body>
+</html>

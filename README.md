@@ -183,7 +183,14 @@ Copy code
 
 ```bash
 # Local build
-docker-compose up --build
+# Quickstart (single command): build images and start backend, worker, and redis
+docker compose up -d --build
+
+# To see logs:
+docker compose logs -f backend
+
+# To stop and remove containers:
+docker compose down
 
 # Run backend tests
 pytest backend/tests -v
