@@ -123,3 +123,6 @@ docker-compose.override.yml
 *.key
 *.cer
 *.crt
+
+# Agent instructions
+AGENT_INSTRUCTIONS.md
