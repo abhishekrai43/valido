@@ -1,0 +1,8 @@
+{
+  "name": "pdf-validator-frontend-placeholder",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "echo \"Frontend placeholder - implement UI separately\""
+  }
+}

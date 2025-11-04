@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # Placeholder for Redis / worker / db services in later phases
+  # redis:
+  #   image: redis:7
