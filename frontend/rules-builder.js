@@ -6,7 +6,6 @@
   const panels = document.querySelectorAll('.panel');
   const rulesPreview = document.getElementById('rulesPreview');
   const rulesTextarea = document.getElementById('rules');
-  const showJsonToggle = document.getElementById('showJsonToggle');
 
   // Simple panel elements
   const chkSigned = document.getElementById('chk_validate_signed');
@@ -128,7 +127,7 @@
     }
     let pretty;
     if (Object.keys(rules).length === 0) {
-      pretty = 'No rules selected yet.';
+      pretty = 'No rules selected yet. Choose some checks above to get started.';
     } else if (summary.length) {
       pretty = summary.join(' • ');
     } else {
@@ -162,36 +161,25 @@
     }
   }
 
-  // show/hide raw JSON when user toggles
-  if (showJsonToggle) {
-    showJsonToggle.addEventListener('change', (ev) => {
-      if (ev.target.checked) {
-        // show raw JSON in a dialog-like area
-        try {
-          const json = JSON.parse(rulesTextarea.value || '{}');
-          rulesPreview.textContent = JSON.stringify(json, null, 2);
-        } catch (e) {
-          // leave as-is
-        }
-      } else {
-        buildRulesPreview();
-      }
-    });
-  }
-
   // wire inputs to preview
   [chkSigned, chkDated, chkSignedAndDated].forEach(el => el && el.addEventListener('change', buildRulesPreview));
 
   // AI integration
   aiGenerate && aiGenerate.addEventListener('click', async () => {
     const text = (aiPrompt.value || '').trim();
-    if (!text) { aiStatus.textContent = 'Please enter instructions for the AI.'; return; }
-    aiStatus.innerHTML = 'Calling AI... <span class="ai-spinner" aria-hidden="true"></span>';
+    if (!text) { 
+      aiStatus.textContent = 'Please describe what you want to check in the text area above.'; 
+      aiStatus.style.color = 'var(--error)';
+      return; 
+    }
+    aiStatus.innerHTML = 'Creating your rules... <span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-left:4px"></span>';
+    aiStatus.style.color = 'var(--text-secondary)';
     aiGenerate.disabled = true;
     try{
       const res = await fetch('/api/v1/ai/convert', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text}) });
       if (!res.ok) {
-        aiStatus.textContent = 'AI request failed: ' + res.status;
+        aiStatus.textContent = 'Unable to create rules. Please try again or use Simple Checks.';
+        aiStatus.style.color = 'var(--error)';
         return;
       }
       const j = await res.json();
@@ -200,14 +188,16 @@
       const pretty = JSON.stringify(j, null, 2);
       aiPreview.textContent = pretty;
       aiPreview.dataset.json = JSON.stringify(j);
-      aiStatus.textContent = 'AI returned rules. Preview below.';
+      aiStatus.textContent = '✓ Rules created successfully!';
+      aiStatus.style.color = 'var(--success)';
       // switch to complex tab preview
       document.querySelector('.tabs button[data-tab="complex"]').classList.add('active');
       document.querySelector('.tabs button[data-tab="simple"]').classList.remove('active');
       panels.forEach(p => p.style.display = (p.dataset.panel === 'complex') ? 'block' : 'none');
       buildRulesPreview();
     }catch(err){
-      aiStatus.textContent = 'AI error: '+err.message;
+      aiStatus.textContent = 'Error: ' + err.message;
+      aiStatus.style.color = 'var(--error)';
     } finally { aiGenerate.disabled = false; }
   });
 
@@ -228,7 +218,7 @@
   const saveBtn = document.getElementById('saveRulesetBtn');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const name = prompt('Enter a name for this ruleset (unique)');
+      const name = prompt('Give your rules a name so you can use them again later:');
       if (!name) return;
       const payload = getRulesPayload();
       saveBtn.disabled = true;
@@ -236,13 +226,13 @@
         const res = await fetch('/api/v1/rulesets', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, rules: payload }) });
         if (!res.ok) {
           const txt = await res.text();
-          alert('Failed to save ruleset: ' + res.status + '\n' + txt);
+          alert('Unable to save: ' + txt);
         } else {
           const j = await res.json();
-          alert('Saved ruleset "' + j.name + '" (id: ' + j.id + ')');
+          alert('✓ Your rules have been saved as "' + j.name + '"');
         }
       }catch(err){
-        alert('Error saving ruleset: ' + err.message);
+        alert('Error saving rules: ' + err.message);
       } finally { saveBtn.disabled = false; }
     });
   }
@@ -256,7 +246,7 @@
     if (newFieldInput) newFieldInput.value = '';
     if (aiPrompt) aiPrompt.value = '';
     if (aiPreview) { aiPreview.style.display = 'none'; aiPreview.textContent = ''; aiPreview.dataset.json = ''; }
-    if (showJsonToggle) showJsonToggle.checked = false;
+    if (aiStatus) { aiStatus.textContent = ''; }
     buildRulesPreview();
   }
   window.resetBuilder = resetBuilder;
@@ -275,13 +265,39 @@
     if (!container) return;
     const items = getHistory();
     container.innerHTML = '';
-    if (!items.length) { container.innerHTML = '<div class="helper">No history yet.</div>'; return; }
+    if (!items.length) { 
+      container.innerHTML = '<div class="helper" style="text-align:center;padding:40px 20px;color:var(--text-tertiary)">No recent validations yet. Once you validate documents, they\'ll appear here.</div>'; 
+      return; 
+    }
     items.forEach((it, idx) => {
       const card = document.createElement('div');
       card.className = 'card';
-      card.style.marginBottom = '10px';
+      card.style.marginBottom = '12px';
       const ts = new Date(it.timestamp).toLocaleString();
-      card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><strong>${it.files.join(', ')}</strong><div class="helper">${it.rulesSummary||'No rules'}</div><div class="helper" style="font-size:12px">${ts}</div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn btn-primary" data-idx="${idx}" data-action="rerun">Re-run</button><button class="btn btn-ghost" data-idx="${idx}" data-action="delete">Delete</button></div></div>`;
+      const fileCount = it.files.length;
+      const fileText = fileCount === 1 ? '1 document' : `${fileCount} documents`;
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px">${fileText}</div>
+            <div class="helper" style="margin-bottom:4px">${it.rulesSummary||'No rules'}</div>
+            <div class="helper" style="font-size:12px;color:var(--text-tertiary)">${ts}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" data-idx="${idx}" data-action="rerun" style="padding:8px 14px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C9.5 2 10.8 2.6 11.7 3.6M12 2V5H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Re-run
+            </button>
+            <button class="btn btn-ghost" data-idx="${idx}" data-action="delete" style="padding:8px 14px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M5 5L11 11M5 11L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
       container.appendChild(card);
     });
     // wire buttons
@@ -293,10 +309,17 @@
         const item = items[idx];
         if (!item) return;
         if (action === 'delete'){
-          items.splice(idx,1); saveHistory(items); renderHistory();
+          if (confirm('Remove this validation from history?')) {
+            items.splice(idx,1); 
+            saveHistory(items); 
+            renderHistory();
+          }
         } else if (action === 'rerun'){
           // populate builder with saved rules and switch to upload tab
-          if (item.mode === 'complex'){ document.querySelector('.tabs button[data-tab="complex"]').click(); if (aiPrompt) aiPrompt.value = item.prompt || ''; }
+          if (item.mode === 'complex'){ 
+            document.querySelector('.tabs button[data-tab="complex"]')?.click(); 
+            if (aiPrompt) aiPrompt.value = item.prompt || ''; 
+          }
           if (item.mode === 'simple'){
             document.querySelector('.tabs button[data-tab="simple"]').click();
             if (chkSigned) chkSigned.checked = !!item.validations?.signed;

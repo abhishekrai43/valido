@@ -3,267 +3,467 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Valido — Upload</title>
+    <title>Valido — Document Validation Made Simple</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <div>
-          <div class="brand">Valido</div>
-          <div class="subtitle">Upload PDFs, apply rules, and download validation results</div>
+        <div class="brand-section">
+          <div class="brand">
+            <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
+              <path d="M9 16L14 21L23 11" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
+                  <stop offset="0%" stop-color="#0066ff"/>
+                  <stop offset="100%" stop-color="#0051d9"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            Valido
+          </div>
+          <div class="subtitle">Validate your documents in seconds</div>
         </div>
-        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-          <button id="navUpload" class="btn btn-ghost" type="button">Upload</button>
-          <button id="navHistory" class="btn btn-ghost" type="button">History</button>
+        <div class="nav-buttons">
+          <button id="navUpload" class="btn btn-nav active" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 4V16M10 4L6 8M10 4L14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            New Validation
+          </button>
+          <button id="navHistory" class="btn btn-nav" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M10 6V10L13 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Recent
+          </button>
         </div>
       </div>
 
       <section id="uploadSection">
-      <form id="uploadForm" class="card">
-        <div class="grid">
-          <div>
-            <label class="label">Files (PDF or ZIP, multiple allowed)</label>
-            <input id="files" name="files" type="file" multiple />
+        <!-- Step indicator -->
+        <div class="steps-indicator">
+          <div class="step active" data-step="1">
+            <div class="step-number">1</div>
+            <div class="step-label">Upload Files</div>
+          </div>
+          <div class="step-divider"></div>
+          <div class="step" data-step="2">
+            <div class="step-number">2</div>
+            <div class="step-label">Choose Rules</div>
+          </div>
+          <div class="step-divider"></div>
+          <div class="step" data-step="3">
+            <div class="step-number">3</div>
+            <div class="step-label">Validate</div>
+          </div>
+        </div>
+
+        <form id="uploadForm" class="validation-form">
+          <!-- Step 1: Upload Files -->
+          <div class="card step-card" data-step-content="1">
+            <div class="card-icon">📄</div>
+            <h2>Step 1: Upload Your Documents</h2>
+            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs.</p>
+            
+            <div class="upload-area" id="uploadArea">
+              <input id="files" name="files" type="file" multiple accept=".pdf,.zip" hidden />
+              <div class="upload-prompt">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                  <circle cx="24" cy="24" r="24" fill="#f0f6ff"/>
+                  <path d="M24 16V32M24 16L19 21M24 16L29 21" stroke="#0066ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div class="upload-text">
+                  <strong>Click to browse</strong> or drag files here
+                  <div class="upload-hint">PDF or ZIP files accepted</div>
+                </div>
+              </div>
+            </div>
+            
+            <div id="filesList" class="files-list"></div>
+            
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary btn-large" id="continueToRules" disabled>
+                Continue to Rules
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M7 4L13 10L7 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
-  <section id="rulesBuilder" class="card full">
-        <h2>Rules</h2>
-        <p class="muted">Non-technical? No problem — choose a rule mode and we'll build the rules for you.</p>
+  <section id="rulesBuilder" class="card step-card" data-step-content="2" style="display:none">
+            <div class="card-icon">✨</div>
+            <h2>Step 2: What do you want to check?</h2>
+            <p class="card-description">Tell us what you'd like to validate in your documents. Choose simple checks or describe your needs in plain language.</p>
 
         <div class="tabs">
-          <button type="button" data-tab="simple" class="active">Simple</button>
-          <button type="button" data-tab="complex">Complex (AI)</button>
+          <button type="button" data-tab="simple" class="tab-button active">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Simple Checks
+          </button>
+          <button type="button" data-tab="complex" class="tab-button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2C10 2 15 4 15 10C15 16 10 18 10 18C10 18 5 16 5 10C5 4 10 2 10 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Describe in Your Words
+          </button>
         </div>
 
         <div class="tab-panels">
           <div class="panel" data-panel="simple">
-            <label><input type="checkbox" id="chk_validate_signed"> Validate document is signed</label>
-            <label><input type="checkbox" id="chk_validate_dated"> Validate document contains a date</label>
-            <label><input type="checkbox" id="chk_validate_signed_and_dated"> Validate signed AND dated</label>
+            <div class="validation-options">
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_validate_signed">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">✍️</div>
+                  <div>
+                    <div class="checkbox-title">Check for Signature</div>
+                    <div class="checkbox-description">Verify that documents are signed</div>
+                  </div>
+                </div>
+              </label>
 
-            <div id="fieldBuilder">
-              <label>Fields to extract (max 5)</label>
-              <div class="helper">Enter short field names (alphanumeric and underscores). Examples: <strong>invoice_number</strong>, <strong>date</strong>, <strong>total</strong>. You can click a suggestion to add.</div>
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_validate_dated">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">📅</div>
+                  <div>
+                    <div class="checkbox-title">Check for Date</div>
+                    <div class="checkbox-description">Verify that documents contain a date</div>
+                  </div>
+                </div>
+              </label>
+
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_validate_signed_and_dated">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">✅</div>
+                  <div>
+                    <div class="checkbox-title">Check for Signature AND Date</div>
+                    <div class="checkbox-description">Verify that documents are both signed and dated</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div id="fieldBuilder" class="field-builder">
+              <h3>Extract Information</h3>
+              <p class="helper">Tell us what information to extract from your documents (up to 5 items).</p>
+              
+              <div class="field-suggestions">
+                <div class="suggestions-label">Quick suggestions:</div>
+                <div class="suggestions">
+                  <button type="button" class="chip suggestion">invoice_number</button>
+                  <button type="button" class="chip suggestion">date</button>
+                  <button type="button" class="chip suggestion">total</button>
+                  <button type="button" class="chip suggestion">vendor</button>
+                  <button type="button" class="chip suggestion">po_number</button>
+                </div>
+              </div>
+
               <div class="field-add">
-                <input id="newField" placeholder="e.g. invoice_number" aria-label="Field name" />
-                <button type="button" id="addFieldBtn">Add</button>
+                <input id="newField" placeholder="e.g. invoice_number, customer_name, amount" aria-label="Field name" />
+                <button type="button" id="addFieldBtn" class="btn btn-secondary">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Add Field
+                </button>
               </div>
-              <div class="suggestions" aria-hidden="false" style="margin-top:8px">
-                <button type="button" class="chip suggestion">invoice_number</button>
-                <button type="button" class="chip suggestion">date</button>
-                <button type="button" class="chip suggestion">total</button>
-                <button type="button" class="chip suggestion">vendor</button>
-                <button type="button" class="chip suggestion">po_number</button>
-              </div>
+
               <ul id="fieldList" class="chip-list" aria-live="polite"></ul>
             </div>
           </div>
 
           <div class="panel" data-panel="complex" style="display:none">
-            <label for="aiPrompt">Describe the validation/extraction rules in plain English</label>
-            <textarea id="aiPrompt" placeholder="e.g. Extract invoice number, invoice date, total amount. Ensure the document is signed."></textarea>
-            <div class="helper" style="margin-top:8px">Tip: be specific about fields and validations. We'll translate this into a ruleset for you.</div>
-            <div class="actions">
-              <button type="button" id="aiGenerate">Use AI to create rules</button>
-              <span id="aiStatus" class="muted"></span>
+            <div class="ai-panel">
+              <div class="ai-input-area">
+                <label for="aiPrompt" class="ai-label">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Describe what you want to check
+                </label>
+                <textarea id="aiPrompt" placeholder="Example: I need to check that invoices are signed and extract the invoice number, date, total amount, and vendor name. Also verify that the total is greater than zero."></textarea>
+                <div class="helper">Be specific about what information you need and what validations to perform. Our AI will understand and create the rules for you.</div>
+              </div>
+
+              <div class="actions">
+                <button type="button" id="aiGenerate" class="btn btn-primary btn-large">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2L12.5 7.5L18 10L12.5 12.5L10 18L7.5 12.5L2 10L7.5 7.5L10 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Create Rules with AI
+                </button>
+              </div>
+
+              <div id="aiStatus" class="status-message"></div>
+              <div id="aiPreview" class="ai-preview" style="display:none"></div>
             </div>
-            <div id="aiPreview" class="ai-preview muted" style="display:none"></div>
           </div>
         </div>
 
-        <h3>Summary</h3>
-        <div id="rulesPreview" class="helper">No rules selected yet.</div>
-        <div style="margin-top:8px">
-          <label><input id="showJsonToggle" type="checkbox"> Show raw JSON (for advanced users)</label>
+        <div class="rules-summary">
+          <h3>Your Validation Rules</h3>
+          <div id="rulesPreview" class="rules-preview-box">No rules selected yet. Choose some checks above to get started.</div>
         </div>
-        <!-- Hidden textarea that will be submitted with the form -->
+
+        <!-- Hidden textarea for form submission -->
         <textarea id="rules" name="rules" hidden></textarea>
+
+        <div class="card-actions">
+          <button type="button" class="btn btn-ghost" id="backToFiles">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Files
+          </button>
+          <button type="button" class="btn btn-secondary" id="saveRulesetBtn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M16 18H4C3.44772 18 3 17.5523 3 17V3C3 2.44772 3.44772 2 4 2H12L17 7V17C17 17.5523 16.5523 18 16 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Save These Rules
+          </button>
+          <button type="button" class="btn btn-primary btn-large" id="continueToValidate">
+            Continue to Validation
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7 4L13 10L7 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </section>
 
-      <div class="card full">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div class="helper">Submit your files and the selected rules will be applied. We keep this local to your environment.</div>
-          <div>
-            <button id="submitBtn" class="btn btn-primary" type="submit">Submit</button>
-            <button id="saveRulesetBtn" type="button" class="btn btn-secondary">Save ruleset</button>
-            <button id="clearBtn" type="button" class="btn btn-ghost">Reset</button>
+          <!-- Step 3: Validate -->
+          <div class="card step-card" data-step-content="3" style="display:none">
+            <div class="card-icon">🚀</div>
+            <h2>Step 3: Validate Your Documents</h2>
+            <p class="card-description">Ready to validate? We'll process your documents and check them against your rules.</p>
+            
+            <div class="validation-summary-box">
+              <div class="summary-row">
+                <span class="summary-label">Documents:</span>
+                <span class="summary-value" id="summaryFiles">-</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Rules:</span>
+                <span class="summary-value" id="summaryRules">-</span>
+              </div>
+            </div>
+
+            <div id="processingStatus" class="processing-status" style="display:none">
+              <div class="status-icon">
+                <div class="spinner"></div>
+              </div>
+              <div class="status-content">
+                <div class="status-title" id="statusTitle">Processing your documents...</div>
+                <div class="status-message" id="statusMessage">This may take a moment</div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="successStatus" class="success-status" style="display:none">
+              <div class="status-icon">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="32" fill="#10b981" opacity="0.1"/>
+                  <circle cx="32" cy="32" r="24" fill="#10b981" opacity="0.2"/>
+                  <path d="M20 32L28 40L44 24" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="status-content">
+                <div class="status-title success-title">✨ Validation Complete!</div>
+                <div class="status-message">Your documents have been validated successfully.</div>
+                <div id="downloadLink" class="download-section"></div>
+              </div>
+            </div>
+
+            <div id="errorStatus" class="error-status" style="display:none">
+              <div class="status-icon">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="32" fill="#ef4444" opacity="0.1"/>
+                  <circle cx="32" cy="32" r="24" fill="#ef4444" opacity="0.2"/>
+                  <path d="M32 20V36M32 44H32.02" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="status-content">
+                <div class="status-title error-title">Something went wrong</div>
+                <div class="status-message" id="errorMessage">Please try again or contact support if the problem persists.</div>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button type="button" class="btn btn-ghost" id="backToRules">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Rules
+              </button>
+              <button id="submitBtn" class="btn btn-primary btn-large" type="submit">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Start Validation
+              </button>
+              <button id="startNewBtn" class="btn btn-primary btn-large" type="button" style="display:none">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 4H16M4 4V16H16V4M8 8V12M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Validate More Documents
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section id="historySection" style="display:none">
+        <div class="card">
+          <div class="card-icon">🕐</div>
+          <h2>Recent Validations</h2>
+          <p class="card-description">View and re-run your previous document validations</p>
+          <div id="historyList" class="history-list"></div>
+        </div>
+      </section>
+
+      <div class="footer-bar">
+        <div class="footer-main">
+          <div class="footer-brand">
+            <div class="brand-row">
+              <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="url(#footerGradient)"/>
+                <path d="M9 16L14 21L23 11" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                  <linearGradient id="footerGradient" x1="0" y1="0" x2="32" y2="32">
+                    <stop offset="0%" stop-color="#0066ff"/>
+                    <stop offset="100%" stop-color="#0051d9"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div>
+                <div class="footer-brand-name">Valido</div>
+                <div class="footer-tagline">Enterprise Document Validation</div>
+              </div>
+            </div>
+            <p class="footer-description">
+              Secure, privacy-first document validation and data extraction. 
+              Built for enterprises that value compliance and data sovereignty.
+            </p>
+          </div>
+
+          <div class="footer-links">
+            <div class="footer-column">
+              <h4 class="footer-heading">Product</h4>
+              <ul class="footer-list">
+                <li><a href="#features" class="footer-link">Features</a></li>
+                <li><a href="#pricing" class="footer-link">Pricing</a></li>
+                <li><a href="#documentation" class="footer-link">Documentation</a></li>
+                <li><a href="#api" class="footer-link">API Reference</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-column">
+              <h4 class="footer-heading">Company</h4>
+              <ul class="footer-list">
+                <li><a href="#about" class="footer-link">About Us</a></li>
+                <li><a href="#contact" class="footer-link">Contact</a></li>
+                <li><a href="#careers" class="footer-link">Careers</a></li>
+                <li><a href="#blog" class="footer-link">Blog</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-column">
+              <h4 class="footer-heading">Legal</h4>
+              <ul class="footer-list">
+                <li><a href="#privacy" class="footer-link">Privacy Policy</a></li>
+                <li><a href="#terms" class="footer-link">Terms of Service</a></li>
+                <li><a href="#security" class="footer-link">Security</a></li>
+                <li><a href="#compliance" class="footer-link">Compliance</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-column">
+              <h4 class="footer-heading">Resources</h4>
+              <ul class="footer-list">
+                <li><a href="#help" class="footer-link">Help Center</a></li>
+                <li><a href="#community" class="footer-link">Community</a></li>
+                <li><a href="#status" class="footer-link">System Status</a></li>
+                <li><a href="#updates" class="footer-link">Release Notes</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <div class="footer-bottom-left">
+            <div class="footer-badges">
+              <div class="footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1C8 1 11 2 11 6C11 10 8 12 8 12C8 12 5 10 5 6C5 2 8 1 8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>100% Private</span>
+              </div>
+              <div class="footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span>99.9% Uptime</span>
+              </div>
+              <div class="footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                  <circle cx="5" cy="9.5" r="0.5" fill="currentColor"/>
+                  <circle cx="7" cy="9.5" r="0.5" fill="currentColor"/>
+                </svg>
+                <span>Enterprise Support</span>
+              </div>
+              <div class="footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L9.5 6.5L14 8L9.5 9.5L8 14L6.5 9.5L2 8L6.5 6.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>AI-Powered</span>
+              </div>
+            </div>
+            <div class="footer-copyright">
+              © 2025 Valido. All rights reserved. Built with security and privacy in mind.
+            </div>
+          </div>
+
+          <div class="footer-bottom-right">
+            <div class="footer-social">
+              <a href="#twitter" class="footer-social-link" aria-label="Twitter">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 4.01C21 4.5 20 4.7 19 4.9C20.1 4.2 21 3.1 21.4 1.9C20.4 2.5 19.3 3 18.1 3.3C17.1 2.2 15.7 1.5 14 1.5C11.3 1.5 9.1 3.7 9.1 6.4C9.1 6.8 9.1 7.2 9.2 7.6C5.3 7.4 1.9 5.4 0 2.5C-0.4 3.2 -0.7 4 -0.7 4.9C-0.7 6.6 0.2 8.1 1.6 8.9C0.7 8.9 -0.1 8.6 -0.8 8.2V8.3C-0.8 10.6 1 12.6 3.3 13C2.9 13.1 2.5 13.2 2 13.2C1.7 13.2 1.4 13.2 1.1 13.1C1.7 15.1 3.7 16.6 6 16.6C4.2 18 2 18.8 -0.4 18.8C-0.8 18.8 -1.2 18.8 -1.6 18.7C0.7 20.2 3.5 21.1 6.5 21.1C14 21.1 18.1 13.2 18.1 7C18.1 6.8 18.1 6.6 18.1 6.4C19.2 5.6 20.1 4.9 21 4C21.4 4 21.7 4 22 4.01Z" fill="currentColor"/>
+                </svg>
+              </a>
+              <a href="#linkedin" class="footer-social-link" aria-label="LinkedIn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M20.5 2H3.5C2.7 2 2 2.7 2 3.5V20.5C2 21.3 2.7 22 3.5 22H20.5C21.3 22 22 21.3 22 20.5V3.5C22 2.7 21.3 2 20.5 2ZM8 19H5V10H8V19ZM6.5 8.5C5.7 8.5 5 7.8 5 7C5 6.2 5.7 5.5 6.5 5.5C7.3 5.5 8 6.2 8 7C8 7.8 7.3 8.5 6.5 8.5ZM19 19H16V14.5C16 13.4 16 12 14.5 12C13 12 12.8 13.2 12.8 14.5V19H9.8V10H12.8V11.3C13.2 10.6 14.1 9.8 15.5 9.8C18.5 9.8 19 11.8 19 14.3V19Z" fill="currentColor"/>
+                </svg>
+              </a>
+              <a href="#github" class="footer-social-link" aria-label="GitHub">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.5 2 2 6.5 2 12C2 16.4 4.9 20.2 8.8 21.5C9.3 21.6 9.5 21.3 9.5 21C9.5 20.7 9.5 20 9.5 19.1C6.7 19.8 6.1 17.8 6.1 17.8C5.7 16.7 5 16.4 5 16.4C4 15.7 5.1 15.7 5.1 15.7C6.2 15.8 6.7 16.8 6.7 16.8C7.7 18.5 9.4 18 9.8 17.8C9.9 17.1 10.2 16.6 10.5 16.3C8.2 16 5.8 15.1 5.8 11.1C5.8 10.1 6.1 9.2 6.8 8.5C6.7 8.2 6.3 7.1 6.9 5.6C6.9 5.6 7.8 5.3 9.5 6.5C10.4 6.2 11.2 6.1 12 6.1C12.8 6.1 13.6 6.2 14.5 6.5C16.2 5.3 17.1 5.6 17.1 5.6C17.7 7.1 17.3 8.2 17.2 8.5C17.9 9.2 18.2 10.1 18.2 11.1C18.2 15.1 15.8 16 13.5 16.3C13.9 16.6 14.2 17.3 14.2 18.3C14.2 19.8 14.2 21 14.2 21.4C14.2 21.7 14.4 22 14.9 21.9C18.8 20.6 21.7 16.8 21.7 12.4C22 6.5 17.5 2 12 2Z" fill="currentColor"/>
+                </svg>
+              </a>
+              <a href="#youtube" class="footer-social-link" aria-label="YouTube">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M23 9.7C23 7.3 21.1 5.4 18.7 5.4H5.3C2.9 5.4 1 7.3 1 9.7V14.3C1 16.7 2.9 18.6 5.3 18.6H18.7C21.1 18.6 23 16.7 23 14.3V9.7ZM9.5 15.5V8.5L16 12L9.5 15.5Z" fill="currentColor"/>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </div>
-    </form>
-    </section>
-
-    <section id="historySection" style="display:none">
-      <div class="card full">
-        <h2>History — previously scanned files</h2>
-        <div class="helper">We store recent submissions locally in your browser. Click Re-run to submit the same files/rules again.</div>
-        <div id="historyList" style="margin-top:12px"></div>
-      </div>
-    </section>
-
-    <div class="grid">
-      <div class="card task-card">
-        <h3>Task</h3>
-        <div id="taskInfo">No task submitted yet.</div>
-        <div id="downloadLink" style="margin-top:8px"></div>
-      </div>
-
-      <div class="card task-card">
-        <h3>Logs / Result</h3>
-        <pre id="log">--</pre>
-      </div>
-    </div>
-
-    <div class="footer-bar">
-      <div class="brand-badge">
-        <div class="brand-row"><span class="dot" aria-hidden="true"></span><strong>Valido</strong></div>
-        <div class="brand-sub muted">— Rules-driven document validation</div>
-      </div>
-      <div class="muted">Built for privacy • Local-first • © 2025</div>
     </div>
 
   <script src="/rules-builder.js"></script>
-  <script>
-      const form = document.getElementById('uploadForm');
-    const navUpload = document.getElementById('navUpload');
-    const navHistory = document.getElementById('navHistory');
-    const uploadSection = document.getElementById('uploadSection');
-    const historySection = document.getElementById('historySection');
-      const logEl = document.getElementById('log');
-      const taskInfo = document.getElementById('taskInfo');
-
-      function appendLog(msg) {
-        logEl.textContent = msg + '\n' + logEl.textContent;
-      }
-
-      async function pollTask(taskId) {
-        appendLog(`Polling task ${taskId}...`);
-        taskInfo.textContent = `Task ID: ${taskId} (polling)`;
-        let interval = 1500;
-        const maxAttempts = 200; // safety cap (~5 minutes)
-        let attempts = 0;
-
-        return new Promise((resolve) => {
-          const t = setInterval(async () => {
-            attempts += 1;
-            try {
-              const res = await fetch(`/api/v1/tasks/${taskId}`);
-              if (!res.ok) {
-                appendLog('Failed to fetch task status: ' + res.status);
-                return;
-              }
-              const json = await res.json();
-              appendLog('state: ' + json.state + (json.info && json.info.processed ? ` (${json.info.processed}/${json.info.total || '?'})` : ''));
-
-              if (json.state === 'SUCCESS' || json.state === 'FAILURE' || json.state === 'REVOKED') {
-                clearInterval(t);
-                taskInfo.textContent = `Task ID: ${taskId} — ${json.state}`;
-                resolve(json);
-              }
-            } catch (err) {
-              appendLog('poll error: ' + err.message);
-            }
-
-            if (attempts >= maxAttempts) {
-              clearInterval(t);
-              appendLog('Polling timed out');
-              resolve({ state: 'TIMEOUT' });
-            }
-          }, interval);
-        });
-      }
-
-    form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        logEl.textContent = '';
-        const files = document.getElementById('files').files;
-        const rulesEl = document.getElementById('rules');
-        // Prefer canonical JSON stored by the rules builder script (dataset.json). If missing,
-        // fall back to the textarea value (legacy/human-friendly). This ensures the backend
-        // receives valid JSON instead of a human summary string.
-        let rules = '';
-        try { rules = (rulesEl && rulesEl.dataset && rulesEl.dataset.json) ? rulesEl.dataset.json : (rulesEl?.value || '').trim(); } catch(e) { rules = (rulesEl?.value||'').trim(); }
-        if (!files || files.length === 0) {
-          appendLog('Please choose at least one file.');
-          return;
-        }
-
-        const fd = new FormData();
-        for (let i = 0; i < files.length; i++) fd.append('files', files[i]);
-        if (rules) fd.append('rules', rules);
-
-        appendLog('Submitting ' + files.length + ' file(s) to /api/v1/submit');
-
-        try {
-          const res = await fetch('/api/v1/submit', { method: 'POST', body: fd });
-          if (!res.ok) {
-            const text = await res.text();
-            appendLog('Submit failed: ' + res.status + ' ' + text);
-            return;
-          }
-          const j = await res.json();
-          appendLog('Task queued: ' + j.task_id);
-          taskInfo.textContent = `Task ID: ${j.task_id}`;
-
-          // record submission to local history
-          try{
-            const historyEntry = {
-              timestamp: Date.now(),
-              files: Array.from(files).map(f=>f.name),
-              mode: document.querySelector('.tabs button.active').dataset.tab,
-              prompt: document.getElementById('aiPrompt')?.value || null,
-              fields: (window.getHistoryFields && window.getHistoryFields()) || null,
-              validations: {
-                signed: !!document.getElementById('chk_validate_signed')?.checked,
-                dated: !!document.getElementById('chk_validate_dated')?.checked,
-                signed_and_dated: !!document.getElementById('chk_validate_signed_and_dated')?.checked,
-              },
-              rulesSummary: document.getElementById('rulesPreview')?.textContent || '',
-              task_id: j.task_id
-            };
-            window.pushHistory && window.pushHistory(historyEntry);
-          }catch(e){ /* non-fatal */ }
-
-          const out = await pollTask(j.task_id);
-          appendLog('Final result: ' + JSON.stringify(out, null, 2));
-
-          // Check for CSV result and show download link if available
-          const downloadEl = document.getElementById('downloadLink');
-          const csvUrl = `/api/v1/tasks/${j.task_id}/result.csv`;
-          try {
-            const head = await fetch(csvUrl, { method: 'HEAD' });
-            if (head.ok) {
-              downloadEl.innerHTML = `<a href="${csvUrl}" download>Download CSV results</a>`;
-            } else {
-              downloadEl.textContent = '';
-            }
-          } catch (err) {
-            appendLog('Download check failed: ' + err.message);
-          }
-        } catch (err) {
-          appendLog('Submit exception: ' + err.message);
-        }
-      });
-
-        // Reset helper (programmatic): clear builder state without reload
-        const clearBtn = document.getElementById('clearBtn');
-        if (clearBtn) {
-          clearBtn.addEventListener('click', () => {
-            if (window.resetBuilder) window.resetBuilder();
-            // clear file input
-            const f = document.getElementById('files'); if (f) f.value = '';
-            appendLog('Form reset');
-          });
-        }
-
-      // nav: Upload / History
-      if (navUpload && navHistory && uploadSection && historySection) {
-        navUpload.addEventListener('click', () => { uploadSection.style.display='block'; historySection.style.display='none'; navUpload.classList.add('btn-primary'); navHistory.classList.remove('btn-primary'); window.renderHistory && window.renderHistory(); });
-        navHistory.addEventListener('click', () => { uploadSection.style.display='none'; historySection.style.display='block'; navHistory.classList.add('btn-primary'); navUpload.classList.remove('btn-primary'); window.renderHistory && window.renderHistory(); });
-        // default: upload active
-        navUpload.classList.add('btn-primary');
-      }
-    </script>
+  <script src="/app.js"></script>
   </body>
 </html>
