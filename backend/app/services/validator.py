@@ -16,15 +16,10 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
     report = {
         "summary": {
             "length": len(text or ""),
-            "contains_invoice": False,
         },
         "rules": [],
     }
 
-    if text and "invoice" in text.lower():
-        report["summary"]["contains_invoice"] = True
-        report["rules"].append({"id": "rule_invoice_present", "result": "pass"})
-    else:
-        report["rules"].append({"id": "rule_invoice_present", "result": "fail"})
-
+    # Legacy stub - validation logic is now handled in worker_tasks.py
+    # This function is kept for backwards compatibility
     return report

@@ -33,6 +33,10 @@
     const errorMessage = document.getElementById('errorMessage');
     const progressFill = document.getElementById('progressFill');
     const downloadLink = document.getElementById('downloadLink');
+  const submitBtnText = document.getElementById('submitBtnText');
+  const successTitleEl = document.getElementById('successTitle');
+  const successMessageEl = document.getElementById('successMessage');
+  const resultsOutput = document.getElementById('resultsOutput');
     
     let currentStep = 1;
     let selectedFiles = [];
@@ -142,7 +146,12 @@
     
     // Upload area interactions
     if (uploadArea && filesInput) {
-      uploadArea.addEventListener('click', () => filesInput.click());
+      uploadArea.addEventListener('click', (e) => {
+        // Only trigger file input if we didn't click the input itself
+        if (e.target !== filesInput) {
+          filesInput.click();
+        }
+      });
       
       uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -195,7 +204,33 @@
       // Update rules summary
       const rulesText = rulesPreview ? rulesPreview.textContent : 'No rules';
       summaryRules.textContent = rulesText || 'No rules selected';
+      // Update submit button label based on whether user requested extraction fields
+      updateSubmitButtonLabel();
     }
+
+    // Update the submit button label depending on whether extraction fields were selected
+    function updateSubmitButtonLabel() {
+      try {
+        const rulesEl = document.getElementById('rules');
+        let hasFields = false;
+        if (rulesEl && rulesEl.dataset && rulesEl.dataset.json) {
+          try {
+            const parsed = JSON.parse(rulesEl.dataset.json);
+            if (parsed && Array.isArray(parsed.fields) && parsed.fields.length > 0) hasFields = true;
+          } catch (e) {
+            // ignore parse
+          }
+        }
+        if (submitBtnText) submitBtnText.textContent = hasFields ? 'Start Extraction' : 'Start Validation';
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    // Listen for rules updates from the rules builder
+    document.addEventListener('rulesUpdated', () => updateSubmitButtonLabel());
+  // Run once at startup to ensure correct label
+  updateSubmitButtonLabel();
     
     // Form submission with user-friendly status
     form && form.addEventListener('submit', async (ev) => {
@@ -213,8 +248,18 @@
         rules = (rulesEl?.value || '').trim();
       }
       
+      // Debug: log what rules are being sent
+      console.log('Submitting with rules:', rules);
+      
       if (!files || files.length === 0) {
         showError('Please select at least one file to validate.');
+        navigateToStep(1);
+        return;
+      }
+
+      // Limit to 500 files per batch
+      if (files.length > 500) {
+        showError('Maximum 500 files allowed per batch. Please split your files into smaller batches.');
         navigateToStep(1);
         return;
       }
@@ -256,8 +301,11 @@
         
         const result = await pollTask(taskId);
         
+        // Debug: log the task result to see what we received
+        console.log('Task completed with result:', result);
+
         if (result.state === 'SUCCESS') {
-          showSuccess(taskId);
+          showSuccess(taskId, result);
         } else if (result.state === 'FAILURE') {
           showError(result.info?.error || 'Validation failed. Please try again.');
         } else {
@@ -288,8 +336,24 @@
             
             const json = await res.json();
             
-            // Update progress
-            if (json.info && json.info.processed && json.info.total) {
+            // Update progress with detailed info
+            if (json.state === 'PROGRESS' && json.info) {
+              const processed = json.info.processed || 0;
+              const total = json.info.total || 0;
+              const currentFile = json.info.current_file || '';
+              
+              if (total > 0) {
+                const percent = Math.min(95, 30 + (processed / total * 65));
+                progressFill.style.width = `${percent}%`;
+                statusTitle.textContent = `Processing ${processed} of ${total} documents...`;
+                if (currentFile) {
+                  statusMessage.textContent = `Current: ${currentFile.substring(0, 40)}${currentFile.length > 40 ? '...' : ''}`;
+                } else {
+                  statusMessage.textContent = `${Math.round(percent)}% complete`;
+                }
+              }
+            } else if (json.info && json.info.processed && json.info.total) {
+              // Fallback for non-PROGRESS states
               const percent = Math.min(95, 30 + (json.info.processed / json.info.total * 65));
               progressFill.style.width = `${percent}%`;
               statusMessage.textContent = `Processing document ${json.info.processed} of ${json.info.total}`;
@@ -313,30 +377,60 @@
       });
     }
     
-    function showSuccess(taskId) {
+    function showSuccess(taskId, taskResult) {
       processingStatus.style.display = 'none';
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
-      
-      // Check for download link
-      const csvUrl = `/api/v1/tasks/${taskId}/result.csv`;
-      fetch(csvUrl, { method: 'HEAD' })
-        .then(res => {
-          if (res.ok) {
-            downloadLink.innerHTML = `
-              <a href="${csvUrl}" download class="btn btn-primary btn-large download-btn">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Download Results
-              </a>
-            `;
-          }
-        })
-        .catch(() => {
-          downloadLink.innerHTML = '<p class="helper">Results are ready but download link is not available.</p>';
-        });
+      // Clear previous results
+      if (resultsOutput) resultsOutput.innerHTML = '';
+
+      // Determine if the user's rules requested extraction fields
+      let hasFields = false;
+      try {
+        const rulesEl = document.getElementById('rules');
+        if (rulesEl && rulesEl.dataset && rulesEl.dataset.json) {
+          const parsed = JSON.parse(rulesEl.dataset.json || '{}');
+          if (parsed && Array.isArray(parsed.fields) && parsed.fields.length > 0) hasFields = true;
+        }
+      } catch (e) { /* ignore */ }
+
+      // Update success title/message depending on extraction vs validation
+      if (successTitleEl) successTitleEl.textContent = hasFields ? '✨ Extraction Complete!' : '✨ Validation Complete!';
+      if (successMessageEl) successMessageEl.textContent = hasFields ? 'Your documents have been processed and extracted successfully.' : 'Your documents have been validated successfully.';
+
+      // The API returns task result in 'info' field when state is SUCCESS
+      // Worker returns {status, total, processed, files, result_files: {csv: path, report_json: path}}
+      const resultInfo = (taskResult && taskResult.info) || {};
+      const zipFromResult = (resultInfo.result_files && resultInfo.result_files.zip) || `/api/v1/tasks/${taskId}/results.zip`;
+
+      // Show download button for ZIP only
+      if (zipFromResult) {
+        downloadLink.innerHTML = `
+          <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Download Results
+          </a>
+        `;
+      } else {
+        downloadLink.innerHTML = '<p class="helper">Results are ready but download link is not available.</p>';
+      }
+
+      // Show simple completion message (no table rendering)
+      if (resultsOutput) {
+        const reportUrl = `/api/v1/tasks/${taskId}/report.json`;
+        fetch(reportUrl)
+          .then(r => r.ok ? r.json() : Promise.reject('no report'))
+          .then(j => {
+            const infoHtml = `<div class="report-summary">✅ Successfully processed ${j.processed || j.total || '-'} of ${j.total || '-'} documents. Download the ZIP file to view results.</div>`;
+            resultsOutput.innerHTML = infoHtml;
+          })
+          .catch(() => {
+            resultsOutput.innerHTML = '<div class="helper">✅ Processing complete. Download the results to view details.</div>';
+          });
+      }
     }
     
     function showError(message) {
@@ -390,22 +484,38 @@
       navigateToStep(1);
     });
     
-    // Navigation between Upload and History
-    if (navUpload && navHistory && uploadSection && historySection) {
+    // Navigation between sections
+    const navAutomation = document.getElementById('navAutomation');
+    const automationSection = document.getElementById('automationSection');
+    
+    if (navUpload && navHistory && navAutomation && uploadSection && historySection && automationSection) {
       navUpload.addEventListener('click', () => {
         uploadSection.style.display = 'block';
         historySection.style.display = 'none';
+        automationSection.style.display = 'none';
         navUpload.classList.add('active');
         navHistory.classList.remove('active');
+        navAutomation.classList.remove('active');
       });
       
       navHistory.addEventListener('click', () => {
         uploadSection.style.display = 'none';
         historySection.style.display = 'block';
-        navHistory.classList.remove('active');
+        automationSection.style.display = 'none';
         navHistory.classList.add('active');
         navUpload.classList.remove('active');
+        navAutomation.classList.remove('active');
         window.renderHistory && window.renderHistory();
+      });
+      
+      navAutomation.addEventListener('click', () => {
+        uploadSection.style.display = 'none';
+        historySection.style.display = 'none';
+        automationSection.style.display = 'block';
+        navAutomation.classList.add('active');
+        navUpload.classList.remove('active');
+        navHistory.classList.remove('active');
+        window.initAutomation && window.initAutomation();
       });
     }
     

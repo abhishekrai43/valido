@@ -32,6 +32,12 @@
             </svg>
             New Validation
           </button>
+          <button id="navAutomation" class="btn btn-nav" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Automation
+          </button>
           <button id="navHistory" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
@@ -74,7 +80,7 @@
               </svg>
             </div>
             <h2>Step 1: Upload Your Documents</h2>
-            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs.</p>
+            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 500 files per batch.</strong></p>
             
             <div class="upload-area" id="uploadArea">
               <input id="files" name="files" type="file" multiple accept=".pdf,.zip" hidden />
@@ -176,6 +182,71 @@
                   </div>
                 </div>
               </label>
+
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_must_contain">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                      <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <path d="M11 8V14M8 11H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div class="checkbox-with-input">
+                    <div class="checkbox-title">Must Contain Text</div>
+                    <input type="text" id="must_contain_text" placeholder="e.g. Confidentiality Clause" class="inline-input" />
+                    <label class="inline-checkbox">
+                      <input type="checkbox" id="must_contain_case_sensitive">
+                      <span>Case sensitive</span>
+                    </label>
+                  </div>
+                </div>
+              </label>
+
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_must_not_contain">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <path d="M4.93 4.93L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div class="checkbox-with-input">
+                    <div class="checkbox-title">Must NOT Contain Text</div>
+                    <input type="text" id="must_not_contain_text" placeholder="e.g. DRAFT, VOID" class="inline-input" />
+                    <label class="inline-checkbox">
+                      <input type="checkbox" id="must_not_contain_case_sensitive">
+                      <span>Case sensitive</span>
+                    </label>
+                  </div>
+                </div>
+              </label>
+
+              <label class="checkbox-card">
+                <input type="checkbox" id="chk_page_count">
+                <div class="checkbox-content">
+                  <div class="checkbox-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M13 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V9L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M13 2V9H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div class="checkbox-with-input">
+                    <div class="checkbox-title">Page Count Check</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <select id="page_count_operator" class="inline-select">
+                        <option value=">=">At least</option>
+                        <option value="<=">At most</option>
+                        <option value="==">Exactly</option>
+                      </select>
+                      <input type="number" id="page_count_value" min="1" value="1" class="inline-input" style="width: 80px;" />
+                      <span>page(s)</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
             </div>
 
             <div id="fieldBuilder" class="field-builder">
@@ -225,6 +296,14 @@
 
               <div id="aiStatus" class="status-message"></div>
             </div>
+          </div>
+        </div>
+
+        <div class="saved-rules-section">
+          <h3>Saved Rules</h3>
+          <p class="helper">Load previously saved rulesets to reuse them.</p>
+          <div id="savedRulesetsList" class="saved-rulesets-list">
+            <div class="loading-rulesets">Loading saved rules...</div>
           </div>
         </div>
 
@@ -303,9 +382,10 @@
                 </svg>
               </div>
               <div class="status-content">
-                <div class="status-title success-title">✨ Validation Complete!</div>
-                <div class="status-message">Your documents have been validated successfully.</div>
-                <div id="downloadLink" class="download-section"></div>
+                  <div class="status-title success-title" id="successTitle">✨ Validation Complete!</div>
+                  <div class="status-message" id="successMessage">Your documents have been validated successfully.</div>
+                  <div id="downloadLink" class="download-section"></div>
+                  <div id="resultsOutput" class="results-output"></div>
               </div>
             </div>
 
@@ -334,7 +414,7 @@
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Start Validation
+                <span id="submitBtnText">Start Validation</span>
               </button>
               <button id="startNewBtn" class="btn btn-primary btn-large" type="button" style="display:none">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -361,6 +441,89 @@
         </div>
       </section>
 
+      <section id="automationSection" style="display:none">
+        <div class="card">
+          <div class="card-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Automated Folder Processing</h2>
+          <p class="card-description">Schedule automatic validation of folders on your computer</p>
+          
+          <!-- Agent Download Section -->
+          <div class="automation-setup">
+            <div class="setup-step">
+              <div class="step-badge">1</div>
+              <div>
+                <h3>Download Valido Agent</h3>
+                <p>Install the lightweight agent on your computer to enable automatic folder processing</p>
+                <div class="download-buttons">
+                  <a href="/api/v1/agent/download/windows" class="btn btn-primary" download>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M10 14L5 9H8V3H12V9H15L10 14Z" fill="currentColor"/>
+                      <path d="M2 16H18V18H2V16Z" fill="currentColor"/>
+                    </svg>
+                    Download for Windows
+                  </a>
+                  <a href="/api/v1/agent/download/mac" class="btn btn-secondary" download>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M10 14L5 9H8V3H12V9H15L10 14Z" fill="currentColor"/>
+                      <path d="M2 16H18V18H2V16Z" fill="currentColor"/>
+                    </svg>
+                    Download for Mac
+                  </a>
+                </div>
+                <p class="helper">~15MB • No Python required • Windows 7+ / macOS 10.14+</p>
+              </div>
+            </div>
+            
+            <div class="setup-step">
+              <div class="step-badge">2</div>
+              <div>
+                <h3>Run the Agent</h3>
+                <p>Double-click the downloaded file and connect to this server:</p>
+                <div class="server-url-box">
+                  <code id="serverUrl">valido-agent.exe --server http://localhost:9090</code>
+                  <button type="button" class="btn-copy" onclick="copyServerUrl()">Copy</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="setup-step">
+              <div class="step-badge">3</div>
+              <div>
+                <h3>Configure Folders Below</h3>
+                <p>The agent will automatically pick up your configurations</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Watch Folders List -->
+          <div class="watch-folders-container">
+            <div class="section-header">
+              <h3>Watch Folders</h3>
+              <button type="button" class="btn btn-primary" id="btnAddWatchFolder">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Add Watch Folder
+              </button>
+            </div>
+            
+            <div id="watchFoldersList" class="watch-folders-list">
+              <div class="empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>No watch folders configured yet</p>
+                <p class="helper">Click "Add Watch Folder" to get started</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Save Ruleset Modal -->
       <div id="saveRulesetModal" class="modal" style="display:none">
         <div class="modal-overlay"></div>
@@ -380,6 +543,111 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-ghost" id="modalCancel">Cancel</button>
             <button type="button" class="btn btn-primary" id="modalSave">Save Rules</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Watch Folder Modal -->
+      <div id="watchFolderModal" class="modal" style="display:none">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-large">
+          <div class="modal-header">
+            <h3 id="watchFolderModalTitle">Add Watch Folder</h3>
+            <button type="button" class="modal-close" id="watchFolderModalClose">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Configuration Name</label>
+              <input type="text" id="watchFolderName" class="modal-input" placeholder="e.g., Daily Invoice Processing" />
+            </div>
+            
+            <div class="form-group">
+              <label>Input Folder Path</label>
+              <div class="input-with-button">
+                <input type="text" id="watchFolderInput" class="modal-input" placeholder="C:\Invoices\ToProcess\" />
+                <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Browse
+                </button>
+              </div>
+              <p class="helper">Local folder (C:\) or network path (\\\\SERVER\\Share\\)</p>
+            </div>
+            
+            <div class="form-group">
+              <label>Ruleset to Apply</label>
+              <select id="watchFolderRuleset" class="modal-input">
+                <option value="">Select a ruleset...</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Schedule (When to Process)</label>
+              <div class="schedule-times" id="scheduleTimes">
+                <div class="schedule-time-row">
+                  <input type="time" class="modal-input schedule-time-input" value="18:00" />
+                  <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnAddScheduleTime">
+                + Add Another Time
+              </button>
+            </div>
+            
+            <div class="form-group">
+              <label>Results Folder</label>
+              <div class="input-with-button">
+                <input type="text" id="watchFolderOutput" class="modal-input" placeholder="C:\Invoices\Results\" />
+                <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderOutput')">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Browse
+                </button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>After Processing</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" name="afterProcessing" value="move" checked />
+                  <span>Move files to:</span>
+                </label>
+                <div class="input-with-button" style="margin-left: 24px; margin-top: 8px;">
+                  <input type="text" id="watchFolderProcessedPath" class="modal-input" placeholder="C:\Invoices\Processed\" />
+                  <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderProcessedPath')">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Browse
+                  </button>
+                </div>
+                
+                <label class="radio-option" style="margin-top: 12px;">
+                  <input type="radio" name="afterProcessing" value="leave" />
+                  <span>Leave files in place</span>
+                </label>
+                
+                <label class="radio-option" style="margin-top: 12px;">
+                  <input type="radio" name="afterProcessing" value="delete" />
+                  <span>Delete files (⚠️ use with caution)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" id="watchFolderModalCancel">Cancel</button>
+            <button type="button" class="btn btn-primary" id="watchFolderModalSave">Save Configuration</button>
           </div>
         </div>
       </div>
@@ -518,6 +786,8 @@
     </div>
 
   <script src="/rules-builder.js"></script>
+  <script src="/automation.js"></script>
   <script src="/app.js"></script>
   </body>
 </html>
+

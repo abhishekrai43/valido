@@ -13,6 +13,10 @@ import io
 import zipfile
 import json
 
+# Do NOT import models at module import time here; register them during startup
+# to avoid metadata duplication and ensure tables are created once when the app
+# process is fully initialized.
+
 app = FastAPI(title="PDF Validator (stub)")
 
 # Allow CORS for local development so the served frontend can call the API.
@@ -30,14 +34,25 @@ async def healthz():
     return {"status": "ok"}
 
 
-# Initialize DB tables (SQLite via SQLModel)
-try:
-    from .db import create_db_and_tables
+@app.on_event("startup")
+async def _on_startup():
+    """FastAPI startup hook: import model definitions and create DB tables.
 
-    create_db_and_tables()
-except Exception:
-    # If import fails in some environments (tests or tooling), continue without crash
-    pass
+    This ensures models are registered with SQLModel/SQLAlchemy only when the
+    application process starts (avoids double-registration when modules are
+    imported in different contexts or by tooling)."""
+    try:
+        # Import models so SQLModel metadata is populated
+        from . import models  # noqa: F401
+        from .db import create_db_and_tables
+
+        create_db_and_tables()
+        print("✓ Database tables created successfully (startup)")
+    except Exception as e:
+        # Startup should not crash hard for non-fatal issues in some dev/test flows.
+        # Log and continue so other routes may still be inspected during dev.
+        print(f"Warning: Failed to initialize database at startup: {e}")
+        pass
 
 
 @app.post("/api/v1/upload")
@@ -73,6 +88,13 @@ async def submit_files(
 
     Returns a Celery task id that can be polled for progress/result.
     """
+    # Limit to 500 files per batch
+    if len(files) > 500:
+        raise HTTPException(
+            status_code=400, 
+            detail="Maximum 500 files allowed per batch. Please split your upload into smaller batches."
+        )
+    
     # Parse rules if provided (expect JSON string in a form field)
     parsed_rules = None
     if rules:
@@ -162,10 +184,20 @@ async def get_task_status(task_id: str):
 async def download_task_csv(task_id: str):
     """Serve the CSV results for a completed task if available."""
     results_dir = os.path.abspath(os.path.join(os.getcwd(), 'results', task_id))
-    csv_path = os.path.join(results_dir, 'results.csv')
-    if not os.path.exists(csv_path):
-        raise HTTPException(status_code=404, detail="CSV result not found")
-    return FileResponse(csv_path, media_type='text/csv', filename=f"{task_id}-results.csv")
+    # Find the CSV file with timestamp pattern
+    import glob
+    csv_files = glob.glob(os.path.join(results_dir, 'valido_results_*.csv'))
+    if not csv_files:
+        # Fallback to old naming for backward compatibility
+        csv_path = os.path.join(results_dir, 'results.csv')
+        if not os.path.exists(csv_path):
+            raise HTTPException(status_code=404, detail="CSV result not found")
+        return FileResponse(csv_path, media_type='text/csv', filename=f"{task_id}-results.csv")
+    
+    # Use the most recent file if multiple exist
+    csv_path = max(csv_files, key=os.path.getctime)
+    filename = os.path.basename(csv_path)
+    return FileResponse(csv_path, media_type='text/csv', filename=filename)
 
 
 @app.get("/api/v1/tasks/{task_id}/report.json")
@@ -177,13 +209,36 @@ async def download_task_report(task_id: str):
     return FileResponse(report_path, media_type='application/json', filename=f"{task_id}-report.json")
 
 
+@app.get("/api/v1/tasks/{task_id}/results.zip")
+async def download_task_zip(task_id: str):
+    """Serve the ZIP file containing CSV results."""
+    results_dir = os.path.abspath(os.path.join(os.getcwd(), 'results', task_id))
+    # Find the ZIP file with timestamp pattern
+    import glob
+    zip_files = glob.glob(os.path.join(results_dir, 'valido_results_*.zip'))
+    if not zip_files:
+        # Fallback to old naming for backward compatibility
+        zip_path = os.path.join(results_dir, 'results.zip')
+        if not os.path.exists(zip_path):
+            raise HTTPException(status_code=404, detail="ZIP file not found")
+        return FileResponse(zip_path, media_type='application/zip', filename=f"valido-results-{task_id}.zip")
+    
+    # Use the most recent file if multiple exist
+    zip_path = max(zip_files, key=os.path.getctime)
+    filename = os.path.basename(zip_path)
+    return FileResponse(zip_path, media_type='application/zip', filename=filename)
+
+
 # Include ruleset routes if available
 try:
+    # Models already imported at top of file
     from .routes.ruleset_routes import router as ruleset_router
 
     app.include_router(ruleset_router)
-except Exception:
+    print("✓ Ruleset routes included successfully")
+except Exception as e:
     # not critical at runtime; routes may be missing during partial edits
+    print(f"Warning: Failed to include ruleset routes: {e}")
     pass
 
 
@@ -193,6 +248,28 @@ try:
 
     app.include_router(user_router)
 except Exception:
+    pass
+
+
+# Include watch folder routes
+try:
+    from .routes.watch_folder_routes import router as watch_folder_router
+
+    app.include_router(watch_folder_router)
+    print("✓ Watch folder routes included successfully")
+except Exception as e:
+    print(f"Warning: Failed to include watch folder routes: {e}")
+    pass
+
+
+# Include agent download routes
+try:
+    from .routes.agent_routes import router as agent_router
+
+    app.include_router(agent_router)
+    print("✓ Agent download routes included successfully")
+except Exception as e:
+    print(f"Warning: Failed to include agent routes: {e}")
     pass
 
 

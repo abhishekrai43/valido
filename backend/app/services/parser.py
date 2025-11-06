@@ -27,16 +27,28 @@ def is_valid_pdf(pdf_bytes: bytes) -> bool:
     Returns True if the PDF header looks correct and (if PyMuPDF is installed)
     the document can be opened.
     """
-    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF-"):
+    if not pdf_bytes or len(pdf_bytes) < 10:
+        return False
+    
+    # Strip leading whitespace/newlines and check for PDF header
+    # Some PDFs may have leading whitespace
+    stripped = pdf_bytes.lstrip(b'\x00\x09\x0a\x0c\x0d\x20')
+    if not stripped.startswith(b"%PDF-"):
         return False
 
     try:
         import fitz  # PyMuPDF
 
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            # A valid PDF should have at least one page
             return doc.page_count > 0
-    except Exception:
-        # If PyMuPDF is unavailable or opening fails, accept the header-based check only
+    except ImportError:
+        # If PyMuPDF is unavailable, accept the header-based check
+        return True
+    except Exception as e:
+        # Log the error but don't fail validation - let extraction handle it
+        print(f"PDF validation warning: {e}")
+        # If we can't open it but header is valid, still try to process
         return True
 
 

@@ -3,16 +3,23 @@ from sqlmodel import SQLModel, create_engine, Session
 
 
 def _sqlite_url() -> str:
-    """Return a sqlite URL for the DB file placed in the repository's backend folder.
-
-    This computes the path relative to this module's location so callers don't need
-    to run commands from a specific working directory.
+    """Return a sqlite URL for the DB file.
+    
+    Uses DATABASE_URL environment variable if set (for Docker volume persistence),
+    otherwise falls back to local backend folder for development.
     """
+    # Check if DATABASE_URL is set (Docker deployment)
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        return db_url
+    
+    # Fallback for local development
     # this file: backend/app/db.py -> parent is backend/app -> parent is backend
     this_dir = os.path.dirname(os.path.abspath(__file__))
     backend_dir = os.path.abspath(os.path.join(this_dir, '..'))
-    os.makedirs(backend_dir, exist_ok=True)
-    db_path = os.path.join(backend_dir, 'valido.db')
+    data_dir = os.path.join(backend_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, 'valido.db')
     return f"sqlite:///{db_path}"
 
 
