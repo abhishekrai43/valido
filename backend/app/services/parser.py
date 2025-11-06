@@ -1,24 +1,22 @@
-"""Parser with PDF validation and OCR fallback.
+"""Parser with PDF validation and text extraction.
 
 Behavior:
 - `is_valid_pdf` performs lightweight PDF validation (header check + attempt to open with PyMuPDF if available).
-- `extract_text_from_bytes` first attempts text extraction via PyMuPDF. If the extracted text is empty or very short,
-  it falls back to rendering pages and running OCR via `pytesseract`.
+- `extract_text_from_bytes` extracts text via PyMuPDF. If the extracted text is empty or very short,
+  it returns a message indicating the PDF is likely a scanned image.
 
 Notes:
+- OCR is disabled by default due to reliability and performance concerns.
 - This implementation prefers small, actionable comments. Do not add AI icons or long AI-comment blocks.
 """
 
+
 from typing import Tuple
 import io
-import shutil
 import os
-import time
+from app.utils.logger import get_logger
 
-
-def _has_tesseract() -> bool:
-    # Check whether the tesseract binary is available on PATH
-    return shutil.which("tesseract") is not None
+logger = get_logger("ValidoParser")
 
 
 def is_valid_pdf(pdf_bytes: bytes) -> bool:
@@ -28,110 +26,75 @@ def is_valid_pdf(pdf_bytes: bytes) -> bool:
     the document can be opened.
     """
     if not pdf_bytes or len(pdf_bytes) < 10:
+        logger.warning("PDF validation failed: empty or too short bytes")
         return False
-    
+
     # Strip leading whitespace/newlines and check for PDF header
-    # Some PDFs may have leading whitespace
     stripped = pdf_bytes.lstrip(b'\x00\x09\x0a\x0c\x0d\x20')
     if not stripped.startswith(b"%PDF-"):
+        logger.warning("PDF validation failed: missing %PDF- header")
         return False
 
     try:
         import fitz  # PyMuPDF
-
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            # A valid PDF should have at least one page
-            return doc.page_count > 0
+            if doc.page_count > 0:
+                return True
+            else:
+                logger.warning("PDF validation failed: zero pages")
+                return False
     except ImportError:
-        # If PyMuPDF is unavailable, accept the header-based check
+        logger.info("PyMuPDF not installed, using header-based PDF validation")
         return True
     except Exception as e:
-        # Log the error but don't fail validation - let extraction handle it
-        print(f"PDF validation warning: {e}")
-        # If we can't open it but header is valid, still try to process
+        logger.error(f"PDF validation exception: {type(e).__name__}: {e}")
         return True
 
 
 def extract_text_from_bytes(pdf_bytes: bytes) -> str:
-    """Extract text from PDF bytes using PyMuPDF; fall back to Tesseract OCR when needed.
+    """Extract text from PDF bytes using PyMuPDF.
 
-    If neither PyMuPDF nor pytesseract are available, this function returns
-    a conservative placeholder string so the pipeline remains stable.
+    If no extractable text is found (scanned PDFs), returns a message indicating
+    the PDF is likely a scanned image.
     """
     if not pdf_bytes:
+        logger.warning("extract_text_from_bytes: empty input bytes")
         return ""
 
-    # Feature flags / limits (env-driven for local user control)
-    OCR_ENABLED = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
     try:
         MAX_PAGES_PER_PDF = int(os.getenv("MAX_PAGES_PER_PDF", "10"))
     except Exception:
         MAX_PAGES_PER_PDF = 10
-    try:
-        PAGE_OCR_SLEEP_MS = int(os.getenv("PAGE_OCR_SLEEP_MS", "0"))
-    except Exception:
-        PAGE_OCR_SLEEP_MS = 0
 
     text_chunks = []
 
-    # Try PyMuPDF extraction first
     try:
         import fitz  # PyMuPDF
-
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        # Limit pages processed to avoid excessive CPU/memory use on user machines
         total_pages = min(len(doc), MAX_PAGES_PER_PDF if MAX_PAGES_PER_PDF > 0 else len(doc))
         for i in range(total_pages):
             page = doc[i]
             page_text = page.get_text("text") or ""
             text_chunks.append(page_text)
-
         combined = "\n".join(text_chunks).strip()
         if combined and len(combined) >= 20:
             return combined
-
-        # If extracted text is empty or very short, fall back to OCR if available and enabled
-        if OCR_ENABLED and _has_tesseract():
-            try:
-                from PIL import Image
-                import pytesseract
-
-                ocr_texts = []
-                # Only OCR up to MAX_PAGES_PER_PDF pages to bound CPU and memory
-                for i in range(total_pages):
-                    page = doc[i]
-                    pix = page.get_pixmap(dpi=200)
-                    img_bytes = pix.tobytes("png")
-                    img = Image.open(io.BytesIO(img_bytes))
-                    ocr_page_text = pytesseract.image_to_string(img)
-                    ocr_texts.append(ocr_page_text)
-                    if PAGE_OCR_SLEEP_MS > 0:
-                        time.sleep(PAGE_OCR_SLEEP_MS / 1000.0)
-
-                ocr_combined = "\n".join(ocr_texts).strip()
-                if ocr_combined:
-                    return ocr_combined
-            except Exception:
-                # Keep comments short; do not include long AI notes.
-                pass
-
-        # If no OCR or OCR failed, return the (possibly short) combined text
+        if not combined or len(combined) < 20:
+            logger.info("PDF appears to be a scan or image (no extractable text)")
+            return "[SCANNED_PDF] This PDF appears to be a scan or image. Please use digitally-generated PDFs with selectable text."
         return combined
-
-    except Exception:
-        # PyMuPDF not available or failed — try pdfminer.six as a fallback
+    except Exception as e:
+        logger.error(f"PyMuPDF extraction failed: {type(e).__name__}: {e}")
         try:
             from pdfminer.high_level import extract_text_to_fp
             from pdfminer.layout import LAParams
-
             output = io.StringIO()
             extract_text_to_fp(io.BytesIO(pdf_bytes), output, laparams=LAParams())
             text = output.getvalue().strip()
             if text:
                 return text
-        except Exception:
-            pass
-
-    # Last resort: return placeholder indicating binary PDF content
+        except Exception as e2:
+            logger.error(f"pdfminer.six extraction failed: {type(e2).__name__}: {e2}")
+    logger.warning("No text extracted from PDF; returning placeholder")
     return "[binary-pdf-content-no-text-extracted]"
 

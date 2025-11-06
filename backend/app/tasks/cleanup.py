@@ -1,8 +1,9 @@
 import os
 import shutil
 from datetime import datetime, timedelta
+from app.utils.logger import get_logger
 
-from backend.celery_app import celery_app
+logger = get_logger(__name__)
 
 
 def _candidate_results_dirs():
@@ -34,13 +35,13 @@ def _remove_path(path: str):
         return False
 
 
-@celery_app.task(bind=True)
-def cleanup_old_results(self, days: int = 7) -> dict:
+def cleanup_old_results(days: int = 7) -> dict:
     """Delete result directories older than `days` days.
 
     This task is conservative: it only deletes directories directly under any
     discovered `results` directory whose last modification time is older than the cutoff.
     """
+    logger.info(f"Starting cleanup of results older than {days} days")
     cutoff = datetime.utcnow() - timedelta(days=days)
     removed = []
     errors = []
@@ -61,9 +62,14 @@ def cleanup_old_results(self, days: int = 7) -> dict:
                     ok = _remove_path(path)
                     if ok:
                         removed.append(path)
+                        logger.info(f"Removed old result directory: {path}")
                     else:
                         errors.append(path)
+                        logger.warning(f"Failed to remove directory: {path}")
         except Exception as exc:
             errors.append(f"root-error:{results_root}:{exc}")
+            logger.error(f"Error processing results root {results_root}: {exc}")
 
-    return {"removed": removed, "errors": errors, "cutoff": cutoff.isoformat()}
+    result = {"removed": removed, "errors": errors, "cutoff": cutoff.isoformat()}
+    logger.info(f"Cleanup completed: {len(removed)} removed, {len(errors)} errors")
+    return result
