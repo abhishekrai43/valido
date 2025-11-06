@@ -53,6 +53,7 @@ Create `agent_config.json` for offline configuration:
 }
 ```
 
+
 ## Building from Source
 
 ### Requirements
@@ -63,7 +64,7 @@ Create `agent_config.json` for offline configuration:
 ### Steps
 
 1. **Install dependencies**:
-   ```bash
+   ```powershell
    pip install -r requirements.txt
    ```
 
@@ -71,7 +72,6 @@ Create `agent_config.json` for offline configuration:
    ```powershell
    # Windows
    .\build.ps1
-   
    # macOS/Linux
    chmod +x build.sh
    ./build.sh

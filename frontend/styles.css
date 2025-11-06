@@ -1555,6 +1555,22 @@ textarea:focus {
   min-width: 200px !important;
 }
 
+.error-toast {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  background: #ef4444 !important;  /* Bright red */
+  color: #ffffff !important;
+  padding: 16px 24px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  z-index: 999999 !important;  /* Very high z-index */
+  animation: slideInRight 0.3s ease !important;
+  min-width: 200px !important;
+}
+
 @keyframes slideInRight {
   from {
     opacity: 0;

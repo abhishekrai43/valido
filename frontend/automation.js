@@ -3,6 +3,15 @@
 let watchFolders = [];
 let editingWatchFolderId = null;
 
+// Utility: Show toast notification
+function showToast(message, type = 'error') {
+    const toast = document.createElement('div');
+    toast.className = type === 'error' ? 'error-toast' : 'success-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 // Initialize automation page
 async function initAutomation() {
     await loadWatchFolders();
@@ -24,7 +33,7 @@ async function loadWatchFolders() {
 // Load rulesets for dropdown
 async function loadRulesetsForDropdown() {
     try {
-        const response = await fetch('/api/v1/rulesets');
+        const response = await fetch('/api/v1/rulesets/');
         const rulesets = await response.json();
         
         const select = document.getElementById('watchFolderRuleset');
@@ -157,7 +166,7 @@ function setupEventListeners() {
 }
 
 // Open add watch folder modal
-function openAddWatchFolderModal() {
+async function openAddWatchFolderModal() {
     editingWatchFolderId = null;
     document.getElementById('watchFolderModalTitle').textContent = 'Add Watch Folder';
     document.getElementById('watchFolderName').value = '';
@@ -165,6 +174,9 @@ function openAddWatchFolderModal() {
     document.getElementById('watchFolderOutput').value = '';
     document.getElementById('watchFolderRuleset').value = '';
     document.getElementById('watchFolderProcessedPath').value = '';
+    
+    // Reload rulesets to ensure dropdown is populated
+    await loadRulesetsForDropdown();
     
     // Reset schedule times to one default
     const container = document.getElementById('scheduleTimes');
@@ -222,7 +234,7 @@ async function saveWatchFolder() {
     const processedPath = document.getElementById('watchFolderProcessedPath').value.trim();
     
     if (!name || !inputPath || !outputPath || !rulesetId) {
-        alert('Please fill in all required fields');
+        showToast('Please fill in all required fields', 'error');
         return;
     }
     
@@ -263,12 +275,13 @@ async function saveWatchFolder() {
         if (response.ok) {
             closeWatchFolderModal();
             await loadWatchFolders();
+            showToast('✓ Watch folder saved successfully!', 'success');
         } else {
             const error = await response.json();
-            alert(`Failed to save: ${error.detail || 'Unknown error'}`);
+            showToast(`Failed to save: ${error.detail || 'Unknown error'}`, 'error');
         }
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        showToast(`Error: ${error.message}`, 'error');
     }
 }
 
