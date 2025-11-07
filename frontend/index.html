@@ -38,14 +38,16 @@
             </svg>
             Automation
           </button>
-          <button id="navHistory" class="btn btn-nav" type="button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
-              <path d="M10 6V10L13 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Recent
-          </button>
+          <!-- Recent tab removed to simplify UI -->
         </div>
+      </div>
+
+      <!-- Network Access Info -->
+      <div class="network-info" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
+        <p style="margin: 0; color: #0c4a6e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em;">
+          <strong>🌐 Want to access Valido from another computer on your network?</strong><br>
+          Open <code id="networkUrl" style="background: rgba(255,255,255,0.8); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace;">http://192.168.1.100:8000</code> in your browser
+        </p>
       </div>
 
       <section id="uploadSection">
@@ -80,7 +82,7 @@
               </svg>
             </div>
             <h2>Step 1: Upload Your Documents</h2>
-            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 500 files per batch.</strong></p>
+            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 2000 pages total.</strong></p>
             
             <div class="upload-area" id="uploadArea">
               <input id="files" name="files" type="file" multiple accept=".pdf,.zip" hidden />
@@ -428,19 +430,7 @@
         </form>
       </section>
 
-      <section id="historySection" style="display:none">
-        <div class="card">
-          <div class="card-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h2>Recent Validations</h2>
-          <p class="card-description">View and re-run your previous document validations</p>
-          <div id="historyList" class="history-list"></div>
-        </div>
-      </section>
+      <!-- Recent/History section removed to reduce complexity -->
 
       <section id="automationSection" style="display:none">
         <div class="card">
@@ -450,75 +440,115 @@
             </svg>
           </div>
           <h2>Automated Folder Processing</h2>
-          <p class="card-description">Schedule automatic validation of folders on your computer</p>
-          
-          <!-- Agent Download Section -->
-          <div class="automation-setup">
-            <div class="setup-step">
-              <div class="step-badge">1</div>
-              <div>
-                <h3>Download Valido Agent</h3>
-                <p>Install the lightweight agent on your computer to enable automatic folder processing</p>
-                <div class="download-buttons">
-                  <a href="/api/v1/agent/download/windows" class="btn btn-primary" download>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M10 14L5 9H8V3H12V9H15L10 14Z" fill="currentColor"/>
-                      <path d="M2 16H18V18H2V16Z" fill="currentColor"/>
-                    </svg>
-                    Download for Windows
-                  </a>
-                  <a href="/api/v1/agent/download/mac" class="btn btn-secondary" download>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M10 14L5 9H8V3H12V9H15L10 14Z" fill="currentColor"/>
-                      <path d="M2 16H18V18H2V16Z" fill="currentColor"/>
-                    </svg>
-                    Download for Mac
-                  </a>
-                </div>
-                <p class="helper">~15MB • No Python required • Windows 7+ / macOS 10.14+</p>
-              </div>
-            </div>
-            
-            <div class="setup-step">
-              <div class="step-badge">2</div>
-              <div>
-                <h3>Run the Agent</h3>
-                <p>Double-click the downloaded file and connect to this server:</p>
-                <div class="server-url-box">
-                  <code id="serverUrl">valido-agent.exe --server http://localhost:9090</code>
-                  <button type="button" class="btn-copy" onclick="copyServerUrl()">Copy</button>
-                </div>
-              </div>
-            </div>
-            
-            <div class="setup-step">
-              <div class="step-badge">3</div>
-              <div>
-                <h3>Configure Folders Below</h3>
-                <p>The agent will automatically pick up your configurations</p>
-              </div>
-            </div>
-          </div>
+          <p class="card-description">Configure folders to automatically validate PDFs on a schedule</p>
 
-          <!-- Watch Folders List -->
-          <div class="watch-folders-container">
-            <div class="section-header">
-              <h3>Watch Folders</h3>
-              <button type="button" class="btn btn-primary" id="btnAddWatchFolder">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Add Watch Folder
-              </button>
-            </div>
-            
-            <div id="watchFoldersList" class="watch-folders-list">
-              <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <p>No watch folders configured yet</p>
-                <p class="helper">Click "Add Watch Folder" to get started</p>
+          <!-- Watch Folder Configuration Form -->
+          <div class="automation-setup">
+            <div class="watch-folder-form">
+              <h3 style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.4em; margin-bottom: 1.5rem;">Configure Watch Folder</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Configuration Name</label>
+                  <input type="text" id="watchFolderName" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="e.g., Daily Invoice Processing" />
+                </div>
+
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Input Folder Path</label>
+                  <div class="input-with-button">
+                    <input type="text" id="watchFolderInput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\ToProcess\" />
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')" id="browseInputBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Browse
+                    </button>
+                  </div>
+                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Click Browse to choose a folder on your system, or paste a network path (\\SERVER\\Share) if the folder is on the network.</p>
+                </div>
+
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Output Folder Path</label>
+                  <div class="input-with-button">
+                    <input type="text" id="watchFolderOutput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\Processed\" />
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderOutput')" id="browseOutputBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Browse
+                    </button>
+                  </div>
+                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Where validated PDFs will be saved</p>
+                </div>
+
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Ruleset to Apply</label>
+                  <select id="watchFolderRuleset" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;">
+                    <option value="">Select a ruleset...</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Schedule (When to Process)</label>
+                  <div class="schedule-times" id="scheduleTimes">
+                    <div class="schedule-time-row">
+                      <input type="time" class="form-input schedule-time-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" value="18:00" />
+                      <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-small" onclick="addScheduleTime()" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                      <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Add Time
+                  </button>
+                </div>
+
+                <div class="form-group">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">After Processing</label>
+                  <div class="radio-group">
+                    <label class="radio-option" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                      <input type="radio" name="afterProcessing" value="leave" checked />
+                      <span>Leave files in input folder</span>
+                    </label>
+                    <label class="radio-option" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                      <input type="radio" name="afterProcessing" value="delete" />
+                      <span>Delete processed files</span>
+                    </label>
+                    <label class="radio-option" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                      <input type="radio" name="afterProcessing" value="move" />
+                      <span>Move to processed folder</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group" id="processedPathGroup" style="display:none">
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Processed Files Folder</label>
+                  <div class="input-with-button">
+                    <input type="text" id="watchFolderProcessed" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\Processed\" />
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderProcessed')" id="browseProcessedBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Browse
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-primary" id="btnSaveWatchFolder" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem 1.5rem;">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M16 5L7.70504 14.595C7.31534 15.0315 6.68466 15.0315 6.29496 14.595L4 12.1818" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Save Watch Folder
+                </button>
+                <button type="button" class="btn btn-ghost" id="btnCancelWatchFolder" style="display:none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem 1.5rem;">
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
@@ -548,110 +578,6 @@
         </div>
       </div>
 
-      <!-- Watch Folder Modal -->
-      <div id="watchFolderModal" class="modal" style="display:none">
-        <div class="modal-overlay"></div>
-        <div class="modal-content modal-large">
-          <div class="modal-header">
-            <h3 id="watchFolderModalTitle">Add Watch Folder</h3>
-            <button type="button" class="modal-close" id="watchFolderModalClose">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Configuration Name</label>
-              <input type="text" id="watchFolderName" class="modal-input" placeholder="e.g., Daily Invoice Processing" />
-            </div>
-            
-            <div class="form-group">
-              <label>Input Folder Path</label>
-              <div class="input-with-button">
-                <input type="text" id="watchFolderInput" class="modal-input" placeholder="C:\Invoices\ToProcess\" />
-                <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Browse
-                </button>
-              </div>
-              <p class="helper">Local folder (C:\) or network path (\\\\SERVER\\Share\\)</p>
-            </div>
-            
-            <div class="form-group">
-              <label>Ruleset to Apply</label>
-              <select id="watchFolderRuleset" class="modal-input">
-                <option value="">Select a ruleset...</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label>Schedule (When to Process)</label>
-              <div class="schedule-times" id="scheduleTimes">
-                <div class="schedule-time-row">
-                  <input type="time" class="modal-input schedule-time-input" value="18:00" />
-                  <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btnAddScheduleTime">
-                + Add Another Time
-              </button>
-            </div>
-            
-            <div class="form-group">
-              <label>Results Folder</label>
-              <div class="input-with-button">
-                <input type="text" id="watchFolderOutput" class="modal-input" placeholder="C:\Invoices\Results\" />
-                <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderOutput')">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Browse
-                </button>
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label>After Processing</label>
-              <div class="radio-group">
-                <label class="radio-option">
-                  <input type="radio" name="afterProcessing" value="move" checked />
-                  <span>Move files to:</span>
-                </label>
-                <div class="input-with-button" style="margin-left: 24px; margin-top: 8px;">
-                  <input type="text" id="watchFolderProcessedPath" class="modal-input" placeholder="C:\Invoices\Processed\" />
-                  <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderProcessedPath')">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Browse
-                  </button>
-                </div>
-                
-                <label class="radio-option" style="margin-top: 12px;">
-                  <input type="radio" name="afterProcessing" value="leave" />
-                  <span>Leave files in place</span>
-                </label>
-                
-                <label class="radio-option" style="margin-top: 12px;">
-                  <input type="radio" name="afterProcessing" value="delete" />
-                  <span>Delete files (⚠️ use with caution)</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" id="watchFolderModalCancel">Cancel</button>
-            <button type="button" class="btn btn-primary" id="watchFolderModalSave">Save Configuration</button>
-          </div>
-        </div>
-      </div>
 
       <div class="footer-bar">
         <div class="footer-main">

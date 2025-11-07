@@ -1,7 +1,4 @@
 # app/tasks/worker_tasks.py
-# Refactored so core logic is a synchronous callable usable by both Celery workers
-# and the single-process in-process runner.
-
 import time
 import io
 import zipfile
@@ -12,56 +9,23 @@ import re
 from typing import List, Dict, Any, Optional, Tuple, Callable
 from datetime import datetime
 
-# celery_app may or may not be present depending on runtime environment.
-# In your repo it exists; importing here preserves compatibility for Celery-based deployments.
-try:
-    from backend.celery_app import celery_app
-except Exception:
-    celery_app = None  # safe fallback for single-process packaging
-
-# Import the parser and validator from the app package.
 from app.services.parser import extract_text_from_bytes, is_valid_pdf
 from app.services.validator import validate_text
 
 
-# -------------------------
-# Helper: chunk demo task (kept for compatibility)
-# -------------------------
-if celery_app is not None:
-    @celery_app.task(bind=True)
-    def process_in_chunks_worker(self, items: List[Any], chunk_size: int = 50):
-        total = len(items or [])
-        processed = 0
-        outputs = []
-        for i in range(0, total, chunk_size):
-            chunk = items[i : i + chunk_size]
-            time.sleep(0.01)
-            chunk_out = [len(x) if isinstance(x, (str, bytes)) else 1 for x in chunk]
-            outputs.extend(chunk_out)
-            processed += len(chunk)
-            try:
-                self.update_state(state="PROGRESS", meta={"processed": processed, "total": total})
-            except Exception:
-                pass
-        return {"status": "completed", "total": total, "processed": processed, "sample": outputs[:10]}
-else:
-    # Provide a no-Celery fallback (callable) for local use
-    def process_in_chunks_worker(items: List[Any], chunk_size: int = 50):
-        total = len(items or [])
-        processed = 0
-        outputs = []
-        for i in range(0, total, chunk_size):
-            chunk = items[i : i + chunk_size]
-            time.sleep(0.01)
-            chunk_out = [len(x) if isinstance(x, (str, bytes)) else 1 for x in chunk]
-            outputs.extend(chunk_out)
-            processed += len(chunk)
-        return {"status": "completed", "total": total, "processed": processed, "sample": outputs[:10]}
+def process_in_chunks_worker(items: List[Any], chunk_size: int = 50):
+    total = len(items or [])
+    processed = 0
+    outputs = []
+    for i in range(0, total, chunk_size):
+        chunk = items[i : i + chunk_size]
+        time.sleep(0.01)
+        chunk_out = [len(x) if isinstance(x, (str, bytes)) else 1 for x in chunk]
+        outputs.extend(chunk_out)
+        processed += len(chunk)
+    return {"status": "completed", "total": total, "processed": processed, "sample": outputs[:10]}
 
 
-# -------------------------
-# Core sync processor (callable)
-# -------------------------
 def process_pdfs_sync(
     files: List[Dict],
     rules: Optional[Dict] = None,
@@ -69,17 +33,6 @@ def process_pdfs_sync(
     results_dir: Optional[str] = None,
     progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
 ) -> Dict:
-    """
-    Synchronous callable that processes uploaded PDFs (or ZIPs).
-    - files: list of {"filename": str, "content": bytes}
-    - rules: optional dict for validator
-    - username: optional username for DB counters
-    - results_dir: directory path where results will be written (must exist or will be created)
-    - progress_callback: optional callable(progress_state, meta_dict)
-      Example: lambda state, meta: celery_self.update_state(state=state, meta=meta)
-    Returns a dict summary with same structure as previous Celery task.
-    """
-    # helper to emit progress if provided
     def _emit_progress(state: str, meta: Dict[str, Any]):
         try:
             if progress_callback:
@@ -90,7 +43,6 @@ def process_pdfs_sync(
     reports = []
     total_files = 0
 
-    # Expand zip files
     expanded_files: List[Dict[str, Any]] = []
     for entry in files:
         filename = entry.get("filename")
@@ -121,24 +73,26 @@ def process_pdfs_sync(
     total = len(expanded_files)
     processed = 0
 
+    _emit_progress("PROGRESS", {"processed": 0, "total": total, "current_file": "", "percent": 0})
+
     for f in expanded_files:
         fname = f.get("filename")
         content = f.get("content") or b''
 
-        # Progress update
-        _emit_progress("PROGRESS", {
-            "processed": processed,
-            "total": total,
-            "current_file": fname,
-            "percent": int((processed / total * 100)) if total > 0 else 0
-        })
+        _emit_progress(
+            "PROGRESS",
+            {
+                "processed": processed,
+                "total": total,
+                "current_file": fname,
+                "percent": int((processed / total * 100)) if total > 0 else 0,
+            },
+        )
 
-        # Debug prints (safe for local logs)
         print(f"Processing {fname}: received {len(content)} bytes")
         if content:
             print(f"First 20 bytes: {content[:20]}")
 
-        # Basic validation
         valid = False
         try:
             valid = is_valid_pdf(content or b'')
@@ -151,13 +105,17 @@ def process_pdfs_sync(
         if not valid:
             reports.append({"filename": fname, "error": "invalid or corrupted pdf"})
             processed += 1
-            _emit_progress("PROGRESS", {
-                "processed": processed, "total": total, "current_file": fname,
-                "percent": int((processed / total * 100)) if total > 0 else 0
-            })
+            _emit_progress(
+                "PROGRESS",
+                {
+                    "processed": processed,
+                    "total": total,
+                    "current_file": fname,
+                    "percent": int((processed / total * 100)) if total > 0 else 0,
+                },
+            )
             continue
 
-        # Extract and validate
         try:
             text = extract_text_from_bytes(content or b'')
             report = validate_text(text, rules)
@@ -166,25 +124,26 @@ def process_pdfs_sync(
             reports.append({"filename": fname, "error": f"processing error: {exc}"})
 
         processed += 1
-        _emit_progress("PROGRESS", {
-            "processed": processed, "total": total, "current_file": fname,
-            "percent": int((processed / total * 100)) if total > 0 else 0
-        })
+        _emit_progress(
+            "PROGRESS",
+            {
+                "processed": processed,
+                "total": total,
+                "current_file": fname,
+                "percent": int((processed / total * 100)) if total > 0 else 0,
+            },
+        )
 
-    # Prepare results directory and files
-    # Determine or create task_id/results_dir
     task_id = None
     if results_dir:
         results_dir = os.path.abspath(results_dir)
         task_id = os.path.basename(results_dir.rstrip("/\\"))
     else:
-        # fallback: generate a timestamp-id
         task_id = datetime.utcnow().strftime('%s')
         results_dir = os.path.abspath(os.path.join(os.getcwd(), 'results', task_id))
 
     os.makedirs(results_dir, exist_ok=True)
 
-    # Helper functions (same detection/extraction/validation logic as before)
     def detect_signed(t: str) -> Tuple[str, str]:
         if not t:
             return 'No', ''
@@ -314,7 +273,6 @@ def process_pdfs_sync(
         else:
             return all_matches[0]
 
-    # Parse rules into checks & fields
     validation_checks = []
     extraction_fields = []
     must_contain_rules = []
@@ -339,7 +297,6 @@ def process_pdfs_sync(
                 must_not_contain_rules.append(validations['must_not_contain'])
             if validations.get('page_count'):
                 page_count_rules = validations['page_count']
-        # backward compatibility keys
         if rules.get('validate_signed'):
             validation_checks.append('signed')
         if rules.get('validate_dated'):
@@ -357,12 +314,10 @@ def process_pdfs_sync(
                 elif isinstance(field, str):
                     extraction_fields.append({'name': field, 'strategy': 'first'})
 
-    # Build CSV rows
     csv_rows = []
     for entry in reports:
         fname = entry.get('filename')
         err = entry.get('error', '')
-        # find content & text
         text = ''
         content_bytes = b''
         try:
@@ -435,7 +390,6 @@ def process_pdfs_sync(
 
         csv_rows.append(row)
 
-    # Determine CSV columns
     if csv_rows:
         fieldnames = list(csv_rows[0].keys())
     else:
@@ -463,7 +417,6 @@ def process_pdfs_sync(
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.write(csv_path, csv_filename)
 
-    # Optional DB counter increment
     if username:
         try:
             from app.db import get_session
@@ -493,40 +446,5 @@ def process_pdfs_sync(
     }
 
 
-# -------------------------
-# Celery task registration (backwards compatibility)
-# -------------------------
-# Register a Celery task that calls the sync function, but keep `process_pdfs`
-# name bound to the synchronous function for imports used by the local runner.
-if celery_app is not None:
-    # We register a named Celery task that will call process_pdfs_sync and
-    # compute results_dir from the Celery request id (to mimic earlier behavior).
-    def _celery_progress_callback(self):
-        # creates a callback closure to call self.update_state
-        def cb(state: str, meta: Dict[str, Any]):
-            try:
-                self.update_state(state=state, meta=meta)
-            except Exception:
-                pass
-        return cb
-
-    def _make_celery_task(func):
-        # wrap so Celery gets a task named exactly as before
-        @celery_app.task(bind=True, name='backend.app.tasks.worker_tasks.process_pdfs')
-        def _task(self, files, rules=None, username=None):
-            # compute results_dir from request id
-            task_id = getattr(self.request, 'id', None) or datetime.utcnow().strftime('%s')
-            results_dir = os.path.abspath(os.path.join(os.getcwd(), 'results', task_id))
-            os.makedirs(results_dir, exist_ok=True)
-            return func(files, rules, username, results_dir, progress_callback=_celery_progress_callback(self))
-        return _task
-
-    # Register the celery task (keeps Celery deployments working)
-    try:
-        process_pdfs_celery = _make_celery_task(process_pdfs_sync)
-    except Exception:
-        process_pdfs_celery = None
-
-# Export name `process_pdfs` as the synchronous function for local runner compatibility.
-# This lets `from app.tasks.worker_tasks import process_pdfs` return a plain callable.
+# backward-compatible export name
 process_pdfs = process_pdfs_sync

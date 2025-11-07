@@ -1,12 +1,28 @@
 // Main application logic for Valido - user-friendly step-by-step validation
 (() => {
   function init() {
+    // Set network URL dynamically
+    const networkUrlEl = document.getElementById('networkUrl');
+    if (networkUrlEl) {
+      // Fetch network info from backend
+      fetch('/api/v1/network-info')
+        .then(response => response.json())
+        .then(data => {
+          networkUrlEl.textContent = data.network;
+        })
+        .catch(error => {
+          console.warn('Failed to fetch network info:', error);
+          // Fallback to localhost
+          const host = window.location.hostname;
+          const port = window.location.port || '80';
+          networkUrlEl.textContent = `http://${host}:${port}`;
+        });
+    }
+
     // Elements
     const form = document.getElementById('uploadForm');
-    const navUpload = document.getElementById('navUpload');
-    const navHistory = document.getElementById('navHistory');
-    const uploadSection = document.getElementById('uploadSection');
-    const historySection = document.getElementById('historySection');
+  const navUpload = document.getElementById('navUpload');
+  const uploadSection = document.getElementById('uploadSection');
     
     const filesInput = document.getElementById('files');
     const uploadArea = document.getElementById('uploadArea');
@@ -295,10 +311,28 @@
         recordHistory(taskId);
         
         // Poll for completion
-        statusTitle.textContent = 'Validating your documents...';
-        statusMessage.textContent = 'This may take a few moments';
-        progressFill.style.width = '30%';
-        
+        // If the user uploaded only non-ZIP files we can show an immediate "Processing 1 of N" count.
+        // If there are ZIPs, show a clear expanding message and rely on the immediate poll to update the true total.
+        try {
+          const fileList = Array.from(files || []);
+          const hasZip = fileList.some(f => f.name && f.name.toLowerCase().endsWith('.zip'));
+          if (!hasZip && fileList.length > 0) {
+            const totalCount = fileList.length;
+            statusTitle.textContent = `Processing 1 of ${totalCount} documents...`;
+            statusMessage.textContent = `Current: ${escapeHtml(fileList[0].name)}`;
+            progressFill.style.width = '35%';
+          } else {
+            statusTitle.textContent = 'Processing documents...';
+            statusMessage.textContent = 'Expanding ZIP(s) and preparing files for validation';
+            progressFill.style.width = '35%';
+          }
+        } catch (e) {
+          // Fallback to generic message on any error
+          statusTitle.textContent = 'Processing documents...';
+          statusMessage.textContent = 'Preparing files for validation';
+          progressFill.style.width = '35%';
+        }
+
         const result = await pollTask(taskId);
         
         // Debug: log the task result to see what we received
@@ -323,7 +357,7 @@
       const interval = 1500;
       
       return new Promise((resolve) => {
-        const timer = setInterval(async () => {
+        const poll = async () => {
           attempts++;
           
           try {
@@ -343,20 +377,22 @@
               const currentFile = json.info.current_file || '';
               
               if (total > 0) {
+                // Show "Processing X of Y" starting from 1
+                const displayProcessed = Math.max(1, processed + 1);
                 const percent = Math.min(95, 30 + (processed / total * 65));
                 progressFill.style.width = `${percent}%`;
-                statusTitle.textContent = `Processing ${processed} of ${total} documents...`;
+                statusTitle.textContent = `Processing ${displayProcessed} of ${total} documents...`;
                 if (currentFile) {
                   statusMessage.textContent = `Current: ${currentFile.substring(0, 40)}${currentFile.length > 40 ? '...' : ''}`;
                 } else {
                   statusMessage.textContent = `${Math.round(percent)}% complete`;
                 }
+              } else {
+                // Show initial processing state
+                progressFill.style.width = '35%';
+                statusTitle.textContent = 'Processing documents...';
+                statusMessage.textContent = 'Preparing files for validation';
               }
-            } else if (json.info && json.info.processed && json.info.total) {
-              // Fallback for non-PROGRESS states
-              const percent = Math.min(95, 30 + (json.info.processed / json.info.total * 65));
-              progressFill.style.width = `${percent}%`;
-              statusMessage.textContent = `Processing document ${json.info.processed} of ${json.info.total}`;
             }
             
             if (json.state === 'SUCCESS' || json.state === 'FAILURE' || json.state === 'REVOKED') {
@@ -373,7 +409,12 @@
             clearInterval(timer);
             resolve({ state: 'FAILURE', info: { error: err.message } });
           }
-        }, interval);
+        };
+        
+        // Poll immediately
+        poll();
+        
+        const timer = setInterval(poll, interval);
       });
     }
     
@@ -399,21 +440,61 @@
       if (successMessageEl) successMessageEl.textContent = hasFields ? 'Your documents have been processed and extracted successfully.' : 'Your documents have been validated successfully.';
 
       // The API returns task result in 'info' field when state is SUCCESS
-      // Worker returns {status, total, processed, files, result_files: {csv: path, report_json: path}}
+      // Worker may return progress/result either directly as top-level keys
+      // or nested under a `result` key — handle both shapes.
       const resultInfo = (taskResult && taskResult.info) || {};
-      const zipFromResult = (resultInfo.result_files && resultInfo.result_files.zip) || `/api/v1/tasks/${taskId}/results.zip`;
+
+      // Normalize to find result_files.zip regardless of nesting
+      let zipFromResult = null;
+      if (resultInfo.result_files && resultInfo.result_files.zip) {
+        zipFromResult = resultInfo.result_files.zip;
+      } else if (resultInfo.result && resultInfo.result.result_files && resultInfo.result.result_files.zip) {
+        zipFromResult = resultInfo.result.result_files.zip;
+      } else if (resultInfo.zip) {
+        zipFromResult = resultInfo.zip;
+      }
+      if (!zipFromResult) zipFromResult = `/api/v1/tasks/${taskId}/results.zip`;
 
       // Show download button for ZIP only
       if (zipFromResult) {
-        downloadLink.innerHTML = `
-          <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Download Results
-          </a>
-        `;
+        // Fetch results path to show local directory
+        fetch('/api/v1/results-path')
+          .then(response => {
+            console.log('Results path response status:', response.status);
+            return response.json();
+          })
+          .then(pathData => {
+            console.log('Results path data:', pathData);
+            const resultsPath = pathData.results_directory;
+            downloadLink.innerHTML = `
+              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 14V16C2 17.1046 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Download Results
+              </a>
+              <div class="results-location" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <p style="margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 0.9em; color: #475569;">
+                  <strong>📁 Results Location:</strong><br>
+                  <code style="background: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; border-radius: 3px; font-family: 'Courier New', monospace;">${resultsPath}</code>
+                </p>
+              </div>
+            `;
+          })
+          .catch(error => {
+            console.warn('Failed to fetch results path:', error);
+            console.log('Falling back to download link without results path');
+            downloadLink.innerHTML = `
+              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 14V16C2 17.1046 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Download Results
+              </a>
+            `;
+          });
       } else {
         downloadLink.innerHTML = '<p class="helper">Results are ready but download link is not available.</p>';
       }
@@ -456,7 +537,7 @@
           rulesSummary: document.getElementById('rulesPreview')?.textContent || '',
           task_id: taskId
         };
-        window.pushHistory && window.pushHistory(historyEntry);
+  // Recent/history feature removed — do not store history entries.
       } catch(e) {
         console.warn('Failed to record history:', e);
       }
@@ -484,37 +565,25 @@
       navigateToStep(1);
     });
     
-    // Navigation between sections
+    // Navigation between sections (Recent/History tab removed)
     const navAutomation = document.getElementById('navAutomation');
     const automationSection = document.getElementById('automationSection');
-    
-    if (navUpload && navHistory && navAutomation && uploadSection && historySection && automationSection) {
+
+    if (navUpload && navAutomation && uploadSection && automationSection) {
       navUpload.addEventListener('click', () => {
         uploadSection.style.display = 'block';
-        historySection.style.display = 'none';
         automationSection.style.display = 'none';
         navUpload.classList.add('active');
-        navHistory.classList.remove('active');
         navAutomation.classList.remove('active');
+        // Ensure other sections hidden
+        // (historySection removed)
       });
-      
-      navHistory.addEventListener('click', () => {
-        uploadSection.style.display = 'none';
-        historySection.style.display = 'block';
-        automationSection.style.display = 'none';
-        navHistory.classList.add('active');
-        navUpload.classList.remove('active');
-        navAutomation.classList.remove('active');
-        window.renderHistory && window.renderHistory();
-      });
-      
+
       navAutomation.addEventListener('click', () => {
         uploadSection.style.display = 'none';
-        historySection.style.display = 'none';
         automationSection.style.display = 'block';
         navAutomation.classList.add('active');
         navUpload.classList.remove('active');
-        navHistory.classList.remove('active');
         window.initAutomation && window.initAutomation();
       });
     }

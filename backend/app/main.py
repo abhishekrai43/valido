@@ -11,6 +11,7 @@ import asyncio
 import time
 import traceback
 import glob
+import sys
 from typing import List, Optional, Dict, Any
 
 # keep your service imports (business logic)
@@ -20,6 +21,19 @@ from .utils.logger import get_logger
 from .db import get_session
 from .models import User, Ruleset, WatchFolder
 from .license import get_license_banner, LicenseManager
+# Optional: load .env for local development (contains OPENAI_API_KEY)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    # dotenv is optional; environment variables are preferred in production
+    pass
+
+# AI stub import (generate ruleset using OpenAI)
+try:
+    from .routes.ai_stub import generate_ruleset_from_prompt
+except Exception:
+    generate_ruleset_from_prompt = None
 
 logger = get_logger("ValidoMain")
 
@@ -33,6 +47,38 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Network info utility
+def get_local_ip():
+    """Get the local IP address for network access."""
+    try:
+        # Create a socket to get the local IP
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))  # Connect to Google DNS
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        return "192.168.1.100"  # Fallback
+
+@app.get("/api/v1/network-info")
+def get_network_info():
+    """Get network access information."""
+    local_ip = get_local_ip()
+    return {
+        "localhost": "http://localhost:8000",
+        "network": f"http://{local_ip}:8000"
+    }
+
+@app.get("/api/v1/results-path")
+def get_results_path():
+    """Get the local path where results are stored."""
+    results_dir = os.path.abspath(os.path.join(os.getcwd(), "results"))
+    return {
+        "results_directory": results_dir,
+        "exists": os.path.exists(results_dir)
+    }
 
 # Simple in-memory task registry.
 # Structure:
@@ -237,9 +283,15 @@ async def submit_files(
     # Validate file types and sizes
     total_size = 0
     for f in files:
-        if not f.filename or not f.filename.lower().endswith('.pdf'):
+        if not f.filename:
+            logger.warning("File without filename")
+            raise HTTPException(status_code=400, detail="File must have a filename")
+        
+        filename_lower = f.filename.lower()
+        if not (filename_lower.endswith('.pdf') or filename_lower.endswith('.zip')):
             logger.warning(f"Invalid file type: {f.filename}")
-            raise HTTPException(status_code=400, detail=f"Only PDF files allowed: {f.filename}")
+            raise HTTPException(status_code=400, detail=f"Only PDF and ZIP files allowed: {f.filename}")
+        
         # Read file to check size (limit to 50MB per file)
         content = await f.read()
         if len(content) > 50 * 1024 * 1024:
@@ -297,7 +349,7 @@ async def submit_files(
     results_dir = ensure_results_dir(task_id)
     logger.info(f"Task {task_id} created, results dir: {results_dir}")
 
-    # Submit task to local worker
+    # Submit task to local worker with the same task_id
     try:
         from local_worker import submit_task
         worker_task_id = submit_task(
@@ -305,9 +357,10 @@ async def submit_files(
             files=payload,
             rules=parsed_rules,
             username=username,
-            results_dir=results_dir
+            results_dir=results_dir,
+            task_id=task_id  # Pass the task_id to use the same ID
         )
-        logger.info(f"Task {task_id} submitted to local worker as {worker_task_id}")
+        logger.info(f"Task {task_id} submitted to local worker")
     except Exception as e:
         logger.error(f"Failed to submit task to local worker: {e}")
         return JSONResponse(content={"task_id": task_id, "error": "Failed to submit task"})
@@ -333,17 +386,60 @@ async def get_task_status(task_id: str):
         from local_worker import get_task_status as get_worker_status
         task_info = get_worker_status(task_id)
         if task_info:
-            state = task_info["status"]
-            info = {
-                "result": task_info.get("result"),
-                "error": task_info.get("error"),
-            }
+            state = task_info.get("status")
+            # Normalize info so frontend can access processed/total/current_file at top-level
+            info = {}
+            result = task_info.get("result")
+            if isinstance(result, dict):
+                # merge common progress keys to top-level info
+                info.update(result)
+            else:
+                info["result"] = result
+            # include error if present
+            info["error"] = task_info.get("error")
             return JSONResponse(content={"task_id": task_id, "state": state, "info": info})
         else:
             return JSONResponse(content={"task_id": task_id, "state": "UNKNOWN", "info": None})
     except Exception as e:
         logger.error(f"Failed to get task status from worker: {e}")
         return JSONResponse(content={"task_id": task_id, "state": "UNKNOWN", "info": None})
+
+
+# --- AI generation endpoint (wraps ai_stub.generate_ruleset_from_prompt) ---
+@app.post("/api/v1/ai/generate")
+async def ai_generate(payload: Dict[str, Any]):
+    """Generate a structured ruleset from a natural language prompt using OpenAI.
+
+    Expects JSON payload: { "prompt": "..." }
+    The OpenAI API key must be set in the environment variable OPENAI_API_KEY or in a .env file.
+    """
+    prompt = payload.get("prompt") if isinstance(payload, dict) else None
+    if not prompt or not isinstance(prompt, str):
+        raise HTTPException(status_code=400, detail="Missing 'prompt' in request body")
+
+    # Ensure ai_stub is available
+    if generate_ruleset_from_prompt is None:
+        raise HTTPException(status_code=500, detail="AI generation is not available (ai_stub import failed)")
+
+    # Read API key from environment
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set in environment")
+
+    # Create OpenAI client lazily so we don't require it at import time
+    try:
+        from openai import OpenAI
+    except Exception as e:
+        logger.error(f"OpenAI SDK not installed: {e}")
+        raise HTTPException(status_code=500, detail="OpenAI SDK not installed on server")
+
+    try:
+        client = OpenAI(api_key=api_key)
+        ruleset = generate_ruleset_from_prompt(prompt, client)
+        return JSONResponse(content={"ok": True, "ruleset": ruleset})
+    except Exception as e:
+        logger.error(f"AI generation error: {e}")
+        return JSONResponse(content={"ok": False, "error": str(e)})
 
 
 # -- Download endpoints remain the same and rely on results folder layout --
@@ -449,16 +545,28 @@ except Exception as e:
 
 # Serve frontend static files (same logic)
 try:
-    candidates = [
-        os.path.abspath(os.path.join(os.getcwd(), '..', 'frontend')),
-        os.path.abspath(os.path.join(os.getcwd(), 'frontend')),
-        '/app/frontend',
-        os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'frontend')),
-    ]
-    for frontend_dir in candidates:
-        if frontend_dir and os.path.exists(frontend_dir):
-            app.mount('/', StaticFiles(directory=frontend_dir, html=True), name='frontend')
-            logger.info(f"Frontend served from {frontend_dir}")
-            break
+    # When running as PyInstaller executable, frontend is bundled
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller executable
+        frontend_dir = os.path.join(sys._MEIPASS, 'frontend')
+    else:
+        # Running as script
+        candidates = [
+            os.path.abspath(os.path.join(os.getcwd(), '..', 'frontend')),
+            os.path.abspath(os.path.join(os.getcwd(), 'frontend')),
+            '/app/frontend',
+            os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'frontend')),
+        ]
+        frontend_dir = None
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                frontend_dir = candidate
+                break
+
+    if frontend_dir and os.path.exists(frontend_dir):
+        app.mount('/', StaticFiles(directory=frontend_dir, html=True), name='frontend')
+        logger.info(f"Frontend served from {frontend_dir}")
+    else:
+        logger.warning("Frontend directory not found")
 except Exception as e:
     logger.warning(f"Failed to mount frontend: {e}")

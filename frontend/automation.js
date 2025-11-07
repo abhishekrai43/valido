@@ -17,6 +17,9 @@ async function initAutomation() {
     await loadWatchFolders();
     await loadRulesetsForDropdown();
     setupEventListeners();
+    clearWatchFolderForm(); // Clear form on initialization
+    // Configure browse buttons: show local-folder browse when available; otherwise advise pasting UNC network paths
+    setupBrowseButtons();
 }
 
 // Load watch folders from server
@@ -61,7 +64,7 @@ function renderWatchFolders() {
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <p>No watch folders configured yet</p>
-                <p class="helper">Click "Add Watch Folder" to get started</p>
+                <p class="helper">Configure your first watch folder above</p>
             </div>
         `;
         return;
@@ -152,37 +155,72 @@ function formatAfterProcessing(folder) {
 
 // Setup event listeners
 function setupEventListeners() {
-    document.getElementById('btnAddWatchFolder').addEventListener('click', openAddWatchFolderModal);
-    document.getElementById('watchFolderModalClose').addEventListener('click', closeWatchFolderModal);
-    document.getElementById('watchFolderModalCancel').addEventListener('click', closeWatchFolderModal);
-    document.getElementById('watchFolderModalSave').addEventListener('click', saveWatchFolder);
-    document.getElementById('btnAddScheduleTime').addEventListener('click', addScheduleTimeRow);
+    document.getElementById('btnSaveWatchFolder').addEventListener('click', saveWatchFolder);
+    document.getElementById('btnCancelWatchFolder').addEventListener('click', cancelEditWatchFolder);
     
-    // Update server URL dynamically
+    // After processing radio buttons
+    document.querySelectorAll('input[name="afterProcessing"]').forEach(radio => {
+        radio.addEventListener('change', toggleProcessedPathField);
+    });
+    
+    // Update server URL dynamically (for any remaining references)
     const serverUrl = document.getElementById('serverUrl');
     if (serverUrl) {
         serverUrl.textContent = `valido-agent.exe --server ${window.location.origin}`;
     }
 }
 
-// Open add watch folder modal
-async function openAddWatchFolderModal() {
-    editingWatchFolderId = null;
-    document.getElementById('watchFolderModalTitle').textContent = 'Add Watch Folder';
+// Setup browse buttons based on browser capabilities
+// Setup browse buttons based on browser capabilities
+function setupBrowseButtons() {
+    const browseButtons = ['browseInputBtn', 'browseOutputBtn', 'browseProcessedBtn'];
+    browseButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        const inputId = btnId === 'browseInputBtn' ? 'watchFolderInput' : (btnId === 'browseOutputBtn' ? 'watchFolderOutput' : 'watchFolderProcessed');
+        const input = document.getElementById(inputId);
+        if (!btn || !input) return;
+
+        // If the browser supports showDirectoryPicker we keep the Browse button visible
+        if ('showDirectoryPicker' in window) {
+            btn.style.display = '';
+            // Helper text: instruct user to paste UNC for network shares because browser cannot return the full UNC path
+            const helper = input.parentElement.querySelector('.helper') || input.parentElement.parentElement.querySelector('.helper');
+            if (helper) {
+                helper.textContent = 'Click Browse to choose a folder on your system, or paste a network path (\\SERVER\\Share) if the folder is on the network.';
+                helper.style.color = 'var(--text-secondary, #6b7280)';
+            }
+        } else {
+            // Hide the browse button if the browser doesn't support directory picker and instruct to paste UNC
+            btn.style.display = 'none';
+            const helper = input.parentElement.querySelector('.helper') || input.parentElement.parentElement.querySelector('.helper');
+            if (helper) {
+                helper.textContent = 'Paste the full path (e.g., C:\\Folder or \\\\SERVER\\Share\\Folder)';
+                helper.style.color = 'var(--text-secondary, #6b7280)';
+            }
+        }
+    });
+}
+
+// Toggle processed path field visibility
+function toggleProcessedPathField() {
+    const moveRadio = document.querySelector('input[name="afterProcessing"][value="move"]');
+    const processedPathGroup = document.getElementById('processedPathGroup');
+    processedPathGroup.style.display = moveRadio.checked ? 'block' : 'none';
+}
+
+// Clear watch folder form
+function clearWatchFolderForm() {
     document.getElementById('watchFolderName').value = '';
     document.getElementById('watchFolderInput').value = '';
     document.getElementById('watchFolderOutput').value = '';
     document.getElementById('watchFolderRuleset').value = '';
-    document.getElementById('watchFolderProcessedPath').value = '';
-    
-    // Reload rulesets to ensure dropdown is populated
-    await loadRulesetsForDropdown();
+    document.getElementById('watchFolderProcessed').value = '';
     
     // Reset schedule times to one default
     const container = document.getElementById('scheduleTimes');
     container.innerHTML = `
         <div class="schedule-time-row">
-            <input type="time" class="modal-input schedule-time-input" value="18:00" />
+            <input type="time" class="form-input schedule-time-input" value="18:00" />
             <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -191,30 +229,16 @@ async function openAddWatchFolderModal() {
         </div>
     `;
     
-    document.querySelector('input[name="afterProcessing"][value="move"]').checked = true;
+    document.querySelector('input[name="afterProcessing"][value="leave"]').checked = true;
+    toggleProcessedPathField();
     
-    document.getElementById('watchFolderModal').style.display = 'flex';
+    document.getElementById('btnCancelWatchFolder').style.display = 'none';
 }
 
-// Close modal
-function closeWatchFolderModal() {
-    document.getElementById('watchFolderModal').style.display = 'none';
-}
-
-// Add schedule time row
-function addScheduleTimeRow() {
-    const container = document.getElementById('scheduleTimes');
-    const row = document.createElement('div');
-    row.className = 'schedule-time-row';
-    row.innerHTML = `
-        <input type="time" class="modal-input schedule-time-input" value="18:00" />
-        <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </button>
-    `;
-    container.appendChild(row);
+// Cancel edit (clear form and reset to add mode)
+function cancelEditWatchFolder() {
+    editingWatchFolderId = null;
+    clearWatchFolderForm();
 }
 
 // Remove schedule time row
@@ -225,13 +249,29 @@ function removeScheduleTime(button) {
     }
 }
 
+// Add schedule time row
+function addScheduleTime() {
+    const container = document.getElementById('scheduleTimes');
+    const row = document.createElement('div');
+    row.className = 'schedule-time-row';
+    row.innerHTML = `
+        <input type="time" class="form-input schedule-time-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" value="18:00" />
+        <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+    `;
+    container.appendChild(row);
+}
+
 // Save watch folder
 async function saveWatchFolder() {
     const name = document.getElementById('watchFolderName').value.trim();
     const inputPath = document.getElementById('watchFolderInput').value.trim();
     const outputPath = document.getElementById('watchFolderOutput').value.trim();
     const rulesetId = parseInt(document.getElementById('watchFolderRuleset').value);
-    const processedPath = document.getElementById('watchFolderProcessedPath').value.trim();
+    const processedPath = document.getElementById('watchFolderProcessed').value.trim();
     
     if (!name || !inputPath || !outputPath || !rulesetId) {
         showToast('Please fill in all required fields', 'error');
@@ -273,7 +313,7 @@ async function saveWatchFolder() {
         });
         
         if (response.ok) {
-            closeWatchFolderModal();
+            cancelEditWatchFolder(); // Clear form instead of closing modal
             await loadWatchFolders();
             showToast('✓ Watch folder saved successfully!', 'success');
         } else {
@@ -291,19 +331,20 @@ async function editWatchFolder(id) {
     if (!folder) return;
     
     editingWatchFolderId = id;
-    document.getElementById('watchFolderModalTitle').textContent = 'Edit Watch Folder';
+    
+    // Populate form fields
     document.getElementById('watchFolderName').value = folder.name;
     document.getElementById('watchFolderInput').value = folder.input_path;
     document.getElementById('watchFolderOutput').value = folder.output_path;
     document.getElementById('watchFolderRuleset').value = folder.ruleset_id;
-    document.getElementById('watchFolderProcessedPath').value = folder.processed_path || '';
+    document.getElementById('watchFolderProcessed').value = folder.processed_path || '';
     
     // Set schedule times
     const times = JSON.parse(folder.schedule_times || '["18:00"]');
     const container = document.getElementById('scheduleTimes');
     container.innerHTML = times.map(time => `
         <div class="schedule-time-row">
-            <input type="time" class="modal-input schedule-time-input" value="${time}" />
+            <input type="time" class="form-input schedule-time-input" value="${time}" />
             <button type="button" class="btn-icon" onclick="removeScheduleTime(this)" title="Remove">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -321,7 +362,13 @@ async function editWatchFolder(id) {
         document.querySelector('input[name="afterProcessing"][value="leave"]').checked = true;
     }
     
-    document.getElementById('watchFolderModal').style.display = 'flex';
+    toggleProcessedPathField();
+    
+    // Show cancel button
+    document.getElementById('btnCancelWatchFolder').style.display = 'inline-block';
+    
+    // Scroll to form
+    document.querySelector('.watch-folder-form').scrollIntoView({ behavior: 'smooth' });
 }
 
 // Toggle watch folder enabled/disabled

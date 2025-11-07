@@ -27,15 +27,16 @@ class LocalWorker:
         self._shutdown = False
         logger.info(f"LocalWorker initialized with {max_workers} max workers")
 
-    def submit_task(self, task_type: str, **kwargs) -> str:
+    def submit_task(self, task_type: str, task_id: Optional[str] = None, **kwargs) -> str:
         """Submit a task for execution. Returns task ID."""
-        task_id = str(uuid.uuid4())
+        if task_id is None:
+            task_id = str(uuid.uuid4())
         self.tasks[task_id] = {
             "id": task_id,
             "type": task_type,
-            "status": "PENDING",
+            "status": "PROGRESS",  # Set to PROGRESS immediately so frontend shows processing
             "kwargs": kwargs,
-            "result": None,
+            "result": {"processed": 0, "total": 0, "current_file": "", "percent": 0},  # Initialize progress info
             "error": None,
             "created_at": time.time(),
             "updated_at": time.time(),
@@ -58,8 +59,29 @@ class LocalWorker:
             task["updated_at"] = time.time()
             logger.info(f"Starting task {task_id}")
 
+            # Create a progress callback that updates the in-memory task entry
+            def _progress_cb(state: str, meta: Dict[str, Any]):
+                try:
+                    # When progress updates are emitted, keep status as PROGRESS
+                    if state:
+                        task["status"] = state
+                    # Merge meta into task.result so frontend can read processed/total/current_file
+                    if meta and isinstance(meta, dict):
+                        # Keep existing result dict and update keys
+                        existing = task.get("result") or {}
+                        if not isinstance(existing, dict):
+                            existing = {"result": existing}
+                        existing.update(meta)
+                        task["result"] = existing
+                    task["updated_at"] = time.time()
+                except Exception:
+                    pass
+
             if task["type"] == "process_pdfs":
-                result = process_pdfs_sync(**task["kwargs"])
+                # Pass the callback so process_pdfs_sync can emit live progress
+                kwargs = dict(task["kwargs"])
+                kwargs["progress_callback"] = _progress_cb
+                result = process_pdfs_sync(**kwargs)
             elif task["type"] == "cleanup_old_results":
                 result = cleanup_old_results(**task["kwargs"])
             else:
@@ -99,9 +121,9 @@ def get_worker() -> LocalWorker:
     return _worker_instance
 
 
-def submit_task(task_type: str, **kwargs) -> str:
+def submit_task(task_type: str, task_id: Optional[str] = None, **kwargs) -> str:
     """Submit a task to the local worker."""
-    return get_worker().submit_task(task_type, **kwargs)
+    return get_worker().submit_task(task_type, task_id=task_id, **kwargs)
 
 
 def get_task_status(task_id: str) -> Optional[Dict[str, Any]]:
