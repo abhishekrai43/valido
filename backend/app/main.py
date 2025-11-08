@@ -442,6 +442,36 @@ async def ai_generate(payload: Dict[str, Any]):
         return JSONResponse(content={"ok": False, "error": str(e)})
 
 
+# Compatibility endpoint for frontend: accepts { text: '...' } and returns the ruleset JSON directly
+@app.post("/api/v1/ai/convert")
+async def ai_convert(payload: Dict[str, Any]):
+    text = payload.get("text") if isinstance(payload, dict) else None
+    if not text or not isinstance(text, str):
+        raise HTTPException(status_code=400, detail="Missing 'text' in request body")
+
+    if generate_ruleset_from_prompt is None:
+        raise HTTPException(status_code=500, detail="AI generation is not available (ai_stub import failed)")
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set in environment")
+
+    try:
+        from openai import OpenAI
+    except Exception as e:
+        logger.error(f"OpenAI SDK not installed: {e}")
+        raise HTTPException(status_code=500, detail="OpenAI SDK not installed on server")
+
+    try:
+        client = OpenAI(api_key=api_key)
+        ruleset = generate_ruleset_from_prompt(text, client)
+        # Return the ruleset directly (frontend expects raw ruleset)
+        return JSONResponse(content=ruleset)
+    except Exception as e:
+        logger.error(f"AI convert error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # -- Download endpoints remain the same and rely on results folder layout --
 @app.get("/api/v1/tasks/{task_id}/result.csv")
 async def download_task_csv(task_id: str):
