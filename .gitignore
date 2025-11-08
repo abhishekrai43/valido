@@ -108,6 +108,11 @@ build/
 logs/
 *.log
 
+# Documentation and test files
+*.md
+*.pdf
+ChatGPT*.png
+
 # Secret config
 .env.local
 .env.*.local
@@ -123,13 +128,3 @@ docker-compose.override.yml
 *.key
 *.cer
 *.crt
-
-# Agent instructions
-AGENT_INSTRUCTIONS.md
-
-PHASES.md
-RUNNING.md
-FRONTEND_CHANGES.md
-FRONTEND_REFACTOR.md
-USER_GUIDE.md
-FOLDER_WATCHER_SUMMARY.md

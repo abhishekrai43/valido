@@ -315,7 +315,7 @@ async function saveWatchFolder() {
         if (response.ok) {
             cancelEditWatchFolder(); // Clear form instead of closing modal
             await loadWatchFolders();
-            showToast('✓ Watch folder saved successfully!', 'success');
+            showToast('Watch folder saved successfully!', 'success');
         } else {
             const error = await response.json();
             showToast(`Failed to save: ${error.detail || 'Unknown error'}`, 'error');
@@ -435,7 +435,7 @@ async function browseFolder(inputId) {
             const helper = input.nextElementSibling;
             if (helper && helper.classList.contains('helper')) {
                 const originalText = helper.textContent;
-                helper.textContent = '✓ Folder selected! Please enter the full path (e.g., C:\\' + dirHandle.name + '\\)';
+                helper.textContent = 'Folder selected! Please enter the full path (e.g., C:\\' + dirHandle.name + '\\)';
                 helper.style.color = 'var(--success, #10b981)';
                 setTimeout(() => {
                     helper.textContent = originalText;

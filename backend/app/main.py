@@ -14,13 +14,13 @@ import glob
 import sys
 from typing import List, Optional, Dict, Any
 
-# keep your service imports (business logic)
-from .services.parser import extract_text_from_bytes
-from .services.validator import validate_text
-from .utils.logger import get_logger
-from .db import get_session
-from .models import User, Ruleset, WatchFolder
-from .license import get_license_banner, LicenseManager
+# Absolute imports for PyInstaller compatibility
+from app.services.parser import extract_text_from_bytes
+from app.services.validator import validate_text
+from app.utils.logger import get_logger
+from app.db import get_session
+from app.models import User, Ruleset, WatchFolder
+from app.license import get_license_banner, LicenseManager
 # Optional: load .env for local development (contains OPENAI_API_KEY)
 try:
     from dotenv import load_dotenv
@@ -31,7 +31,7 @@ except Exception:
 
 # AI stub import (generate ruleset using OpenAI)
 try:
-    from .routes.ai_stub import generate_ruleset_from_prompt
+    from app.routes.ai_stub import generate_ruleset_from_prompt
 except Exception:
     generate_ruleset_from_prompt = None
 
@@ -156,8 +156,185 @@ async def diagnostics():
             "timestamp": time.time(),
         }
     except Exception as e:
-        logger.error(f"Diagnostics error: {e}")
+        logger.error(f"Diagnostics error: {e}", exc_info=True)
         return {"error": str(e)}
+
+
+@app.get("/api/v1/diagnostics/export")
+async def export_diagnostics():
+    """
+    Export comprehensive diagnostics package for support.
+    Returns a ZIP file containing:
+    - System information
+    - Recent logs (last 1000 lines)
+    - Error logs
+    - Database statistics
+    - Validation summaries
+    
+    Customer can download this and email to support for remote debugging.
+    """
+    logger.info("Diagnostics export requested")
+    import tempfile
+    import zipfile
+    import psutil
+    import platform
+    from app.db import get_session
+    from app.models import User, Ruleset, WatchFolder
+    from app.utils.logger import get_recent_logs, get_error_logs
+    
+    try:
+        # Create temporary directory for diagnostics
+        with tempfile.TemporaryDirectory() as temp_dir:
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            
+            # 1. System information
+            system_info = {
+                "platform": platform.platform(),
+                "python_version": platform.python_version(),
+                "hostname": platform.node(),
+                "cpu_count": psutil.cpu_count(),
+                "memory_total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
+                "memory_available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
+                "disk_free_gb": round((psutil.disk_usage('/').free if os.name == 'posix' else psutil.disk_usage('C:\\').free) / (1024**3), 2),
+                "timestamp": timestamp,
+            }
+            
+            system_file = os.path.join(temp_dir, 'system_info.json')
+            with open(system_file, 'w') as f:
+                json.dump(system_info, f, indent=2)
+            
+            # 2. License status
+            try:
+                license_info = LicenseManager.get_license_info()
+                license_file = os.path.join(temp_dir, 'license_info.json')
+                with open(license_file, 'w') as f:
+                    json.dump(license_info, f, indent=2)
+            except Exception as e:
+                logger.warning(f"Could not export license info: {e}")
+            
+            # 3. Database statistics
+            try:
+                with get_session() as session:
+                    db_stats = {
+                        "users": session.query(User).count(),
+                        "rulesets": session.query(Ruleset).count(),
+                        "watch_folders": session.query(WatchFolder).count(),
+                        "watch_folders_active": session.query(WatchFolder).filter(WatchFolder.enabled == True).count(),
+                    }
+                
+                db_file = os.path.join(temp_dir, 'database_stats.json')
+                with open(db_file, 'w') as f:
+                    json.dump(db_stats, f, indent=2)
+            except Exception as e:
+                logger.warning(f"Could not export database stats: {e}")
+            
+            # 4. Recent logs (last 1000 lines)
+            recent_logs = get_recent_logs(1000)
+            log_file = os.path.join(temp_dir, 'recent_logs.txt')
+            with open(log_file, 'w', encoding='utf-8') as f:
+                f.write(recent_logs)
+            
+            # 5. Error logs
+            error_logs = get_error_logs(500)
+            error_file = os.path.join(temp_dir, 'error_logs.txt')
+            with open(error_file, 'w', encoding='utf-8') as f:
+                f.write(error_logs)
+            
+            # 6. Validation summaries (last 10 validations)
+            results_dir = os.path.join(os.getcwd(), "results")
+            if os.path.exists(results_dir):
+                result_folders = sorted([
+                    d for d in os.listdir(results_dir)
+                    if os.path.isdir(os.path.join(results_dir, d))
+                ], reverse=True)[:10]
+                
+                summaries = []
+                for folder in result_folders:
+                    json_files = glob.glob(os.path.join(results_dir, folder, '*.json'))
+                    if json_files:
+                        try:
+                            with open(json_files[0], 'r') as f:
+                                data = json.load(f)
+                                summaries.append({
+                                    'folder': folder,
+                                    'total_files': data.get('total_files', 0),
+                                    'processed': data.get('processed', 0),
+                                    'generated_at': data.get('generated_at', 'unknown')
+                                })
+                        except:
+                            pass
+                
+                if summaries:
+                    summary_file = os.path.join(temp_dir, 'validation_summaries.json')
+                    with open(summary_file, 'w') as f:
+                        json.dump(summaries, f, indent=2)
+            
+            # 7. README for support
+            readme = f"""
+Valido Diagnostics Package
+==========================
+
+Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+This package contains diagnostic information to help Valido support 
+troubleshoot any issues you're experiencing.
+
+Contents:
+---------
+1. system_info.json - System hardware and OS information
+2. license_info.json - Your license status
+3. database_stats.json - Database usage statistics
+4. recent_logs.txt - Last 1000 log lines from application
+5. error_logs.txt - Recent error logs for quick scanning
+6. validation_summaries.json - Summary of last 10 validation runs
+
+Privacy:
+--------
+This package does NOT contain:
+- Your PDF files
+- PDF content or extracted text
+- Personal identification information
+- Business data
+
+It only contains technical logs and system information needed 
+for debugging.
+
+Support:
+--------
+Please email this ZIP file to: support@valido.app
+Include a brief description of the issue you're experiencing.
+
+We aim to respond within 48 hours.
+
+Thank you for using Valido!
+"""
+            readme_file = os.path.join(temp_dir, 'README.txt')
+            with open(readme_file, 'w') as f:
+                f.write(readme)
+            
+            # Create ZIP file
+            zip_filename = f'valido_diagnostics_{timestamp}.zip'
+            zip_path = os.path.join(temp_dir, zip_filename)
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for filename in os.listdir(temp_dir):
+                    if filename != zip_filename:
+                        file_path = os.path.join(temp_dir, filename)
+                        zf.write(file_path, filename)
+            
+            logger.info(f"Diagnostics package created: {zip_filename}")
+            
+            # Return the ZIP file
+            return FileResponse(
+                zip_path,
+                media_type='application/zip',
+                filename=zip_filename,
+                headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+            )
+    
+    except Exception as e:
+        logger.error(f"Failed to export diagnostics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create diagnostics: {str(e)}")
 
 
 # -- License --
@@ -173,7 +350,7 @@ async def license_status():
             "banner": banner,
         }
     except Exception as e:
-        logger.error(f"License status error: {e}")
+        logger.error(f"License status error: {e}", exc_info=True)
         return {"error": str(e)}
 
 
@@ -196,7 +373,7 @@ async def setup_status():
             "needs_setup": not is_configured,
         }
     except Exception as e:
-        logger.error(f"Setup status error: {e}")
+        logger.error(f"Setup status error: {e}", exc_info=True)
         return {"error": str(e)}
 
 
@@ -422,9 +599,15 @@ async def ai_generate(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail="AI generation is not available (ai_stub import failed)")
 
     # Read API key from environment
+    # Note: For production SaaS, this should be YOUR OpenAI API key (centralized)
+    # Rule generation costs ~$0.0003 per request, negligible compared to subscription revenue
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set in environment")
+        logger.error("OPENAI_API_KEY not configured in environment")
+        raise HTTPException(
+            status_code=503, 
+            detail="AI rule generation is temporarily unavailable. Please use Simple Checks or contact support."
+        )
 
     # Create OpenAI client lazily so we don't require it at import time
     try:
@@ -454,7 +637,11 @@ async def ai_convert(payload: Dict[str, Any]):
 
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set in environment")
+        logger.error("OPENAI_API_KEY not configured in environment")
+        raise HTTPException(
+            status_code=503, 
+            detail="AI rule generation is temporarily unavailable. Please use Simple Checks or contact support."
+        )
 
     try:
         from openai import OpenAI
@@ -537,21 +724,21 @@ async def download_task_zip(task_id: str):
 
 # --- Route includes (unchanged) ---
 try:
-    from .routes.ruleset_routes import router as ruleset_router
+    from app.routes.ruleset_routes import router as ruleset_router
     app.include_router(ruleset_router)
     logger.info("Ruleset routes included successfully")
 except Exception as e:
     logger.warning(f"Failed to include ruleset routes: {e}")
 
 try:
-    from .routes.user_routes import router as user_router
+    from app.routes.user_routes import router as user_router
     app.include_router(user_router)
     logger.info("User routes included successfully")
 except Exception as e:
     logger.warning(f"Failed to include user routes: {e}")
 
 try:
-    from .routes.watch_folder_routes import router as watch_folder_router
+    from app.routes.watch_folder_routes import router as watch_folder_router
     app.include_router(watch_folder_router)
     logger.info("Watch folder routes included successfully")
 except Exception as e:
@@ -560,18 +747,14 @@ except Exception as e:
 # Agent download routes are no longer necessary in single-exe setup,
 # but keep router include for compatibility if present.
 try:
-    from .routes.agent_routes import router as agent_router
+    from app.routes.agent_routes import router as agent_router
     app.include_router(agent_router)
     logger.info("Agent download routes included successfully")
 except Exception as e:
     logger.warning(f"Failed to include agent routes: {e}")
 
-try:
-    from .routes.ai_stub import router as ai_router
-    app.include_router(ai_router)
-    logger.info("AI routes included successfully")
-except Exception as e:
-    logger.warning(f"Failed to include AI routes: {e}")
+# AI routes are defined directly in main.py (lines 586-657), no separate router needed
+logger.info("AI routes configured successfully")
 
 # Serve frontend static files (same logic)
 try:
@@ -600,3 +783,29 @@ try:
         logger.warning("Frontend directory not found")
 except Exception as e:
     logger.warning(f"Failed to mount frontend: {e}")
+
+if __name__ == "__main__":
+    import uvicorn
+    import webbrowser
+    import threading
+    import sys
+    
+    # Redirect stdout/stderr for console=False mode
+    if sys.stdout is None:
+        sys.stdout = open('valido.log', 'w')
+    if sys.stderr is None:
+        sys.stderr = sys.stdout
+    
+    logger.info("Starting Valido server on http://0.0.0.0:8000")
+    
+    # Open browser after a short delay (let server start first)
+    def open_browser():
+        import time
+        time.sleep(2)  # Wait for server to start
+        webbrowser.open("http://localhost:8000")
+    
+    browser_thread = threading.Thread(target=open_browser, daemon=True)
+    browser_thread.start()
+    
+    # Use minimal logging config for GUI mode
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_config=None)

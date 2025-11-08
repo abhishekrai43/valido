@@ -4,33 +4,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Valido — Document Validation Made Simple</title>
-    <link rel="stylesheet" href="/styles.css">
+    
+    <!-- Favicons for browser tabs -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/valido-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/valido-icon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/valido-icon.png">
+    
+    <link rel="stylesheet" href="/styles.css?v=1.1">
   </head>
   <body>
     <div class="container">
+      <!-- Header -->
       <div class="header">
         <div class="brand-section">
           <div class="brand">
-            <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
-              <path d="M9 16L14 21L23 11" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-              <defs>
-                <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
-                  <stop offset="0%" stop-color="#0066ff"/>
-                  <stop offset="100%" stop-color="#0051d9"/>
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/valido-icon.png" alt="Valido" class="logo-icon" width="32" height="32">
             Valido
           </div>
-          <div class="subtitle">Validate your documents in seconds</div>
+          <div class="subtitle">Professional PDF validation and automation</div>
         </div>
         <div class="nav-buttons">
-          <button id="navUpload" class="btn btn-nav active" type="button">
+          <button id="navFeatures" class="btn btn-nav active" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M9 3L11 8L16 9L12 13L13 18L9 15L5 18L6 13L2 9L7 8L9 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            Features
+          </button>
+          <button id="navPricing" class="btn btn-nav" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M10 8V12M8 10H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Pricing
+          </button>
+          <button id="navUpload" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 4V16M10 4L6 8M10 4L14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            New Validation
+            Try It Now
           </button>
           <button id="navAutomation" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -38,14 +52,131 @@
             </svg>
             Automation
           </button>
-          <!-- Recent tab removed to simplify UI -->
+          <button id="navHowTo" class="btn btn-nav" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M10 14V10M10 6H10.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            How To Use
+          </button>
         </div>
       </div>
 
-      <!-- Network Access Info -->
-      <div class="network-info" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
+      <!-- Features Section (First Thing User Sees) -->
+      <section id="featuresSection">
+        <!-- Simple Intro -->
+        <div class="intro-section">
+          <h1 class="page-title">PDF Validations. Simplified.</h1>
+          <p class="page-subtitle">Upload PDFs, define validation rules, get professional reports. Your files never leave your computer.</p>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="features-section">
+          <h2 class="section-title">What Valido Does</h2>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3>AI-Powered Rules</h3>
+              <p>Describe what to check in plain English. AI creates validation rules automatically. No coding knowledge needed.</p>
+              <div class="feature-example">Example: "Check if invoice is signed and extract the total amount"</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <rect x="6" y="4" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+                  <rect x="6" y="10" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+                  <rect x="6" y="16" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+                </svg>
+              </div>
+              <h3>Batch Processing</h3>
+              <p>Small batch? Upload PDFs or ZIP files directly (up to 2000 pages). Large batch? Set a folder to watch and schedule validation.</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L4 6V12C4 17 7 21 12 23C17 21 20 17 20 12V6L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" fill="#0066ff"/>
+                </svg>
+              </div>
+              <h3>100% Private</h3>
+              <p>Your documents NEVER leave your computer. Everything processes locally. Zero cloud upload, zero data retention.</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 12L11 14L15 10" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="#0066ff" stroke-width="2"/>
+                </svg>
+              </div>
+              <h3>Smart Validation</h3>
+              <p>Check for signatures, dates, specific text, page count. Extract data like invoice numbers, amounts, names.</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
+                  <path d="M8 2V6M16 2V6M4 10H20" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>Folder Automation</h3>
+              <p>Automatically validate new PDFs in watched folders on a schedule (hourly, daily, weekly).</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2Z" stroke="#0066ff" stroke-width="2"/>
+                  <path d="M14 2V8H20" stroke="#0066ff" stroke-width="2"/>
+                </svg>
+              </div>
+              <h3>Professional Reports</h3>
+              <p>Export results as CSV, Excel, PDF, or JSON. Clean formatting, ready to share.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing Section -->
+      <section id="pricingSection" style="display:none">
+        <div class="pricing-simple">
+          <h2 class="section-title">Simple Pricing</h2>
+          <p class="section-subtitle">Try free for 3 days. No credit card required. Trial starts when you upload your first file.</p>
+          
+          <div class="pricing-card-single">
+            <div class="pricing-after-trial">
+              <h3>After Your Trial</h3>
+              <div class="pricing-price">
+                <span class="price-amount">$15</span>
+                <span class="price-period">/month</span>
+              </div>
+              <ul class="pricing-features">
+                <li>Unlimited documents & batches</li>
+                <li>Unlimited AI rule generation</li>
+                <li>Batch processing (2000 pages)</li>
+                <li>Folder automation</li>
+                <li>All export formats (CSV, Excel, PDF, JSON)</li>
+                <li>Email support</li>
+                <li>Cancel anytime</li>
+              </ul>
+              <button class="btn btn-primary btn-large" disabled>Purchase (Coming Soon)</button>
+              <div class="pricing-note">Payment system will be available soon. Enjoy your free trial!</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Network Access Info (only show on upload section) -->
+      <div id="networkInfo" class="network-info" style="display:none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
         <p style="margin: 0; color: #0c4a6e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em;">
-          <strong>🌐 Want to access Valido from another computer on your network?</strong><br>
+          <strong>Want to access Valido from another computer on your network?</strong><br>
           Open <code id="networkUrl" style="background: rgba(255,255,255,0.8); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace;">http://192.168.1.100:8000</code> in your browser
         </p>
       </div>
@@ -84,6 +215,14 @@
             <h2>Step 1: Upload Your Documents</h2>
             <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 2000 pages total.</strong></p>
             
+            <div class="privacy-notice" style="margin-bottom: 16px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+                <circle cx="8" cy="7" r="1.5" fill="currentColor"/>
+              </svg>
+              <strong>100% Local Processing:</strong> All documents are processed on your computer. Nothing is uploaded to the cloud.
+            </div>
+            
             <div class="upload-area" id="uploadArea">
               <input id="files" name="files" type="file" multiple accept=".pdf,.zip" hidden />
               <div class="upload-prompt">
@@ -94,7 +233,7 @@
                 <div class="upload-text">
                   <strong>Click to browse</strong> or drag files here
                   <div class="upload-hint">PDF or ZIP files accepted</div>
-                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">⚠️ Scanned PDFs or images are not supported</div>
+                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">Warning: Scanned PDFs or images are not supported</div>
                 </div>
               </div>
             </div>
@@ -254,7 +393,7 @@
 
             <div id="fieldBuilder" class="field-builder">
               <h3>Extract Information</h3>
-              <p class="helper">Tell us what information to extract from your documents (up to 5 items).</p>
+              <p class="helper">Tell us what information to extract from your documents. Add fields one at a time.</p>
               
               <div class="field-suggestions">
                 <div class="suggestions-label">Quick suggestions:</div>
@@ -268,13 +407,17 @@
               </div>
 
               <div class="field-add">
-                <input id="newField" placeholder="e.g. invoice_number, customer_name, amount" aria-label="Field name" />
+                <input id="newField" placeholder="Enter one field name (e.g. invoice_number, amount)" aria-label="Field name" />
                 <button type="button" id="addFieldBtn" class="btn btn-secondary">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                   </svg>
                   Add Field
                 </button>
+              </div>
+              
+              <div class="helper" style="margin-top: 8px; font-size: 13px;">
+                <strong>Tip:</strong> After adding a field, choose whether to extract the <em>first</em> occurrence or <em>all</em> occurrences from each document.
               </div>
 
               <ul id="fieldList" class="chip-list" aria-live="polite"></ul>
@@ -283,17 +426,92 @@
 
           <div class="panel" data-panel="complex" style="display:none">
             <div class="ai-panel">
-              <div class="ai-input-area">
-                <label for="aiPrompt" class="ai-label">
-                  Describe what you want to check
-                </label>
-                <textarea id="aiPrompt" placeholder="Example: I need to check that invoices are signed and extract the invoice number, date, total amount, and vendor name. Also verify that the total is greater than zero."></textarea>
-                <div class="helper">Be specific about what information you need and what validations to perform. Our AI will understand and create the rules for you.</div>
+              <h3 style="margin-top: 0;">AI-Powered Rule Builder</h3>
+              <p class="helper">Answer a few simple questions and we'll create intelligent validation rules for you.</p>
+              
+              <div class="privacy-notice">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
+                  <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+                  <circle cx="8" cy="7" r="1.5" fill="currentColor"/>
+                </svg>
+                <strong>Privacy First:</strong> AI is only used to generate validation rules. Your documents never leave your system.
               </div>
 
-              <div class="actions">
-                <button type="button" id="aiGenerate" class="btn btn-primary btn-large">
-                  Create Rules with AI
+              <!-- Step 1: Document Type -->
+              <div class="ai-form-section">
+                <label class="ai-label">
+                  <span class="step-number">1</span> What type of document are you validating?
+                </label>
+                <input type="text" id="aiDocType" class="ai-text-input" 
+                       placeholder="e.g. Invoice, Report Card, Contract, Resume, etc." />
+                <div class="helper">This helps us understand the context</div>
+              </div>
+
+              <!-- Step 2: Data to Extract -->
+              <div class="ai-form-section">
+                <label class="ai-label">
+                  <span class="step-number">2</span> What information do you need to extract?
+                </label>
+                <div class="helper" style="margin-bottom: 10px;">List the fields you want to pull from the document (one per line)</div>
+                <div id="aiFieldsList" class="ai-fields-list">
+                  <div class="ai-field-row">
+                    <input type="text" class="ai-field-input" placeholder="e.g. Invoice Number" />
+                    <button type="button" class="btn-remove-field" title="Remove">×</button>
+                  </div>
+                </div>
+                <button type="button" id="aiAddField" class="btn btn-secondary btn-small">
+                  + Add Field
+                </button>
+              </div>
+
+              <!-- Step 3: Text Validations -->
+              <div class="ai-form-section">
+                <label class="ai-label">
+                  <span class="step-number">3</span> What text should the document contain or avoid?
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                  <div>
+                    <label class="ai-sublabel">Must Contain (optional)</label>
+                    <textarea id="aiMustContain" class="ai-textarea" rows="3" 
+                              placeholder="e.g. PAID&#10;Authorized Signature&#10;Accredited"></textarea>
+                    <div class="helper-small">One per line</div>
+                  </div>
+                  <div>
+                    <label class="ai-sublabel">Must NOT Contain (optional)</label>
+                    <textarea id="aiMustNotContain" class="ai-textarea" rows="3" 
+                              placeholder="e.g. DRAFT&#10;VOID&#10;CONFIDENTIAL"></textarea>
+                    <div class="helper-small">One per line</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 4: Numeric Validations -->
+              <div class="ai-form-section">
+                <label class="ai-label">
+                  <span class="step-number">4</span> Any numeric checks? (optional)
+                </label>
+                <div class="helper" style="margin-bottom: 10px;">Validate numbers from extracted fields</div>
+                <div id="aiNumericRules" class="ai-numeric-rules">
+                  <!-- Dynamic rows added here -->
+                </div>
+                <button type="button" id="aiAddNumeric" class="btn btn-secondary btn-small">
+                  + Add Numeric Check
+                </button>
+              </div>
+
+              <!-- Step 5: Additional Notes -->
+              <div class="ai-form-section">
+                <label class="ai-label">
+                  <span class="step-number">5</span> Anything else we should know? (optional)
+                </label>
+                <textarea id="aiAdditionalNotes" class="ai-textarea" rows="2" 
+                          placeholder="e.g. The document must be dated in 2024, Check for digital signatures, etc."></textarea>
+              </div>
+
+              <div class="actions" style="margin-top: 25px;">
+                <button type="button" id="aiGenerate" class="btn btn-primary btn-large" 
+                        title="AI analyzes your requirements (not your documents) to generate validation rules">
+                  Generate Rules with AI
                 </button>
               </div>
 
@@ -385,7 +603,7 @@
                 </svg>
               </div>
               <div class="status-content">
-                  <div class="status-title success-title" id="successTitle">✨ Validation Complete!</div>
+                  <div class="status-title success-title" id="successTitle">Validation Complete!</div>
                   <div class="status-message" id="successMessage">Your documents have been validated successfully.</div>
                   <div id="downloadLink" class="download-section"></div>
                   <div id="resultsOutput" class="results-output"></div>
@@ -578,6 +796,193 @@
         </div>
       </div>
 
+      <!-- How To Section -->
+      <section id="howToSection" style="display:none">
+        <div class="card">
+          <h2>How To Use Valido</h2>
+          <p class="card-description">Everything you need to know to validate your documents efficiently</p>
+        </div>
+
+        <div class="how-to-grid">
+          <!-- Getting Started -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M5 13L9 17L19 7" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>Quick Start</h3>
+            <ol class="how-to-steps">
+              <li><strong>Upload PDFs:</strong> Click "Choose Files" or drag PDFs into the upload area</li>
+              <li><strong>Choose Validation Type:</strong> Use "Simple Checks" for quick validations or "AI Rules" for complex requirements</li>
+              <li><strong>Configure Rules:</strong> Select what you want to check (signatures, dates, specific text, etc.)</li>
+              <li><strong>Run Validation:</strong> Click "Validate Documents" and wait for results</li>
+              <li><strong>Download Results:</strong> Get a ZIP file with CSV, Excel, PDF reports and validated documents</li>
+            </ol>
+          </div>
+
+          <!-- Simple Checks -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
+                <path d="M8 12H16M12 8V16" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Simple Checks</h3>
+            <p class="how-to-desc">For common validation needs:</p>
+            <ul class="how-to-list">
+              <li><strong>Signature Check:</strong> Detects if document is digitally signed</li>
+              <li><strong>Date Check:</strong> Finds dates in the document (any format)</li>
+              <li><strong>Text Contains:</strong> Checks if document contains specific text (e.g., "PAID", "Approved")</li>
+              <li><strong>Text Does NOT Contain:</strong> Ensures document doesn't have unwanted text (e.g., "DRAFT", "VOID")</li>
+              <li><strong>Page Count:</strong> Validates number of pages (at least, at most, exactly)</li>
+            </ul>
+          </div>
+
+          <!-- AI Rules -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="#0066ff" stroke-width="2"/>
+                <path d="M12 2V5M12 19V22M22 12H19M5 12H2" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+                <path d="M19.07 4.93L16.95 7.05M7.05 16.95L4.93 19.07M19.07 19.07L16.95 16.95M7.05 7.05L4.93 4.93" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>AI-Powered Rules</h3>
+            <p class="how-to-desc">For advanced validation and data extraction:</p>
+            <ul class="how-to-list">
+              <li><strong>Document Type:</strong> Tell AI what kind of document (Invoice, Contract, Report Card, etc.)</li>
+              <li><strong>Extract Fields:</strong> List what data to pull out (Invoice Number, Total Amount, Student Name, etc.)</li>
+              <li><strong>Text Rules:</strong> What text must or must NOT be present</li>
+              <li><strong>Numeric Rules:</strong> Validate numbers (e.g., "GPA > 3.0", "Total Amount > 0")</li>
+              <li><strong>Additional Notes:</strong> Any special requirements (e.g., "Must be dated in 2024")</li>
+            </ul>
+            <div class="privacy-notice" style="margin-top: 12px; font-size: 12px;">
+              AI only analyzes your requirements, not your documents. All PDFs stay on your computer.
+            </div>
+          </div>
+
+          <!-- Batch Processing -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <rect x="6" y="4" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+                <rect x="6" y="10" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+                <rect x="6" y="16" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
+              </svg>
+            </div>
+            <h3>Batch Processing</h3>
+            <ul class="how-to-list">
+              <li><strong>Small Batches (Browser Upload):</strong> Select multiple files at once (Ctrl+Click or Cmd+Click). Maximum 2000 pages total.</li>
+              <li><strong>Upload ZIP Files:</strong> Package all PDFs in a ZIP for easier upload</li>
+              <li><strong>Large Batches (Watch Folders):</strong> Need to process more than 2000 pages? Set a folder to watch and schedule validation. No page limit.</li>
+              <li><strong>Results:</strong> Get individual results for each document in CSV, Excel, and PDF format</li>
+              <li><strong>Pass/Fail Summary:</strong> See which documents passed and which failed at a glance</li>
+            </ul>
+          </div>
+
+          <!-- Automation -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Watch Folders (Automation)</h3>
+            <p class="how-to-desc">Set up automatic validation for folders:</p>
+            <ol class="how-to-steps">
+              <li>Go to "Automation" tab</li>
+              <li>Click "Create Watch Folder"</li>
+              <li>Select folder to monitor</li>
+              <li>Choose saved ruleset</li>
+              <li>Set schedule (e.g., every hour, daily at 9 AM)</li>
+              <li>Valido automatically validates new PDFs and saves results</li>
+            </ol>
+            <div class="helper" style="margin-top: 8px; font-size: 13px;">
+              Perfect for recurring document validation (daily reports, invoices, etc.)
+            </div>
+          </div>
+
+          <!-- Understanding Results -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M9 12L11 14L15 10" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="#0066ff" stroke-width="2"/>
+              </svg>
+            </div>
+            <h3>Understanding Results</h3>
+            <p class="how-to-desc">Your results ZIP file contains:</p>
+            <ul class="how-to-list">
+              <li><strong>summary.csv:</strong> Plain text results, opens in any spreadsheet app</li>
+              <li><strong>results.xlsx:</strong> Formatted Excel with summary and detailed sheets</li>
+              <li><strong>summary.pdf:</strong> Beautiful PDF report with branding</li>
+              <li><strong>results.json:</strong> Raw data for developers/integrations</li>
+              <li><strong>PASS/FAIL:</strong> Clear status for each document</li>
+              <li><strong>Extracted Data:</strong> All fields you requested (if using AI rules)</li>
+              <li><strong>Validation Details:</strong> Which checks passed/failed</li>
+            </ul>
+          </div>
+
+          <!-- Privacy & Security -->
+          <div class="how-to-card" style="border: 2px solid #10b981;">
+            <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L4 6V12C4 17 7 21 12 23C17 21 20 17 20 12V6L12 2Z" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" fill="#10b981"/>
+              </svg>
+            </div>
+            <h3>Privacy & Security</h3>
+            <ul class="how-to-list">
+              <li><strong>100% Local:</strong> Valido runs entirely on your computer</li>
+              <li><strong>No Cloud Upload:</strong> Your PDFs never leave your system</li>
+              <li><strong>No Internet Required:</strong> Works offline (except AI rule generation)</li>
+              <li><strong>AI Privacy:</strong> When using AI rules, only your requirements are sent to OpenAI, never your documents</li>
+              <li><strong>Your Data, Your Control:</strong> Delete anytime, no data retention</li>
+            </ul>
+          </div>
+
+          <!-- Tips & Best Practices -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>Tips & Best Practices</h3>
+            <ul class="how-to-list">
+              <li><strong>Save Rulesets:</strong> Create and save rules you use frequently</li>
+              <li><strong>Test First:</strong> Try with 1-2 documents before batch processing hundreds</li>
+              <li><strong>Text-Based PDFs Only:</strong> Scanned images won't work (must be text-based PDFs)</li>
+              <li><strong>Clear Field Names:</strong> Use descriptive names when extracting data</li>
+              <li><strong>Batch Wisely:</strong> Process 50-100 docs at a time for best performance</li>
+              <li><strong>Check Results:</strong> Always review the summary before relying on automated results</li>
+            </ul>
+          </div>
+
+          <!-- Troubleshooting -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2Z" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 2V8H20" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 18V12M12 10H12.01" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Troubleshooting</h3>
+            <ul class="how-to-list">
+              <li><strong>PDF won't upload:</strong> Ensure it's a PDF file, not an image or scanned document</li>
+              <li><strong>No results found:</strong> PDF might be image-based. Try converting to text-based PDF first</li>
+              <li><strong>Wrong data extracted:</strong> Try using more specific field names (e.g., "Invoice Total Amount" instead of just "Total")</li>
+              <li><strong>Processing stuck:</strong> Refresh page and try again with fewer documents (50-100 at a time)</li>
+              <li><strong>AI rules not generating:</strong> Please contact support if rule generation fails repeatedly</li>
+              <li><strong>Need help?</strong> Use the diagnostics export feature and email to support@valido.app</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
 
       <div class="footer-bar">
         <div class="footer-main">
@@ -602,26 +1007,21 @@
               Secure, privacy-first document validation and data extraction. 
               Built for enterprises that value compliance and data sovereignty.
             </p>
+            <div class="privacy-badge" style="margin-top: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 1L4 4V9C4 13 7 16.5 10 18.5C13 16.5 16 13 16 9V4L10 1Z" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+                <circle cx="10" cy="9" r="2" fill="#10b981"/>
+              </svg>
+              <span style="color: #10b981; font-weight: 600; font-size: 14px;">Your data never leaves your system</span>
+            </div>
           </div>
 
           <div class="footer-links">
             <div class="footer-column">
               <h4 class="footer-heading">Product</h4>
               <ul class="footer-list">
-                <li><a href="#features" class="footer-link">Features</a></li>
-                <li><a href="#pricing" class="footer-link">Pricing</a></li>
-                <li><a href="#documentation" class="footer-link">Documentation</a></li>
-                <li><a href="#api" class="footer-link">API Reference</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-column">
-              <h4 class="footer-heading">Company</h4>
-              <ul class="footer-list">
-                <li><a href="#about" class="footer-link">About Us</a></li>
-                <li><a href="#contact" class="footer-link">Contact</a></li>
-                <li><a href="#careers" class="footer-link">Careers</a></li>
-                <li><a href="#blog" class="footer-link">Blog</a></li>
+                <li><a href="#howto" class="footer-link" onclick="document.getElementById('navHowTo').click(); return false;">How To Use</a></li>
+                <li><a href="mailto:support@valido.app" class="footer-link">Contact Support</a></li>
               </ul>
             </div>
 
@@ -630,18 +1030,6 @@
               <ul class="footer-list">
                 <li><a href="#privacy" class="footer-link">Privacy Policy</a></li>
                 <li><a href="#terms" class="footer-link">Terms of Service</a></li>
-                <li><a href="#security" class="footer-link">Security</a></li>
-                <li><a href="#compliance" class="footer-link">Compliance</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-column">
-              <h4 class="footer-heading">Resources</h4>
-              <ul class="footer-list">
-                <li><a href="#help" class="footer-link">Help Center</a></li>
-                <li><a href="#community" class="footer-link">Community</a></li>
-                <li><a href="#status" class="footer-link">System Status</a></li>
-                <li><a href="#updates" class="footer-link">Release Notes</a></li>
               </ul>
             </div>
           </div>
@@ -658,53 +1046,20 @@
               </div>
               <div class="footer-badge">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                <span>99.9% Uptime</span>
-              </div>
-              <div class="footer-badge">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
-                  <circle cx="5" cy="9.5" r="0.5" fill="currentColor"/>
-                  <circle cx="7" cy="9.5" r="0.5" fill="currentColor"/>
-                </svg>
-                <span>Enterprise Support</span>
-              </div>
-              <div class="footer-badge">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M8 2L9.5 6.5L14 8L9.5 9.5L8 14L6.5 9.5L2 8L6.5 6.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span>AI-Powered</span>
               </div>
             </div>
             <div class="footer-copyright">
-              © 2025 Valido. All rights reserved. Built with security and privacy in mind.
+              © 2025 Valido. All rights reserved. Made with care for your privacy.
             </div>
           </div>
 
           <div class="footer-bottom-right">
             <div class="footer-social">
-              <a href="#twitter" class="footer-social-link" aria-label="Twitter">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 4.01C21 4.5 20 4.7 19 4.9C20.1 4.2 21 3.1 21.4 1.9C20.4 2.5 19.3 3 18.1 3.3C17.1 2.2 15.7 1.5 14 1.5C11.3 1.5 9.1 3.7 9.1 6.4C9.1 6.8 9.1 7.2 9.2 7.6C5.3 7.4 1.9 5.4 0 2.5C-0.4 3.2 -0.7 4 -0.7 4.9C-0.7 6.6 0.2 8.1 1.6 8.9C0.7 8.9 -0.1 8.6 -0.8 8.2V8.3C-0.8 10.6 1 12.6 3.3 13C2.9 13.1 2.5 13.2 2 13.2C1.7 13.2 1.4 13.2 1.1 13.1C1.7 15.1 3.7 16.6 6 16.6C4.2 18 2 18.8 -0.4 18.8C-0.8 18.8 -1.2 18.8 -1.6 18.7C0.7 20.2 3.5 21.1 6.5 21.1C14 21.1 18.1 13.2 18.1 7C18.1 6.8 18.1 6.6 18.1 6.4C19.2 5.6 20.1 4.9 21 4C21.4 4 21.7 4 22 4.01Z" fill="currentColor"/>
-                </svg>
-              </a>
-              <a href="#linkedin" class="footer-social-link" aria-label="LinkedIn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M20.5 2H3.5C2.7 2 2 2.7 2 3.5V20.5C2 21.3 2.7 22 3.5 22H20.5C21.3 22 22 21.3 22 20.5V3.5C22 2.7 21.3 2 20.5 2ZM8 19H5V10H8V19ZM6.5 8.5C5.7 8.5 5 7.8 5 7C5 6.2 5.7 5.5 6.5 5.5C7.3 5.5 8 6.2 8 7C8 7.8 7.3 8.5 6.5 8.5ZM19 19H16V14.5C16 13.4 16 12 14.5 12C13 12 12.8 13.2 12.8 14.5V19H9.8V10H12.8V11.3C13.2 10.6 14.1 9.8 15.5 9.8C18.5 9.8 19 11.8 19 14.3V19Z" fill="currentColor"/>
-                </svg>
-              </a>
-              <a href="#github" class="footer-social-link" aria-label="GitHub">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C6.5 2 2 6.5 2 12C2 16.4 4.9 20.2 8.8 21.5C9.3 21.6 9.5 21.3 9.5 21C9.5 20.7 9.5 20 9.5 19.1C6.7 19.8 6.1 17.8 6.1 17.8C5.7 16.7 5 16.4 5 16.4C4 15.7 5.1 15.7 5.1 15.7C6.2 15.8 6.7 16.8 6.7 16.8C7.7 18.5 9.4 18 9.8 17.8C9.9 17.1 10.2 16.6 10.5 16.3C8.2 16 5.8 15.1 5.8 11.1C5.8 10.1 6.1 9.2 6.8 8.5C6.7 8.2 6.3 7.1 6.9 5.6C6.9 5.6 7.8 5.3 9.5 6.5C10.4 6.2 11.2 6.1 12 6.1C12.8 6.1 13.6 6.2 14.5 6.5C16.2 5.3 17.1 5.6 17.1 5.6C17.7 7.1 17.3 8.2 17.2 8.5C17.9 9.2 18.2 10.1 18.2 11.1C18.2 15.1 15.8 16 13.5 16.3C13.9 16.6 14.2 17.3 14.2 18.3C14.2 19.8 14.2 21 14.2 21.4C14.2 21.7 14.4 22 14.9 21.9C18.8 20.6 21.7 16.8 21.7 12.4C22 6.5 17.5 2 12 2Z" fill="currentColor"/>
-                </svg>
-              </a>
-              <a href="#youtube" class="footer-social-link" aria-label="YouTube">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M23 9.7C23 7.3 21.1 5.4 18.7 5.4H5.3C2.9 5.4 1 7.3 1 9.7V14.3C1 16.7 2.9 18.6 5.3 18.6H18.7C21.1 18.6 23 16.7 23 14.3V9.7ZM9.5 15.5V8.5L16 12L9.5 15.5Z" fill="currentColor"/>
-                </svg>
+              <a href="mailto:support@valido.app" class="footer-link" style="color: var(--text-secondary); text-decoration: none; font-size: 14px;">
+                Contact Support
               </a>
             </div>
           </div>

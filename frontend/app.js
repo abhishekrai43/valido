@@ -436,7 +436,7 @@
       } catch (e) { /* ignore */ }
 
       // Update success title/message depending on extraction vs validation
-      if (successTitleEl) successTitleEl.textContent = hasFields ? '✨ Extraction Complete!' : '✨ Validation Complete!';
+      if (successTitleEl) successTitleEl.textContent = hasFields ? 'Extraction Complete!' : 'Validation Complete!';
       if (successMessageEl) successMessageEl.textContent = hasFields ? 'Your documents have been processed and extracted successfully.' : 'Your documents have been validated successfully.';
 
       // The API returns task result in 'info' field when state is SUCCESS
@@ -505,11 +505,11 @@
         fetch(reportUrl)
           .then(r => r.ok ? r.json() : Promise.reject('no report'))
           .then(j => {
-            const infoHtml = `<div class="report-summary">✅ Successfully processed ${j.processed || j.total || '-'} of ${j.total || '-'} documents. Download the ZIP file to view results.</div>`;
+            const infoHtml = `<div class="report-summary">Successfully processed ${j.processed || j.total || '-'} of ${j.total || '-'} documents. Download the ZIP file to view results.</div>`;
             resultsOutput.innerHTML = infoHtml;
           })
           .catch(() => {
-            resultsOutput.innerHTML = '<div class="helper">✅ Processing complete. Download the results to view details.</div>';
+            resultsOutput.innerHTML = '<div class="helper">Processing complete. Download the results to view details.</div>';
           });
       }
     }
@@ -565,28 +565,107 @@
       navigateToStep(1);
     });
     
-    // Navigation between sections (Recent/History tab removed)
+    // Navigation between sections
     const navAutomation = document.getElementById('navAutomation');
+    const navHowTo = document.getElementById('navHowTo');
+    const navFeatures = document.getElementById('navFeatures');
+    const navPricing = document.getElementById('navPricing');
     const automationSection = document.getElementById('automationSection');
+    const howToSection = document.getElementById('howToSection');
+    const featuresSection = document.getElementById('featuresSection');
+    const pricingSection = document.getElementById('pricingSection');
+    const networkInfo = document.getElementById('networkInfo');
 
-    if (navUpload && navAutomation && uploadSection && automationSection) {
+    if (navUpload && navAutomation && navHowTo && navFeatures && navPricing && uploadSection && automationSection && howToSection && featuresSection && pricingSection) {
+      // Features tab (default view)
+      navFeatures.addEventListener('click', () => {
+        uploadSection.style.display = 'none';
+        automationSection.style.display = 'none';
+        howToSection.style.display = 'none';
+        featuresSection.style.display = 'block';
+        pricingSection.style.display = 'none';
+        networkInfo.style.display = 'none';
+        navFeatures.classList.add('active');
+        navUpload.classList.remove('active');
+        navPricing.classList.remove('active');
+        navAutomation.classList.remove('active');
+        navHowTo.classList.remove('active');
+        featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      // Pricing tab
+      navPricing.addEventListener('click', () => {
+        uploadSection.style.display = 'none';
+        automationSection.style.display = 'none';
+        howToSection.style.display = 'none';
+        featuresSection.style.display = 'none';
+        pricingSection.style.display = 'block';
+        networkInfo.style.display = 'none';
+        navPricing.classList.add('active');
+        navFeatures.classList.remove('active');
+        navUpload.classList.remove('active');
+        navAutomation.classList.remove('active');
+        navHowTo.classList.remove('active');
+        pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      // Try It Now tab (upload section)
       navUpload.addEventListener('click', () => {
         uploadSection.style.display = 'block';
         automationSection.style.display = 'none';
+        howToSection.style.display = 'none';
+        featuresSection.style.display = 'none';
+        pricingSection.style.display = 'none';
+        networkInfo.style.display = 'block';
         navUpload.classList.add('active');
+        navFeatures.classList.remove('active');
+        navPricing.classList.remove('active');
         navAutomation.classList.remove('active');
-        // Ensure other sections hidden
-        // (historySection removed)
+        navHowTo.classList.remove('active');
       });
 
+      // Automation tab
       navAutomation.addEventListener('click', () => {
         uploadSection.style.display = 'none';
         automationSection.style.display = 'block';
+        howToSection.style.display = 'none';
+        featuresSection.style.display = 'none';
+        pricingSection.style.display = 'none';
+        networkInfo.style.display = 'none';
         navAutomation.classList.add('active');
+        navFeatures.classList.remove('active');
+        navPricing.classList.remove('active');
         navUpload.classList.remove('active');
+        navHowTo.classList.remove('active');
         window.initAutomation && window.initAutomation();
       });
+
+      // How To tab
+      navHowTo.addEventListener('click', () => {
+        uploadSection.style.display = 'none';
+        automationSection.style.display = 'none';
+        howToSection.style.display = 'block';
+        featuresSection.style.display = 'none';
+        pricingSection.style.display = 'none';
+        networkInfo.style.display = 'none';
+        howToSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        navHowTo.classList.add('active');
+        navFeatures.classList.remove('active');
+        navPricing.classList.remove('active');
+        navUpload.classList.remove('active');
+        navAutomation.classList.remove('active');
+      });
+
+      // Set default view to Features (landing page)
+      featuresSection.style.display = 'block';
+      uploadSection.style.display = 'none';
+      automationSection.style.display = 'none';
+      howToSection.style.display = 'none';
+      pricingSection.style.display = 'none';
+      networkInfo.style.display = 'none';
+      navFeatures.classList.add('active');
     }
+
     
     // Initialize on step 1
     navigateToStep(1);

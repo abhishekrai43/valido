@@ -29,8 +29,71 @@
   const aiGenerate = document.getElementById('aiGenerate');
   const aiStatus = document.getElementById('aiStatus');
   const aiPreview = document.getElementById('aiPreview');
+  
+  // AI form elements
+  const aiAddField = document.getElementById('aiAddField');
+  const aiFieldsList = document.getElementById('aiFieldsList');
+  const aiAddNumeric = document.getElementById('aiAddNumeric');
+  const aiNumericRules = document.getElementById('aiNumericRules');
 
   let fields = [];  // Array of {name: string, strategy: 'first'|'last'|'all'}
+  
+  // AI form: Add extraction field
+  if (aiAddField && aiFieldsList) {
+    aiAddField.addEventListener('click', () => {
+      const newRow = document.createElement('div');
+      newRow.className = 'ai-field-row';
+      newRow.innerHTML = `
+        <input type="text" class="ai-field-input" placeholder="e.g. Total Amount, Customer Name" />
+        <button type="button" class="btn-remove-field" title="Remove">×</button>
+      `;
+      aiFieldsList.appendChild(newRow);
+      
+      // Focus the new input
+      newRow.querySelector('.ai-field-input')?.focus();
+      
+      // Add remove handler
+      newRow.querySelector('.btn-remove-field')?.addEventListener('click', () => {
+        newRow.remove();
+      });
+    });
+    
+    // Add remove handlers to existing rows
+    aiFieldsList.querySelectorAll('.btn-remove-field').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.target.closest('.ai-field-row')?.remove();
+      });
+    });
+  }
+  
+  // AI form: Add numeric validation
+  if (aiAddNumeric && aiNumericRules) {
+    aiAddNumeric.addEventListener('click', () => {
+      const newRow = document.createElement('div');
+      newRow.className = 'ai-numeric-row';
+      newRow.innerHTML = `
+        <input type="text" class="ai-field-input ai-numeric-field" placeholder="Field name" />
+        <select class="ai-numeric-select ai-numeric-condition">
+          <option value="greater_than">is greater than</option>
+          <option value="less_than">is less than</option>
+          <option value="equals">equals</option>
+          <option value="min_value">minimum value</option>
+          <option value="max_value">maximum value</option>
+        </select>
+        <input type="number" class="ai-numeric-value" placeholder="0" step="0.01" />
+        <button type="button" class="btn-remove-field" title="Remove">×</button>
+      `;
+      aiNumericRules.appendChild(newRow);
+      
+      // Focus the field input
+      newRow.querySelector('.ai-numeric-field')?.focus();
+      
+      // Add remove handler
+      newRow.querySelector('.btn-remove-field')?.addEventListener('click', () => {
+        newRow.remove();
+      });
+    });
+  }
 
   function switchTab(tabName){
     tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
@@ -85,7 +148,7 @@
       document.querySelectorAll('.suggestion').forEach(btn => {
         const btnText = btn.textContent.trim();
         const exists = fields.some(f => (typeof f === 'string' ? f : f.name) === btnText);
-        btn.disabled = fields.length >= 5 || exists;
+        btn.disabled = exists;
       });
   }
 
@@ -94,10 +157,6 @@
       ev.preventDefault();
     const v = (newFieldInput.value || '').trim();
     if (!v) return;
-    if (fields.length >= 5) {
-      alert('Maximum 5 fields allowed');
-      return;
-    }
     // Keep spaces, parentheses, hyphens - allow most characters except problematic ones
     // Remove only: quotes, backslashes, newlines, tabs
     const safe = v.replace(/["'\\|\n\r\t]/g, '').trim();
@@ -194,21 +253,21 @@
       // Show validations
       if (rules.validations) {
         const vals = [];
-        if (rules.validations.signed) vals.push('✓ Check for Signature');
-        if (rules.validations.dated) vals.push('✓ Check for Date');
-        if (rules.validations.signed_and_dated) vals.push('✓ Check for Signature AND Date');
+        if (rules.validations.signed) vals.push('Check for Signature');
+        if (rules.validations.dated) vals.push('Check for Date');
+        if (rules.validations.signed_and_dated) vals.push('Check for Signature AND Date');
         if (rules.validations.must_contain) {
           const cs = rules.validations.must_contain.case_sensitive ? ' (case-sensitive)' : '';
-          vals.push(`✓ Must contain: "${rules.validations.must_contain.text}"${cs}`);
+          vals.push(`Must contain: "${rules.validations.must_contain.text}"${cs}`);
         }
         if (rules.validations.must_not_contain) {
           const cs = rules.validations.must_not_contain.case_sensitive ? ' (case-sensitive)' : '';
-          vals.push(`✓ Must NOT contain: "${rules.validations.must_not_contain.text}"${cs}`);
+          vals.push(`Must NOT contain: "${rules.validations.must_not_contain.text}"${cs}`);
         }
         if (rules.validations.page_count) {
           const op = rules.validations.page_count.operator === '>=' ? 'At least' :
                      rules.validations.page_count.operator === '<=' ? 'At most' : 'Exactly';
-          vals.push(`✓ Page count: ${op} ${rules.validations.page_count.value} page(s)`);
+          vals.push(`Page count: ${op} ${rules.validations.page_count.value} page(s)`);
         }
         
         if (vals.length) {
@@ -278,7 +337,7 @@
     const activeTab = document.querySelector('.tabs button.active').dataset.tab;
     if (activeTab === 'simple'){
       // Convert fields to object format with strategy
-      const fieldsPayload = fields.slice(0,5).map(f => {
+      const fieldsPayload = fields.map(f => {
         if (typeof f === 'string') return {name: f, strategy: 'first'};
         return {name: f.name, strategy: f.strategy || 'first'};
       });
@@ -329,40 +388,138 @@
   [chkSigned, chkDated, chkSignedAndDated, chkMustContain, chkMustNotContain, chkPageCount].forEach(el => el && el.addEventListener('change', buildRulesPreview));
   [mustContainText, mustNotContainText, pageCountOperator, pageCountValue, mustContainCaseSensitive, mustNotContainCaseSensitive].forEach(el => el && el.addEventListener('input', buildRulesPreview));
 
-  // AI integration
+  // AI integration - Build prompt from structured form
   aiGenerate && aiGenerate.addEventListener('click', async () => {
-    const text = (aiPrompt.value || '').trim();
-    if (!text) { 
-      aiStatus.textContent = 'Please describe what you want to check in the text area above.'; 
+    // Gather data from structured form
+    const docType = document.getElementById('aiDocType')?.value?.trim() || '';
+    const additionalNotes = document.getElementById('aiAdditionalNotes')?.value?.trim() || '';
+    const mustContain = document.getElementById('aiMustContain')?.value?.trim() || '';
+    const mustNotContain = document.getElementById('aiMustNotContain')?.value?.trim() || '';
+    
+    // Get extraction fields
+    const fieldInputs = document.querySelectorAll('.ai-field-input');
+    const fields = Array.from(fieldInputs)
+      .map(inp => inp.value.trim())
+      .filter(v => v.length > 0);
+    
+    // Get numeric rules
+    const numericRows = document.querySelectorAll('.ai-numeric-row');
+    const numericRules = Array.from(numericRows).map(row => {
+      const field = row.querySelector('.ai-numeric-field')?.value || '';
+      const condition = row.querySelector('.ai-numeric-condition')?.value || '';
+      const value = row.querySelector('.ai-numeric-value')?.value || '';
+      return { field, condition, value };
+    }).filter(rule => rule.field && rule.condition && rule.value);
+    
+    // Validate minimum input
+    if (!docType && fields.length === 0 && !mustContain && !mustNotContain && numericRules.length === 0) {
+      aiStatus.textContent = 'Please fill in at least one section to generate rules.'; 
       aiStatus.style.color = 'var(--error)';
-      return; 
+      return;
     }
+    
+    // Build natural language prompt
+    let prompt = '';
+    
+    if (docType) {
+      prompt += `I am validating ${docType} documents.\n\n`;
+    }
+    
+    if (fields.length > 0) {
+      prompt += `I need to extract the following information:\n`;
+      fields.forEach(field => {
+        prompt += `- ${field}\n`;
+      });
+      prompt += '\n';
+    }
+    
+    let hasValidations = false;
+    if (mustContain || mustNotContain || numericRules.length > 0) {
+      prompt += `Validation requirements:\n`;
+      hasValidations = true;
+    }
+    
+    if (mustContain) {
+      const items = mustContain.split('\n').map(s => s.trim()).filter(s => s);
+      items.forEach(item => {
+        prompt += `- Document must contain: "${item}"\n`;
+      });
+    }
+    
+    if (mustNotContain) {
+      const items = mustNotContain.split('\n').map(s => s.trim()).filter(s => s);
+      items.forEach(item => {
+        prompt += `- Document must NOT contain: "${item}"\n`;
+      });
+    }
+    
+    if (numericRules.length > 0) {
+      numericRules.forEach(rule => {
+        const conditionText = {
+          'greater_than': `must be greater than ${rule.value}`,
+          'less_than': `must be less than ${rule.value}`,
+          'equals': `must equal ${rule.value}`,
+          'min_value': `minimum value must be ${rule.value}`,
+          'max_value': `maximum value must be ${rule.value}`
+        }[rule.condition] || rule.condition;
+        prompt += `- ${rule.field} ${conditionText}\n`;
+      });
+    }
+    
+    if (hasValidations) prompt += '\n';
+    
+    if (additionalNotes) {
+      prompt += `Additional notes:\n${additionalNotes}\n`;
+    }
+    
+    // Show what we're sending
+    console.log('Generated prompt:', prompt);
+    
     aiStatus.innerHTML = 'Creating your rules... <span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-left:4px"></span>';
     aiStatus.style.color = 'var(--text-secondary)';
     aiGenerate.disabled = true;
-    try{
-      const res = await fetch('/api/v1/ai/convert', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text}) });
+    
+    try {
+      const res = await fetch('/api/v1/ai/convert', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({text: prompt}) 
+      });
+      
       if (!res.ok) {
+        const errorText = await res.text();
+        console.error('AI API error:', errorText);
         aiStatus.textContent = 'Unable to create rules. Please try again or use Simple Checks.';
         aiStatus.style.color = 'var(--error)';
         return;
       }
+      
       const j = await res.json();
+      console.log('AI Response:', j);
+      
       // Store JSON for building rules
-      if (aiPrompt.dataset) {
+      if (aiPrompt && aiPrompt.dataset) {
         aiPrompt.dataset.json = JSON.stringify(j);
       }
-      aiStatus.textContent = '✓ Rules created successfully!';
+      
+      aiStatus.textContent = 'Rules created successfully! Generated ' + 
+        (j.extractions?.length || 0) + ' extraction rules and ' + 
+        (j.validations?.length || 0) + ' validation rules.';
       aiStatus.style.color = 'var(--success)';
+      
       // switch to complex tab preview
       document.querySelector('.tabs button[data-tab="complex"]')?.classList.add('active');
       document.querySelector('.tabs button[data-tab="simple"]')?.classList.remove('active');
       panels.forEach(p => p.style.display = (p.dataset.panel === 'complex') ? 'block' : 'none');
       buildRulesPreview();
-    }catch(err){
+      
+    } catch(err) {
+      console.error('AI error:', err);
       aiStatus.textContent = 'Error: ' + err.message;
       aiStatus.style.color = 'var(--error)';
-    } finally { aiGenerate.disabled = false; }
+    } finally { 
+      aiGenerate.disabled = false; 
+    }
   });
 
   // initial render
@@ -434,7 +591,7 @@
             // Show success message
             const successMsg = document.createElement('div');
             successMsg.className = 'success-toast';
-            successMsg.textContent = '✓ Rules saved successfully!';
+            successMsg.textContent = 'Rules saved successfully!';
             document.body.appendChild(successMsg);
             setTimeout(() => successMsg.remove(), 3000);
           }
@@ -511,7 +668,7 @@
               loadSavedRulesets(); // Reload list
               const successMsg = document.createElement('div');
               successMsg.className = 'success-toast';
-              successMsg.textContent = '✓ Ruleset deleted';
+              successMsg.textContent = 'Ruleset deleted';
               document.body.appendChild(successMsg);
               setTimeout(() => successMsg.remove(), 3000);
             } else {
@@ -599,7 +756,7 @@
     // Show success message
     const successMsg = document.createElement('div');
     successMsg.className = 'success-toast';
-    successMsg.textContent = `✓ Loaded "${ruleset.name}"`;
+    successMsg.textContent = `Loaded "${ruleset.name}"`;
     document.body.appendChild(successMsg);
     setTimeout(() => successMsg.remove(), 3000);
   }
