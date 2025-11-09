@@ -361,6 +361,24 @@
                 Add Field to Extract
               </button>
             </div>
+
+            <!-- Calculations Section -->
+            <div id="calculationsBuilder" class="field-builder" style="margin-top: 30px;">
+              <h3>Calculations</h3>
+              <p class="helper">Perform mathematical operations on extracted values. Example: <code>Gross Salary - PF - Income Tax</code></p>
+              
+              <div id="calculationsList" class="fields-list">
+                <!-- Calculations will be added here dynamically -->
+              </div>
+
+              <button type="button" id="addCalculationBtn" class="btn btn-secondary btn-large" style="margin-top: 15px;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 7h12M4 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Add Calculation
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -437,13 +455,43 @@
               </div>
             </div>
 
-            <div class="wizard-step">
-              <label class="wizard-label">If Multiple Matches Found</label>
+            <div class="wizard-step" id="fieldStrategySection">
+              <label class="wizard-label">Extraction Strategy</label>
               <select id="fieldStrategySelect" class="wizard-select">
                 <option value="first">Extract first occurrence</option>
                 <option value="last">Extract last occurrence</option>
                 <option value="all">Extract all occurrences</option>
+                <option value="between">Extract between two markers</option>
               </select>
+            </div>
+
+            <!-- Between Markers Section (conditional) -->
+            <div class="wizard-step" id="betweenMarkersSection" style="display: none;">
+              <label class="wizard-label">Start Marker</label>
+              <input type="text" id="startMarkerInput" class="wizard-input" 
+                     placeholder="e.g., Total Amount:, Invoice #, Date:" />
+              <label class="wizard-label" style="margin-top: 12px;">End Marker</label>
+              <input type="text" id="endMarkerInput" class="wizard-input" 
+                     placeholder="e.g., USD, [newline], Tax:" />
+              <p style="font-size: 0.85em; color: #6b7280; margin-top: 8px;">
+                Extract text found between these two markers. Use <code>[newline]</code> to indicate a line break.
+              </p>
+            </div>
+
+            <!-- Column Selection (for multi-column tables) -->
+            <div class="wizard-step">
+              <label class="wizard-label">
+                Is this field in a multi-column table?
+                <input type="checkbox" id="fieldInTableCheckbox" style="margin-left: 8px;">
+              </label>
+              <div id="fieldColumnSection" style="display: none; margin-top: 10px;">
+                <label class="wizard-label">Which column?</label>
+                <input type="text" id="fieldColumnInput" class="wizard-input" 
+                       placeholder='e.g. "Per Month", "Monthly", "Annual", or "first", "last", "1", "2"' />
+                <p class="wizard-hint">
+                  Enter the column header name, or use: "first", "last", or number "1", "2", "3"
+                </p>
+              </div>
             </div>
 
             <!-- Validation Rules Section (shown conditionally based on type) -->
@@ -748,6 +796,53 @@
         </div>
       </section>
 
+      <!-- Calculation Modal -->
+      <div id="calculationModal" class="wizard-modal" style="display: none;">
+        <div class="wizard-content">
+          <div class="wizard-header">
+            <h2>Add Calculation</h2>
+            <button type="button" id="calculationModalClose" class="wizard-close">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="wizard-body">
+            <div class="wizard-step">
+              <label class="wizard-label">Calculation Name</label>
+              <input type="text" id="calcNameInput" class="wizard-input" placeholder="e.g., Net Salary, Tax Amount" />
+              <p class="wizard-hint">This will appear in your results</p>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Formula</label>
+              <textarea id="calcFormulaInput" class="wizard-input" rows="3" 
+                        placeholder="e.g., Basic Salary + HRA + DA - PF"></textarea>
+              <p class="wizard-hint">
+                <strong>Use exact field names</strong> from your extraction fields above.<br>
+                <strong>Operators:</strong> + - * / ( )<br>
+                <strong>Percentage:</strong> Use % symbol (e.g., <code>Basic Salary * 15%</code> calculates 15% of Basic Salary)<br>
+                <strong>Functions:</strong> log(), sqrt(), abs(), round(), floor(), ceil(), sin(), cos(), tan(), exp(), pow(), min(), max()
+              </p>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Available Fields</label>
+              <div id="availableFieldsList" class="available-fields">
+                <!-- Will be populated dynamically -->
+              </div>
+              <p class="wizard-hint">Click a field name to insert it into the formula</p>
+            </div>
+          </div>
+
+          <div class="wizard-footer">
+            <button type="button" id="calculationModalCancel" class="btn btn-ghost">Cancel</button>
+            <button type="button" id="calculationModalSave" class="btn btn-primary">Add Calculation</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Save Ruleset Modal -->
       <div id="saveRulesetModal" class="modal" style="display:none">
         <div class="modal-overlay"></div>
@@ -1042,7 +1137,17 @@
       </div>
     </div>
 
-  <script src="/rules-builder.js"></script>
+  <!-- Load modules first -->
+  <script src="/modules/field-wizard.js"></script>
+  <script src="/modules/validations-builder.js"></script>
+  <script src="/calculations.js"></script>
+  <script src="/modules/rules-preview.js"></script>
+  <script src="/modules/ruleset-loader.js"></script>
+  
+  <!-- Load main orchestrator -->
+  <script src="/modules/rules-builder-main.js"></script>
+  
+  <!-- Load other main files -->
   <script src="/automation.js"></script>
   <script src="/app.js"></script>
   </body>

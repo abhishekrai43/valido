@@ -26,7 +26,23 @@
   const fieldNameInput = document.getElementById('fieldNameInput');
   const fieldLookForInput = document.getElementById('fieldLookForInput');
   const fieldStrategySelect = document.getElementById('fieldStrategySelect');
+  const fieldStrategySection = document.getElementById('fieldStrategySection');
+  const fieldInTableCheckbox = document.getElementById('fieldInTableCheckbox');
+  const fieldColumnSection = document.getElementById('fieldColumnSection');
+  const fieldColumnInput = document.getElementById('fieldColumnInput');
+  const fieldFormulaSection = document.getElementById('fieldFormulaSection');
+  const fieldFormulaInput = document.getElementById('fieldFormulaInput');
   const fieldsList = document.getElementById('fieldsList');
+
+  // Toggle column section visibility
+  if (fieldInTableCheckbox) {
+    fieldInTableCheckbox.addEventListener('change', (e) => {
+      fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
+      if (!e.target.checked) {
+        fieldColumnInput.value = '';
+      }
+    });
+  }
 
   // Type selection handler for showing validation rules
   const fieldTypeRadios = document.querySelectorAll('input[name="fieldType"]');
@@ -39,14 +55,24 @@
   fieldTypeRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
       const type = e.target.value;
-      validationRulesSection.style.display = 'block';
-      textValidations.style.display = type === 'text' ? 'block' : 'none';
-      numberValidations.style.display = type === 'number' ? 'block' : 'none';
-      dateValidations.style.display = type === 'date' ? 'block' : 'none';
+      
+      // Show/hide formula section for computed type
+      if (type === 'computed') {
+        fieldFormulaSection.style.display = 'block';
+        fieldStrategySection.style.display = 'none';
+        validationRulesSection.style.display = 'none';
+      } else {
+        fieldFormulaSection.style.display = 'none';
+        fieldStrategySection.style.display = 'block';
+        validationRulesSection.style.display = 'block';
+        textValidations.style.display = type === 'text' ? 'block' : 'none';
+        numberValidations.style.display = type === 'number' ? 'block' : 'none';
+        dateValidations.style.display = type === 'date' ? 'block' : 'none';
+      }
     });
   });
 
-  let fields = [];  // Array of {name, lookFor, type, strategy, validations}
+  let fields = [];  // Array of {name, lookFor, type, strategy, validations, column, formula}
 
   function renderFields(){
     fieldsList.innerHTML = '';
@@ -80,6 +106,8 @@
         typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><text x="2" y="18" font-size="16" font-weight="bold">123</text></svg>';
       } else if (f.type === 'date') {
         typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/><path d="M5 22h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2zm0-2V9h14v11H5z"/></svg>';
+      } else if (f.type === 'computed') {
+        typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><text x="6" y="18" font-size="18" font-weight="bold">=</text></svg>';
       }
       typeBadge.innerHTML = typeIcon;
       
@@ -93,23 +121,27 @@
       
       const fieldLookFor = document.createElement('div');
       fieldLookFor.className = 'field-lookfor';
-      fieldLookFor.textContent = f.lookFor;
+      // Show formula for computed fields, lookFor for others
+      fieldLookFor.textContent = f.type === 'computed' ? f.formula : f.lookFor;
       
       fieldInfo.appendChild(fieldName);
       fieldInfo.appendChild(fieldLookFor);
       
-      // Strategy selector
-      const strategySelect = document.createElement('select');
-      strategySelect.className = 'field-strategy';
-      strategySelect.innerHTML = `
-        <option value="first" ${f.strategy === 'first' ? 'selected' : ''}>First</option>
-        <option value="last" ${f.strategy === 'last' ? 'selected' : ''}>Last</option>
-        <option value="all" ${f.strategy === 'all' ? 'selected' : ''}>All</option>
-      `;
-      strategySelect.addEventListener('change', (e) => {
-        fields[idx].strategy = e.target.value;
-        buildRulesPreview();
-      });
+      // Strategy selector (not for computed fields)
+      let strategySelect = null;
+      if (f.type !== 'computed') {
+        strategySelect = document.createElement('select');
+        strategySelect.className = 'field-strategy';
+        strategySelect.innerHTML = `
+          <option value="first" ${f.strategy === 'first' ? 'selected' : ''}>First</option>
+          <option value="last" ${f.strategy === 'last' ? 'selected' : ''}>Last</option>
+          <option value="all" ${f.strategy === 'all' ? 'selected' : ''}>All</option>
+        `;
+        strategySelect.addEventListener('change', (e) => {
+          fields[idx].strategy = e.target.value;
+          buildRulesPreview();
+        });
+      }
       
       // Remove button
       const removeBtn = document.createElement('button');
@@ -125,7 +157,9 @@
       
       fieldCard.appendChild(typeBadge);
       fieldCard.appendChild(fieldInfo);
-      fieldCard.appendChild(strategySelect);
+      if (strategySelect) {
+        fieldCard.appendChild(strategySelect);
+      }
       fieldCard.appendChild(removeBtn);
       fieldsList.appendChild(fieldCard);
     });
@@ -138,13 +172,21 @@
       // Reset wizard inputs
       fieldNameInput.value = '';
       fieldLookForInput.value = '';
+      fieldFormulaInput.value = '';
+      fieldInTableCheckbox.checked = false;
+      fieldColumnInput.value = '';
       document.querySelectorAll('input[name="fieldType"]').forEach(radio => {
         radio.checked = radio.value === 'text';
       });
       fieldStrategySelect.value = 'first';
       
-      // Reset and hide validation rules
+      // Reset visibility states
+      fieldFormulaSection.style.display = 'none';
+      fieldStrategySection.style.display = 'block';
+      fieldColumnSection.style.display = 'none';
       validationRulesSection.style.display = 'none';
+      
+      // Reset validation checkboxes
       document.querySelectorAll('.validation-checkbox input[type="checkbox"]').forEach(cb => cb.checked = false);
       document.querySelectorAll('.inline-number, .inline-text, .inline-date').forEach(input => input.value = '');
       
@@ -171,14 +213,32 @@
       const lookFor = fieldLookForInput.value.trim();
       const type = document.querySelector('input[name="fieldType"]:checked')?.value || 'text';
       const strategy = fieldStrategySelect.value;
+      const inTable = fieldInTableCheckbox?.checked || false;
+      const column = inTable ? fieldColumnInput.value.trim() : null;
+      const formula = fieldFormulaInput.value.trim();
 
       // Validation
       if (!name) {
         alert('Please enter a field name');
         return;
       }
-      if (!lookFor) {
-        alert('Please enter text to look for');
+      
+      // For computed fields, require formula and skip lookFor
+      if (type === 'computed') {
+        if (!formula) {
+          alert('Please enter a formula for computed field');
+          return;
+        }
+      } else {
+        // For non-computed fields, require lookFor
+        if (!lookFor) {
+          alert('Please enter text to look for');
+          return;
+        }
+      }
+      
+      if (inTable && !column) {
+        alert('Please specify which column to extract from');
         return;
       }
 
@@ -229,13 +289,25 @@
       }
 
       // Add field
-      fields.push({
+      const newField = {
         name,
-        lookFor,
         type,
-        strategy,
         validations
-      });
+      };
+      
+      // Add type-specific properties
+      if (type === 'computed') {
+        newField.formula = formula;
+      } else {
+        newField.lookFor = lookFor;
+        newField.strategy = strategy;
+      }
+      
+      // Add column if specified
+      if (column) {
+        newField.column = column;
+      }
+      fields.push(newField);
 
       // Close modal and refresh
       fieldWizardModal.style.display = 'none';
@@ -243,9 +315,8 @@
     });
   }
 
-
   function buildRulesPreview(){
-    let rules = { fields: [], validations: {} };
+    let rules = { fields: [], validations: {}, calculations: [] };
     
     if (chkSigned && chkSigned.checked) {
       rules.validations.signed = true;
@@ -281,12 +352,19 @@
       lookFor: f.lookFor,
       type: f.type,
       strategy: f.strategy || 'first',
-      validations: f.validations || []
+      validations: f.validations || [],
+      ...(f.column && { column: f.column })
     }));
+    
+    // Add calculations if available
+    if (typeof getCalculations === 'function') {
+      rules.calculations = getCalculations();
+    }
     
     // remove empty objects
     if (Object.keys(rules.validations).length === 0) delete rules.validations;
     if (!rules.fields || rules.fields.length===0) delete rules.fields;
+    if (!rules.calculations || rules.calculations.length===0) delete rules.calculations;
     
     // Build human-readable summary with HTML formatting
     let summaryHtml = '';
@@ -359,6 +437,21 @@
             <strong>${escapeHtml(field.name)}</strong> 
             <span class="preview-field-meta">(${typeLabel}, ${strategyLabel})</span>${validationsDesc}
             <div class="preview-field-lookfor">Look for: "${escapeHtml(field.lookFor)}"</div>
+          </div>`;
+        });
+        summaryHtml += '</div>';
+        summaryHtml += '</div>';
+      }
+      
+      // Calculations section
+      if (rules.calculations && rules.calculations.length > 0) {
+        summaryHtml += '<div class="preview-section">';
+        summaryHtml += '<div class="preview-label">Calculations:</div>';
+        summaryHtml += '<div class="preview-field-list">';
+        rules.calculations.forEach(calc => {
+          summaryHtml += `<div class="preview-field-item" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 3px solid #10b981;">
+            <strong>${escapeHtml(calc.name)}</strong>
+            <div class="preview-field-lookfor" style="font-family: 'Courier New', monospace; font-size: 13px;">= ${escapeHtml(calc.formula)}</div>
           </div>`;
         });
         summaryHtml += '</div>';
@@ -627,9 +720,15 @@
         lookFor: f.lookFor || '',
         type: f.type || 'text',
         strategy: f.strategy || 'first',
-        validations: f.validations || []
+        validations: f.validations || [],
+        ...(f.column && { column: f.column })
       };
     });
+    
+    // Load calculations if present
+    if (rules.calculations && typeof setCalculations === 'function') {
+      setCalculations(rules.calculations);
+    }
     
     renderFields();
     buildRulesPreview();
