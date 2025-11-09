@@ -55,15 +55,11 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
         return ""
 
     try:
-        MAX_PAGES_PER_PDF = int(os.getenv("MAX_PAGES_PER_PDF", "10"))
-    except Exception:
-        MAX_PAGES_PER_PDF = 10
-
-    try:
         import fitz  # PyMuPDF
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
             total_pages = len(doc)
-            pages_to_scan = total_pages if MAX_PAGES_PER_PDF <= 0 else min(total_pages, MAX_PAGES_PER_PDF)
+            # Process all pages - no arbitrary limit for local desktop app
+            pages_to_scan = total_pages
 
             text_chunks = []
             low_text_pages = 0

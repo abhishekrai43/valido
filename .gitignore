@@ -108,6 +108,14 @@ build/
 logs/
 *.log
 
+# Results and test data
+results/
+
+# Old/backup files
+*-old.js
+*-old.*
+*.bak
+
 # Documentation and test files
 *.md
 *.pdf

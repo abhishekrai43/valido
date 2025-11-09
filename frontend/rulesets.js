@@ -1,4 +1,4 @@
-const API = '/api/v1/rulesets'
+const API = '/api/v1/rulesets/'
 
 async function listRulesets() {
   const res = await fetch(API + '/')

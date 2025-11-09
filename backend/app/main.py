@@ -13,6 +13,7 @@ import traceback
 import glob
 import sys
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 # Absolute imports for PyInstaller compatibility
 from app.services.parser import extract_text_from_bytes
@@ -28,12 +29,6 @@ try:
 except Exception:
     # dotenv is optional; environment variables are preferred in production
     pass
-
-# AI stub import (generate ruleset using OpenAI)
-try:
-    from app.routes.ai_stub import generate_ruleset_from_prompt
-except Exception:
-    generate_ruleset_from_prompt = None
 
 logger = get_logger("ValidoMain")
 
@@ -97,12 +92,14 @@ def ensure_results_dir(task_id: str):
 @app.on_event("startup")
 async def _on_startup():
     try:
+        logger.info("Starting database initialization...")
         from . import models  # noqa: F401
-        from .db import create_db_and_tables
+        from .db import create_db_and_tables, SQLITE_URL
+        logger.info(f"Database URL: {SQLITE_URL}")
         create_db_and_tables()
         logger.info("Database tables created successfully (startup)")
     except Exception as e:
-        logger.error(f"Failed to initialize database at startup: {e}")
+        logger.error(f"Failed to initialize database at startup: {e}", exc_info=True)
         # continue; DB may be optional in local dev
 
 
@@ -117,7 +114,10 @@ async def healthz():
 async def diagnostics():
     """Get system diagnostics information."""
     logger.info("Diagnostics request")
-    import psutil
+    try:
+        import psutil  # type: ignore
+    except ImportError:
+        psutil = None  # type: ignore
     import platform
     from app.db import get_session
     from app.models import User, Ruleset, WatchFolder
@@ -127,10 +127,10 @@ async def diagnostics():
         system_info = {
             "platform": platform.platform(),
             "python_version": platform.python_version(),
-            "cpu_count": psutil.cpu_count(),
-            "memory_total": psutil.virtual_memory().total,
-            "memory_available": psutil.virtual_memory().available,
-            "disk_free": psutil.disk_usage('/').free if os.name == 'posix' else psutil.disk_usage('C:\\').free,
+            "cpu_count": psutil.cpu_count() if psutil else "N/A",  # type: ignore
+            "memory_total": psutil.virtual_memory().total if psutil else "N/A",  # type: ignore
+            "memory_available": psutil.virtual_memory().available if psutil else "N/A",  # type: ignore
+            "disk_free": (psutil.disk_usage('/').free if os.name == 'posix' else psutil.disk_usage('C:\\').free) if psutil else "N/A",  # type: ignore
         }
 
         # Database stats
@@ -176,7 +176,10 @@ async def export_diagnostics():
     logger.info("Diagnostics export requested")
     import tempfile
     import zipfile
-    import psutil
+    try:
+        import psutil  # type: ignore
+    except ImportError:
+        psutil = None  # type: ignore
     import platform
     from app.db import get_session
     from app.models import User, Ruleset, WatchFolder
@@ -219,7 +222,7 @@ async def export_diagnostics():
                         "users": session.query(User).count(),
                         "rulesets": session.query(Ruleset).count(),
                         "watch_folders": session.query(WatchFolder).count(),
-                        "watch_folders_active": session.query(WatchFolder).filter(WatchFolder.enabled == True).count(),
+                        "watch_folders_active": session.query(WatchFolder).filter(WatchFolder.enabled.is_(True)).count(),  # type: ignore
                     }
                 
                 db_file = os.path.join(temp_dir, 'database_stats.json')
@@ -528,6 +531,12 @@ async def submit_files(
 
     # Submit task to local worker with the same task_id
     try:
+        import sys
+        import os
+        # Add backend directory to path to import local_worker
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
         from local_worker import submit_task
         worker_task_id = submit_task(
             "process_pdfs",
@@ -560,6 +569,12 @@ async def get_task_status(task_id: str):
     
     # Check local worker for task status
     try:
+        import sys
+        import os
+        # Add backend directory to path to import local_worker
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
         from local_worker import get_task_status as get_worker_status
         task_info = get_worker_status(task_id)
         if task_info:
@@ -580,83 +595,6 @@ async def get_task_status(task_id: str):
     except Exception as e:
         logger.error(f"Failed to get task status from worker: {e}")
         return JSONResponse(content={"task_id": task_id, "state": "UNKNOWN", "info": None})
-
-
-# --- AI generation endpoint (wraps ai_stub.generate_ruleset_from_prompt) ---
-@app.post("/api/v1/ai/generate")
-async def ai_generate(payload: Dict[str, Any]):
-    """Generate a structured ruleset from a natural language prompt using OpenAI.
-
-    Expects JSON payload: { "prompt": "..." }
-    The OpenAI API key must be set in the environment variable OPENAI_API_KEY or in a .env file.
-    """
-    prompt = payload.get("prompt") if isinstance(payload, dict) else None
-    if not prompt or not isinstance(prompt, str):
-        raise HTTPException(status_code=400, detail="Missing 'prompt' in request body")
-
-    # Ensure ai_stub is available
-    if generate_ruleset_from_prompt is None:
-        raise HTTPException(status_code=500, detail="AI generation is not available (ai_stub import failed)")
-
-    # Read API key from environment
-    # Note: For production SaaS, this should be YOUR OpenAI API key (centralized)
-    # Rule generation costs ~$0.0003 per request, negligible compared to subscription revenue
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        logger.error("OPENAI_API_KEY not configured in environment")
-        raise HTTPException(
-            status_code=503, 
-            detail="AI rule generation is temporarily unavailable. Please use Simple Checks or contact support."
-        )
-
-    # Create OpenAI client lazily so we don't require it at import time
-    try:
-        from openai import OpenAI
-    except Exception as e:
-        logger.error(f"OpenAI SDK not installed: {e}")
-        raise HTTPException(status_code=500, detail="OpenAI SDK not installed on server")
-
-    try:
-        client = OpenAI(api_key=api_key)
-        ruleset = generate_ruleset_from_prompt(prompt, client)
-        return JSONResponse(content={"ok": True, "ruleset": ruleset})
-    except Exception as e:
-        logger.error(f"AI generation error: {e}")
-        return JSONResponse(content={"ok": False, "error": str(e)})
-
-
-# Compatibility endpoint for frontend: accepts { text: '...' } and returns the ruleset JSON directly
-@app.post("/api/v1/ai/convert")
-async def ai_convert(payload: Dict[str, Any]):
-    text = payload.get("text") if isinstance(payload, dict) else None
-    if not text or not isinstance(text, str):
-        raise HTTPException(status_code=400, detail="Missing 'text' in request body")
-
-    if generate_ruleset_from_prompt is None:
-        raise HTTPException(status_code=500, detail="AI generation is not available (ai_stub import failed)")
-
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        logger.error("OPENAI_API_KEY not configured in environment")
-        raise HTTPException(
-            status_code=503, 
-            detail="AI rule generation is temporarily unavailable. Please use Simple Checks or contact support."
-        )
-
-    try:
-        from openai import OpenAI
-    except Exception as e:
-        logger.error(f"OpenAI SDK not installed: {e}")
-        raise HTTPException(status_code=500, detail="OpenAI SDK not installed on server")
-
-    try:
-        client = OpenAI(api_key=api_key)
-        ruleset = generate_ruleset_from_prompt(text, client)
-        # Return the ruleset directly (frontend expects raw ruleset)
-        return JSONResponse(content=ruleset)
-    except Exception as e:
-        logger.error(f"AI convert error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # -- Download endpoints remain the same and rely on results folder layout --
@@ -728,7 +666,7 @@ try:
     app.include_router(ruleset_router)
     logger.info("Ruleset routes included successfully")
 except Exception as e:
-    logger.warning(f"Failed to include ruleset routes: {e}")
+    logger.error(f"Failed to include ruleset routes: {e}", exc_info=True)
 
 try:
     from app.routes.user_routes import router as user_router
@@ -753,8 +691,8 @@ try:
 except Exception as e:
     logger.warning(f"Failed to include agent routes: {e}")
 
-# AI routes are defined directly in main.py (lines 586-657), no separate router needed
-logger.info("AI routes configured successfully")
+# Routes configured
+logger.info("All routes configured successfully")
 
 # Serve frontend static files (same logic)
 try:

@@ -38,22 +38,29 @@ def list_rulesets():
 @router.post("/", response_model=RulesetRead)
 def create_ruleset(payload: RulesetCreate):
     logger.info(f"Creating ruleset: {payload.name}")
-    if not payload.name or len(payload.name.strip()) == 0:
-        logger.warning("Empty ruleset name")
-        raise HTTPException(status_code=400, detail="Ruleset name cannot be empty")
-    with get_session() as session:
-        # simple duplicate-name guard
-        existing = session.exec(select(Ruleset).where(Ruleset.name == payload.name)).first()
-        if existing:
-            logger.warning(f"Duplicate ruleset name: {payload.name}")
-            raise HTTPException(status_code=409, detail="ruleset with this name already exists")
+    try:
+        if not payload.name or len(payload.name.strip()) == 0:
+            logger.warning("Empty ruleset name")
+            raise HTTPException(status_code=400, detail="Ruleset name cannot be empty")
+        
+        with get_session() as session:
+            # simple duplicate-name guard
+            existing = session.exec(select(Ruleset).where(Ruleset.name == payload.name)).first()
+            if existing:
+                logger.warning(f"Duplicate ruleset name: {payload.name}")
+                raise HTTPException(status_code=409, detail="ruleset with this name already exists")
 
-        r = Ruleset(name=payload.name, rules=payload.rules or {}, is_active=False)
-        session.add(r)
-        session.commit()
-        session.refresh(r)
-        logger.info(f"Ruleset created: {r.id}")
-        return r
+            r = Ruleset(name=payload.name, rules=payload.rules or {}, is_active=False)
+            session.add(r)
+            session.commit()
+            session.refresh(r)
+            logger.info(f"Ruleset created: {r.id}")
+            return r
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating ruleset: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create ruleset: {str(e)}")
 
 
 @router.get("/{ruleset_id}", response_model=RulesetRead)

@@ -21,8 +21,15 @@ from contextlib import contextmanager
 import time
 
 
-# Global log directory
-LOG_DIR = os.path.join(os.getcwd(), "logs")
+# Global log directory - handle PyInstaller frozen app
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    base_dir = os.path.dirname(sys.executable)
+else:
+    # Running as script
+    base_dir = os.getcwd()
+
+LOG_DIR = os.path.join(base_dir, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 

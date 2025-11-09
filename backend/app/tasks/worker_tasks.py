@@ -1,4 +1,5 @@
 # app/tasks/worker_tasks.py
+# pyright: reportOptionalCall=false, reportOptionalMemberAccess=false, reportOptionalOperand=false, reportArgumentType=false, reportOperatorIssue=false
 import time
 import io
 import zipfile
@@ -20,6 +21,14 @@ try:
     EXCEL_AVAILABLE = True
 except ImportError:
     EXCEL_AVAILABLE = False
+    # Define dummy variables to avoid unbound variable errors
+    openpyxl = None  # type: ignore
+    Font = None  # type: ignore
+    PatternFill = None  # type: ignore
+    Alignment = None  # type: ignore
+    Border = None  # type: ignore
+    Side = None  # type: ignore
+    get_column_letter = None  # type: ignore
 
 try:
     from reportlab.lib.pagesizes import letter, A4
@@ -31,40 +40,44 @@ try:
     PDF_REPORT_AVAILABLE = True
 except ImportError:
     PDF_REPORT_AVAILABLE = False
+    # Type ignore to avoid unbound variable warnings when reportlab is not installed
+    letter = None  # type: ignore
+    A4 = None  # type: ignore
+    getSampleStyleSheet = None  # type: ignore
+    ParagraphStyle = None  # type: ignore
+    inch = None  # type: ignore
+    colors = None  # type: ignore
+    TA_CENTER = None  # type: ignore
+    TA_LEFT = None  # type: ignore
+    TA_RIGHT = None  # type: ignore
+    SimpleDocTemplate = None  # type: ignore
+    Table = None  # type: ignore
+    TableStyle = None  # type: ignore
+    Paragraph = None  # type: ignore
+    Spacer = None  # type: ignore
+    PageBreak = None  # type: ignore
 
 
-# Professional color palettes for PDF reports
+# Professional color palettes for PDF reports - Light Blue theme
 BACKGROUND_COLORS = [
-    [(0.85, 0.92, 0.98), (0.7, 0.85, 0.95)],  # Blue tones
-    [(0.90, 0.95, 0.90), (0.75, 0.88, 0.75)],  # Green tones
-    [(0.95, 0.88, 0.90), (0.88, 0.75, 0.80)],  # Rose tones
-    [(0.95, 0.92, 0.85), (0.88, 0.82, 0.70)],  # Warm tones
-    [(0.92, 0.90, 0.95), (0.80, 0.75, 0.88)],  # Purple tones
+    [(0.85, 0.93, 0.98), (0.70, 0.85, 0.95)],  # Soft blue tones
 ]
 
 HEADER_COLORS = [
-    colors.HexColor('#0066CC'),  # Professional Blue
-    colors.HexColor('#2D5F2E'),  # Forest Green
-    colors.HexColor('#8B4513'),  # Saddle Brown
-    colors.HexColor('#4B0082'),  # Indigo
-    colors.HexColor('#DC143C'),  # Crimson
+    colors.HexColor('#5DADE2'),  # Light Blue
 ]
 
 
 def draw_elegant_background(canvas, doc):
-    """Draw random elegant oval patterns as background."""
+    """Draw elegant light blue background."""
     width, height = doc.pagesize
     canvas.saveState()
     
-    # Choose random color palette
-    import random
-    color_palette = random.choice(BACKGROUND_COLORS)
-    
-    # Draw two overlapping ovals with lighter shades
-    canvas.setFillColorRGB(*color_palette[0])
+    # Light blue gradient background
+    canvas.setFillColorRGB(0.85, 0.93, 0.98)
     canvas.ellipse(-width * 0.4, height * 0.05, width * 1.2, height * 0.7, fill=True, stroke=False)
     
-    canvas.setFillColorRGB(*color_palette[1])
+    canvas.setFillColorRGB(0.70, 0.85, 0.95)
     canvas.ellipse(-width * 0.3, height * 0.2, width * 1.1, height * 0.8, fill=True, stroke=False)
     
     canvas.restoreState()
@@ -94,25 +107,27 @@ def draw_valido_footer(canvas, doc):
 
 def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str) -> Optional[str]:
     """Generate Excel report with professional formatting."""
+    # type: ignore  # Suppress warnings for optional openpyxl imports
     if not EXCEL_AVAILABLE or not csv_rows:
         return None
     
+    # type: ignore  # Suppress warnings for optional openpyxl imports
     try:
         excel_filename = f'valido_results_{timestamp}.xlsx'
         excel_path = os.path.join(output_path, excel_filename)
         
-        wb = openpyxl.Workbook()
+        wb = openpyxl.Workbook()  # type: ignore
         
         # Remove default sheet and create Summary sheet
-        wb.remove(wb.active)
+        wb.remove(wb.active)  # type: ignore
         ws_summary = wb.create_sheet("Summary", 0)
         
         # Summary sheet styling
-        header_fill = PatternFill(start_color="0066CC", end_color="0066CC", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=14)
+        header_fill = PatternFill(start_color="0066CC", end_color="0066CC", fill_type="solid")  # type: ignore
+        header_font = Font(bold=True, color="FFFFFF", size=14)  # type: ignore
         
         ws_summary['A1'] = "Valido Validation Report"
-        ws_summary['A1'].font = Font(bold=True, size=18, color="0066CC")
+        ws_summary['A1'].font = Font(bold=True, size=18, color="0066CC")  # type: ignore
         ws_summary.merge_cells('A1:B1')
         
         ws_summary['A3'] = "Report Date:"
@@ -143,8 +158,8 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         
         # Format summary cells
         for row in range(3, 11):
-            ws_summary[f'A{row}'].font = Font(bold=True)
-            ws_summary[f'A{row}'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+            ws_summary[f'A{row}'].font = Font(bold=True)  # type: ignore
+            ws_summary[f'A{row}'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")  # type: ignore
         
         ws_summary.column_dimensions['A'].width = 30
         ws_summary.column_dimensions['B'].width = 40
@@ -161,7 +176,7 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
             for cell in ws_details[1]:
                 cell.fill = header_fill
                 cell.font = header_font
-                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)  # type: ignore
             
             # Write data rows
             for row_data in csv_rows:
@@ -223,6 +238,7 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
     if not PDF_REPORT_AVAILABLE or not csv_rows:
         return None
     
+    # type: ignore  # Suppress warnings for optional reportlab imports - only runs when reportlab is available
     try:
         import random
         
@@ -241,8 +257,8 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
         
         styles = getSampleStyleSheet()
         
-        # Custom styles with random colors
-        title_color = random.choice(HEADER_COLORS)
+        # Light blue color scheme
+        title_color = colors.HexColor('#5DADE2')
         
         title_style = ParagraphStyle(
             'CustomTitle',
@@ -357,6 +373,74 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
         
         flowables.append(validation_table)
         flowables.append(Spacer(1, 20))
+        
+        # Detailed file-by-file results
+        if total_files <= 20:
+            flowables.append(Paragraph("Detailed Results by File", heading_style))
+            
+            for idx, row in enumerate(csv_rows, 1):
+                filename = row.get('Filename', 'Unknown')
+                status = row.get('Status', 'Unknown')
+                
+                # File header
+                file_header = f"{idx}. {filename}"
+                flowables.append(Paragraph(file_header, ParagraphStyle(
+                    'FileHeader',
+                    parent=styles['Heading3'],
+                    fontSize=12,
+                    textColor=colors.HexColor('#2874A6'),
+                    spaceAfter=8,
+                    spaceBefore=12,
+                    fontName='Helvetica-Bold'
+                )))
+                
+                # Build details list
+                details = []
+                details.append(f"<b>Status:</b> {status}")
+                
+                if row.get('Signed'):
+                    details.append(f"<b>Text Signature:</b> {row.get('Signed')}")
+                    if row.get('Signature Details'):
+                        sig_details = row.get('Signature Details', '')
+                        if sig_details:
+                            details.append(f"  → {sig_details[:80]}")
+                
+                if row.get('Digital Signed'):
+                    details.append(f"<b>Digital Signature:</b> {row.get('Digital Signed')}")
+                
+                if row.get('Dated'):
+                    details.append(f"<b>Date Found:</b> {row.get('Dated')}")
+                    if row.get('Date Found'):
+                        details.append(f"  → {row.get('Date Found')}")
+                
+                # Add extracted fields (exclude internal fields)
+                excluded_keys = [
+                    'Filename', 'Status', 'Signed', 'Digital Signed', 'Dated', 
+                    'Signature Details', 'Date Found', 'Error Details', 'Signature Type', 
+                    'Digital Signature Details', 'Actual Page Count', 'validation_report'
+                ]
+                for key, value in row.items():
+                    if key not in excluded_keys:
+                        if value and value != 'N/A' and value != '':
+                            details.append(f"<b>{key}:</b> {value}")
+                
+                if row.get('Error Details'):
+                    err_details = row.get('Error Details', '')
+                    if err_details:
+                        details.append(f"<b>Error:</b> {err_details[:100]}")
+                
+                # Add details as paragraph
+                details_text = '<br/>'.join(details)
+                flowables.append(Paragraph(details_text, ParagraphStyle(
+                    'FileDetails',
+                    parent=styles['Normal'],
+                    fontSize=10,
+                    leftIndent=20,
+                    spaceAfter=10,
+                    leading=14
+                )))
+            
+            flowables.append(Spacer(1, 10))
         
         # Failed/Error files (if any)
         if error_count > 0 or scanned_count > 0:
@@ -581,9 +665,15 @@ def process_pdfs_sync(
             # Check for /Sig annotation in pages
             for page in reader.pages:
                 annots = page.get('/Annots', [])
+                # Resolve IndirectObject if needed
+                if hasattr(annots, 'get_object'):
+                    annots = annots.get_object()
+                # Ensure annots is a list
+                if not isinstance(annots, list):
+                    continue
                 for annot_ref in annots:
                     try:
-                        annot = annot_ref.get_object()
+                        annot = annot_ref.get_object() if hasattr(annot_ref, 'get_object') else annot_ref
                         if annot.get('/Subtype') == '/Widget' and annot.get('/FT') == '/Sig':
                             return 'Yes', 'Digital signature annotation found'
                     except Exception:
@@ -593,9 +683,10 @@ def process_pdfs_sync(
             return 'Error', str(e)
 
     date_regexes = [
-        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",
-        r"\b\d{4}-\d{1,2}-\d{1,2}\b",
-        r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2},? \d{2,4}\b",
+        r"\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4}\b",  # 21st August 2024
+        r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b",  # August 21st, 2024
+        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",  # 11/09/2025
+        r"\b\d{4}-\d{1,2}-\d{1,2}\b",  # 2024-08-21
     ]
     date_re = re.compile('|'.join(date_regexes), re.IGNORECASE)
 
@@ -754,6 +845,7 @@ def process_pdfs_sync(
     for entry in reports:
         fname = entry.get('filename')
         err = entry.get('error', '')
+        report = entry.get('report', {})  # Get the validation report
         text = ''
         content_bytes = b''
         try:
@@ -772,6 +864,7 @@ def process_pdfs_sync(
             text = ''
 
         row = {'Filename': fname, 'Status': 'Scanned PDF' if is_scanned else ('Error' if err else 'Success')}
+        row['validation_report'] = report  # Store report for log generation
         if is_scanned:
             row['Error Details'] = scanned_message
 
@@ -828,11 +921,13 @@ def process_pdfs_sync(
             row[col_name] = result
             row['Actual Page Count'] = actual_count
 
+        # Use extractions from validation report (which used lookFor text)
+        extractions = report.get('extractions', {}) if report else {}
         for field in extraction_fields:
             field_name = field.get('name', field) if isinstance(field, dict) else field
-            field_strategy = field.get('strategy', 'first') if isinstance(field, dict) else 'first'
             field_display = field_name.replace('_', ' ').title()
-            extracted_value = extract_field_from_text(text, field_name, field_strategy) if text else ''
+            # Get value from validation report extractions (already correctly extracted)
+            extracted_value = extractions.get(field_name, '')
             row[field_display] = extracted_value
 
         if err:
@@ -841,7 +936,7 @@ def process_pdfs_sync(
         csv_rows.append(row)
 
     if csv_rows:
-        fieldnames = list(csv_rows[0].keys())
+        fieldnames = [k for k in csv_rows[0].keys() if k != 'validation_report']
     else:
         fieldnames = ['Filename', 'Status']
 
@@ -854,6 +949,8 @@ def process_pdfs_sync(
         for row in csv_rows:
             safe_row = {}
             for key, value in row.items():
+                if key == 'validation_report':  # Skip validation_report in CSV
+                    continue
                 if value is None:
                     safe_row[key] = ''
                 elif isinstance(value, bytes):
@@ -868,16 +965,64 @@ def process_pdfs_sync(
     # Generate PDF summary
     pdf_filename = generate_pdf_summary(csv_rows, results_dir, timestamp, rules)
     
-    # Generate JSON for advanced users
-    json_filename = f'valido_results_{timestamp}.json'
-    json_path = os.path.join(results_dir, json_filename)
-    with open(json_path, 'w', encoding='utf-8') as jf:
-        json.dump({
-            'generated_at': datetime.utcnow().isoformat(),
-            'total_files': total,
-            'processed': processed,
-            'results': csv_rows
-        }, jf, indent=2, ensure_ascii=False)
+    # Generate JSON report for API
+    report_json_path = os.path.join(results_dir, 'report.json')
+    json_data = {
+        'generated_at': datetime.utcnow().isoformat(),
+        'total_files': total,
+        'processed': processed,
+        'results': csv_rows
+    }
+    with open(report_json_path, 'w', encoding='utf-8') as jf:
+        json.dump(json_data, jf, indent=2, ensure_ascii=False)
+    
+    # Generate detailed extraction log for debugging
+    log_path = os.path.join(results_dir, 'extraction_log.txt')
+    with open(log_path, 'w', encoding='utf-8') as log_file:
+        log_file.write("="*80 + "\n")
+        log_file.write(f"VALIDO EXTRACTION LOG\n")
+        log_file.write(f"Generated: {datetime.utcnow().isoformat()}\n")
+        log_file.write(f"Total Files: {total}\n")
+        log_file.write(f"Processed: {processed}\n")
+        log_file.write("="*80 + "\n\n")
+        
+        for row in csv_rows:
+            log_file.write("\n" + "="*80 + "\n")
+            log_file.write(f"FILE: {row.get('Filename', 'Unknown')}\n")
+            log_file.write(f"STATUS: {row.get('Status', 'Unknown')}\n")
+            log_file.write("="*80 + "\n")
+            
+            # Get the validation report if available
+            if 'validation_report' in row:
+                report = row['validation_report']
+                
+                # PDF Text Preview
+                if 'pdf_text_preview' in report:
+                    log_file.write("\n--- PDF TEXT PREVIEW (First 1000 chars) ---\n")
+                    log_file.write(report['pdf_text_preview'])
+                    log_file.write("\n" + "-"*80 + "\n")
+                
+                # Extraction Log
+                if 'extraction_log' in report and report['extraction_log']:
+                    log_file.write("\n--- FIELD EXTRACTION DETAILS ---\n")
+                    for log_entry in report['extraction_log']:
+                        log_file.write(f"\nField: {log_entry.get('field_name', 'Unknown')}\n")
+                        log_file.write(f"  Looking for: '{log_entry.get('look_for_text', '')}'\n")
+                        log_file.write(f"  Strategy: {log_entry.get('strategy', 'first')}\n")
+                        log_file.write(f"  Found: {log_entry.get('found', False)}\n")
+                        log_file.write(f"  Extracted Value: '{log_entry.get('extracted_value', '')}'\n")
+                        log_file.write(f"  Match Position: {log_entry.get('match_position', -1)}\n")
+                        if 'context' in log_entry:
+                            log_file.write(f"  Context:\n    {log_entry['context']}\n")
+                        log_file.write("-"*40 + "\n")
+                
+                # Validation Results
+                if 'validations' in report and report['validations']:
+                    log_file.write("\n--- VALIDATION CHECKS ---\n")
+                    for key, val in report['validations'].items():
+                        log_file.write(f"{key}: {val}\n")
+            
+            log_file.write("\n")
 
     if username:
         try:

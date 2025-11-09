@@ -80,9 +80,9 @@
                   <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
               </div>
-              <h3>AI-Powered Rules</h3>
-              <p>Describe what to check in plain English. AI creates validation rules automatically. No coding knowledge needed.</p>
-              <div class="feature-example">Example: "Check if invoice is signed and extract the total amount"</div>
+              <h3>Smart Validation Rules</h3>
+              <p>Create powerful validation rules with simple checkboxes. Extract fields, check signatures, validate calculations - no coding needed.</p>
+              <div class="feature-example">Example: Check if invoice is signed and verify the total matches line items</div>
             </div>
 
             <div class="feature-card">
@@ -159,7 +159,7 @@
               </div>
               <ul class="pricing-features">
                 <li>Unlimited documents & batches</li>
-                <li>Unlimited AI rule generation</li>
+                <li>Unlimited rulesets & validations</li>
                 <li>Batch processing (2000 pages)</li>
                 <li>Folder automation</li>
                 <li>All export formats (CSV, Excel, PDF, JSON)</li>
@@ -257,20 +257,8 @@
                 <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h2>Step 2: What do you want to check?</h2>
-            <p class="card-description">Tell us what you'd like to validate in your documents. Choose simple checks or describe your needs in plain language.</p>
-
-        <div class="tabs">
-          <button type="button" data-tab="simple" class="tab-button active">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Simple Checks
-          </button>
-          <button type="button" data-tab="complex" class="tab-button">
-            Describe in Your Words
-          </button>
-        </div>
+            <h2>Step 2: Build Your Validation Rules</h2>
+            <p class="card-description">Create powerful validation rules with our guided wizard. Extract fields, validate data, and check calculations - no coding required.</p>
 
         <div class="tab-panels">
           <div class="panel" data-panel="simple">
@@ -287,40 +275,6 @@
                   <div>
                     <div class="checkbox-title">Check for Signature</div>
                     <div class="checkbox-description">Verify that documents are signed</div>
-                  </div>
-                </div>
-              </label>
-
-              <label class="checkbox-card">
-                <input type="checkbox" id="chk_validate_dated">
-                <div class="checkbox-content">
-                  <div class="checkbox-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="checkbox-title">Check for Date</div>
-                    <div class="checkbox-description">Verify that documents contain a date</div>
-                  </div>
-                </div>
-              </label>
-
-              <label class="checkbox-card">
-                <input type="checkbox" id="chk_validate_signed_and_dated">
-                <div class="checkbox-content">
-                  <div class="checkbox-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.709 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="checkbox-title">Check for Signature AND Date</div>
-                    <div class="checkbox-description">Verify that documents are both signed and dated</div>
                   </div>
                 </div>
               </label>
@@ -391,131 +345,21 @@
               </label>
             </div>
 
+            <!-- Field Extraction Section -->
             <div id="fieldBuilder" class="field-builder">
               <h3>Extract Information</h3>
-              <p class="helper">Tell us what information to extract from your documents. Add fields one at a time.</p>
+              <p class="helper">Define fields to extract from your documents. Click "Add Field" to open the guided wizard.</p>
               
-              <div class="field-suggestions">
-                <div class="suggestions-label">Quick suggestions:</div>
-                <div class="suggestions">
-                  <button type="button" class="chip suggestion">invoice_number</button>
-                  <button type="button" class="chip suggestion">date</button>
-                  <button type="button" class="chip suggestion">total</button>
-                  <button type="button" class="chip suggestion">vendor</button>
-                  <button type="button" class="chip suggestion">po_number</button>
-                </div>
+              <div id="fieldsList" class="fields-list">
+                <!-- Fields will be added here dynamically -->
               </div>
 
-              <div class="field-add">
-                <input id="newField" placeholder="Enter one field name (e.g. invoice_number, amount)" aria-label="Field name" />
-                <button type="button" id="addFieldBtn" class="btn btn-secondary">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                  Add Field
-                </button>
-              </div>
-              
-              <div class="helper" style="margin-top: 8px; font-size: 13px;">
-                <strong>Tip:</strong> After adding a field, choose whether to extract the <em>first</em> occurrence or <em>all</em> occurrences from each document.
-              </div>
-
-              <ul id="fieldList" class="chip-list" aria-live="polite"></ul>
-            </div>
-          </div>
-
-          <div class="panel" data-panel="complex" style="display:none">
-            <div class="ai-panel">
-              <h3 style="margin-top: 0;">AI-Powered Rule Builder</h3>
-              <p class="helper">Answer a few simple questions and we'll create intelligent validation rules for you.</p>
-              
-              <div class="privacy-notice">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
-                  <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-                  <circle cx="8" cy="7" r="1.5" fill="currentColor"/>
+              <button type="button" id="addFieldWizardBtn" class="btn btn-secondary btn-large" style="margin-top: 15px;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                <strong>Privacy First:</strong> AI is only used to generate validation rules. Your documents never leave your system.
-              </div>
-
-              <!-- Step 1: Document Type -->
-              <div class="ai-form-section">
-                <label class="ai-label">
-                  <span class="step-number">1</span> What type of document are you validating?
-                </label>
-                <input type="text" id="aiDocType" class="ai-text-input" 
-                       placeholder="e.g. Invoice, Report Card, Contract, Resume, etc." />
-                <div class="helper">This helps us understand the context</div>
-              </div>
-
-              <!-- Step 2: Data to Extract -->
-              <div class="ai-form-section">
-                <label class="ai-label">
-                  <span class="step-number">2</span> What information do you need to extract?
-                </label>
-                <div class="helper" style="margin-bottom: 10px;">List the fields you want to pull from the document (one per line)</div>
-                <div id="aiFieldsList" class="ai-fields-list">
-                  <div class="ai-field-row">
-                    <input type="text" class="ai-field-input" placeholder="e.g. Invoice Number" />
-                    <button type="button" class="btn-remove-field" title="Remove">×</button>
-                  </div>
-                </div>
-                <button type="button" id="aiAddField" class="btn btn-secondary btn-small">
-                  + Add Field
-                </button>
-              </div>
-
-              <!-- Step 3: Text Validations -->
-              <div class="ai-form-section">
-                <label class="ai-label">
-                  <span class="step-number">3</span> What text should the document contain or avoid?
-                </label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                  <div>
-                    <label class="ai-sublabel">Must Contain (optional)</label>
-                    <textarea id="aiMustContain" class="ai-textarea" rows="3" 
-                              placeholder="e.g. PAID&#10;Authorized Signature&#10;Accredited"></textarea>
-                    <div class="helper-small">One per line</div>
-                  </div>
-                  <div>
-                    <label class="ai-sublabel">Must NOT Contain (optional)</label>
-                    <textarea id="aiMustNotContain" class="ai-textarea" rows="3" 
-                              placeholder="e.g. DRAFT&#10;VOID&#10;CONFIDENTIAL"></textarea>
-                    <div class="helper-small">One per line</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Step 4: Numeric Validations -->
-              <div class="ai-form-section">
-                <label class="ai-label">
-                  <span class="step-number">4</span> Any numeric checks? (optional)
-                </label>
-                <div class="helper" style="margin-bottom: 10px;">Validate numbers from extracted fields</div>
-                <div id="aiNumericRules" class="ai-numeric-rules">
-                  <!-- Dynamic rows added here -->
-                </div>
-                <button type="button" id="aiAddNumeric" class="btn btn-secondary btn-small">
-                  + Add Numeric Check
-                </button>
-              </div>
-
-              <!-- Step 5: Additional Notes -->
-              <div class="ai-form-section">
-                <label class="ai-label">
-                  <span class="step-number">5</span> Anything else we should know? (optional)
-                </label>
-                <textarea id="aiAdditionalNotes" class="ai-textarea" rows="2" 
-                          placeholder="e.g. The document must be dated in 2024, Check for digital signatures, etc."></textarea>
-              </div>
-
-              <div class="actions" style="margin-top: 25px;">
-                <button type="button" id="aiGenerate" class="btn btn-primary btn-large" 
-                        title="AI analyzes your requirements (not your documents) to generate validation rules">
-                  Generate Rules with AI
-                </button>
-              </div>
-
-              <div id="aiStatus" class="status-message"></div>
+                Add Field to Extract
+              </button>
             </div>
           </div>
         </div>
@@ -535,6 +379,137 @@
 
         <!-- Hidden textarea for form submission -->
         <textarea id="rules" name="rules" hidden></textarea>
+
+        <!-- Field Wizard Modal -->
+        <div id="fieldWizardModal" class="wizard-modal" style="display: none;">
+          <div class="wizard-content">
+            <div class="wizard-header">
+              <h3>Add Field to Extract</h3>
+              <button type="button" id="fieldWizardClose" class="wizard-close" title="Close">×</button>
+            </div>
+            
+            <div class="wizard-body">
+              <div class="wizard-step">
+              <label class="wizard-label">Field Name</label>
+              <input type="text" id="fieldNameInput" class="wizard-input" 
+                     placeholder="e.g. Employee Name, Salary, Invoice Date" />
+              <p class="wizard-hint">A label to identify this field in your results</p>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Text to Look For</label>
+              <input type="text" id="fieldLookForInput" class="wizard-input" 
+                     placeholder="e.g. Employee Name:, Salary:, Invoice Date:" />
+              <p class="wizard-hint">Must match <strong>exactly</strong> as it appears in the PDF</p>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Value Type</label>
+              <div class="type-selector">
+                <label class="type-option">
+                  <input type="radio" name="fieldType" value="text" checked>
+                  <div class="type-card">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 7V4H20V7M9 20H15M12 4V20"/>
+                    </svg>
+                    <span>Text</span>
+                  </div>
+                </label>
+                <label class="type-option">
+                  <input type="radio" name="fieldType" value="number">
+                  <div class="type-card">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <text x="12" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="currentColor">123</text>
+                    </svg>
+                    <span>Number</span>
+                  </div>
+                </label>
+                <label class="type-option">
+                  <input type="radio" name="fieldType" value="date">
+                  <div class="type-card">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/>
+                      <path d="M16 2V6M8 2V6M3 10H21"/>
+                    </svg>
+                    <span>Date</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">If Multiple Matches Found</label>
+              <select id="fieldStrategySelect" class="wizard-select">
+                <option value="first">Extract first occurrence</option>
+                <option value="last">Extract last occurrence</option>
+                <option value="all">Extract all occurrences</option>
+              </select>
+            </div>
+
+            <!-- Validation Rules Section (shown conditionally based on type) -->
+            <div id="validationRulesSection" class="wizard-step" style="display: none;">
+              <label class="wizard-label">Validation Rules (Optional)</label>
+              
+              <!-- Text validation rules -->
+              <div id="textValidations" class="validation-group" style="display: none;">
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="textMinLength">
+                  <span>Minimum length:</span>
+                  <input type="number" id="textMinLengthValue" min="1" class="inline-number" placeholder="10">
+                </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="textMaxLength">
+                  <span>Maximum length:</span>
+                  <input type="number" id="textMaxLengthValue" min="1" class="inline-number" placeholder="100">
+                </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="textPattern">
+                  <span>Must match pattern:</span>
+                  <input type="text" id="textPatternValue" class="inline-text" placeholder="e.g. ^[A-Z]{3}-\d{4}$">
+                </label>
+              </div>
+
+              <!-- Number validation rules -->
+              <div id="numberValidations" class="validation-group" style="display: none;">
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="numberMin">
+                  <span>Minimum value:</span>
+                  <input type="number" id="numberMinValue" step="any" class="inline-number" placeholder="0">
+                </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="numberMax">
+                  <span>Maximum value:</span>
+                  <input type="number" id="numberMaxValue" step="any" class="inline-number" placeholder="1000">
+                </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="numberEquals">
+                  <span>Must equal:</span>
+                  <input type="number" id="numberEqualsValue" step="any" class="inline-number" placeholder="100">
+                </label>
+              </div>
+
+              <!-- Date validation rules -->
+              <div id="dateValidations" class="validation-group" style="display: none;">
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="dateBefore">
+                  <span>Must be before:</span>
+                  <input type="date" id="dateBeforeValue" class="inline-date">
+                </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="dateAfter">
+                  <span>Must be after:</span>
+                  <input type="date" id="dateAfterValue" class="inline-date">
+                </label>
+              </div>
+            </div>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" id="fieldWizardCancel" class="wizard-btn wizard-btn-cancel">Cancel</button>
+              <button type="button" id="fieldWizardSave" class="wizard-btn wizard-btn-save">Add Field</button>
+            </div>
+          </div>
+        </div>
 
         <div class="card-actions">
           <button type="button" class="btn btn-ghost" id="backToFiles">

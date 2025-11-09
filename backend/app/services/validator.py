@@ -104,27 +104,47 @@ def _match_not_contain_rule(text: str, rule: Dict[str, Any]) -> Tuple[str, Optio
     return "Fail", snippet
 
 
-def _extract_field(text: str, field_name: str, strategy: str = "first") -> str:
-    if not field_name:
+def _extract_field(text: str, field_name: str, strategy: str = "first", look_for: Optional[str] = None) -> str:
+    """
+    Extract a field value from text.
+    If look_for is provided, it searches for that exact text followed by the value.
+    Otherwise, it falls back to searching by field_name.
+    """
+    if not text:
         return ""
-    name = field_name.lower().replace("_", " ")
+    
+    # Use look_for if provided, otherwise fall back to field_name
+    search_term = look_for if look_for else field_name
+    if not search_term:
+        return ""
+    
+    # Escape special regex characters in the search term
+    escaped_term = re.escape(search_term)
+    
     patterns = [
-        rf"\b{name}\s*[:]\s*([^\n\r]+)",
-        rf"\b{name}\s+([A-Za-z0-9₹$€£¥₨,.\/\-]+[^\n\r]*?)(?:\s{{2,}}|\n|$)",
-        rf"\b{name}\s*\n\s*([^\n\r]+)",
+        # Pattern 1: "SearchTerm: value" or "SearchTerm :value"
+        rf"{escaped_term}\s*[:]\s*([^\n\r]+)",
+        # Pattern 2: "SearchTerm value" (captures until double space or newline)
+        rf"{escaped_term}\s+([A-Za-z0-9₹$€£¥₨,.\/\-]+[^\n\r]*?)(?:\s{{2,}}|\n|$)",
+        # Pattern 3: "SearchTerm" on one line, value on next
+        rf"{escaped_term}\s*\n\s*([^\n\r]+)",
     ]
+    
     matches: List[str] = []
     for pat in patterns:
         try:
-            for m in re.finditer(pat, text or "", flags=re.IGNORECASE):
+            for m in re.finditer(pat, text, flags=re.IGNORECASE if not look_for else 0):
                 v = m.group(1).strip()
+                # Clean up extra whitespace
                 v = re.sub(r"\s{2,}", " ", v)
                 if v and v not in matches:
                     matches.append(v)
         except re.error:
             continue
+    
     if not matches:
         return ""
+    
     if strategy == "last":
         return matches[-1]
     if strategy == "all":
@@ -144,6 +164,8 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
             "contains": [],
             "not_contains": [],
             "extractions": {},
+            "extraction_log": [],  # Detailed log for debugging
+            "pdf_text_preview": text[:1000] if text else ""  # First 1000 chars of PDF
         }
 
         validations = {}
@@ -197,14 +219,43 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 if isinstance(f, dict):
                     name = f.get("name") or f.get("field") or ""
                     strat = f.get("strategy", "first")
+                    look_for = f.get("lookFor") or f.get("look_for")
                 else:
                     name = str(f)
                     strat = "first"
+                    look_for = None
                 if not name:
                     continue
-                value = _extract_field(text, name, strat)
+                
+                # Extract value
+                value = _extract_field(text, name, strat, look_for)
                 display = name.replace("_", " ").title()
                 report["extractions"][display] = value
+                
+                # Add detailed log entry
+                log_entry = {
+                    "field_name": name,
+                    "look_for_text": look_for or name,
+                    "strategy": strat,
+                    "extracted_value": value,
+                    "found": value is not None and value != ""
+                }
+                
+                # Find where the lookFor text appears in PDF
+                if look_for:
+                    search_text = look_for.lower() if not look_for else look_for
+                    idx = text.lower().find(search_text.lower()) if text else -1
+                    if idx != -1:
+                        # Get 200 chars context around the match
+                        start = max(0, idx - 100)
+                        end = min(len(text), idx + len(search_text) + 100)
+                        log_entry["context"] = text[start:end]
+                        log_entry["match_position"] = idx
+                    else:
+                        log_entry["context"] = "Text not found in PDF"
+                        log_entry["match_position"] = -1
+                
+                report["extraction_log"].append(log_entry)
 
         return report
 

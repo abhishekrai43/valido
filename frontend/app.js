@@ -81,6 +81,18 @@
         card.style.display = cardStep === currentStep ? 'block' : 'none';
       });
       
+      // Reset validation status when entering step 3
+      if (stepNum === 3) {
+        // Hide all status displays
+        if (processingStatus) processingStatus.style.display = 'none';
+        if (successStatus) successStatus.style.display = 'none';
+        if (errorStatus) errorStatus.style.display = 'none';
+        // Show submit button
+        if (submitBtn) submitBtn.style.display = 'block';
+        // Clear any previous results
+        if (resultsOutput) resultsOutput.innerHTML = '';
+      }
+      
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -200,6 +212,10 @@
     });
     
     continueToValidate && continueToValidate.addEventListener('click', () => {
+      // Force rules preview update to ensure latest rules are in dataset
+      if (window.buildRulesPreview) {
+        window.buildRulesPreview();
+      }
       updateSummary();
       navigateToStep(3);
     });
@@ -217,9 +233,42 @@
       const fileCount = selectedFiles.length;
       summaryFiles.textContent = `${fileCount} ${fileCount === 1 ? 'document' : 'documents'}`;
       
-      // Update rules summary
-      const rulesText = rulesPreview ? rulesPreview.textContent : 'No rules';
-      summaryRules.textContent = rulesText || 'No rules selected';
+      // Update rules summary - get actual rules from the rules textarea dataset
+      let rulesText = 'No rules selected yet. Choose some checks above to get started.';
+      try {
+        const rulesEl = document.getElementById('rules');
+        console.log('updateSummary - rulesEl:', rulesEl);
+        console.log('updateSummary - rulesEl.dataset.json:', rulesEl?.dataset?.json);
+        
+        if (rulesEl && rulesEl.dataset && rulesEl.dataset.json) {
+          const rules = JSON.parse(rulesEl.dataset.json);
+          console.log('updateSummary - parsed rules:', rules);
+          const parts = [];
+          
+          // Check validations
+          if (rules.validations) {
+            if (rules.validations.signed) parts.push('Check for Signature');
+            if (rules.validations.dated) parts.push('Check for Date');
+            if (rules.validations.signed_and_dated) parts.push('Check for Signature & Date');
+            if (rules.validations.must_contain) parts.push(`Must contain "${rules.validations.must_contain.text}"`);
+            if (rules.validations.must_not_contain) parts.push(`Must NOT contain "${rules.validations.must_not_contain.text}"`);
+            if (rules.validations.page_count) parts.push(`Page count ${rules.validations.page_count.operator} ${rules.validations.page_count.value}`);
+          }
+          
+          // Check fields
+          if (rules.fields && rules.fields.length > 0) {
+            parts.push(`Extract ${rules.fields.length} field${rules.fields.length > 1 ? 's' : ''}`);
+          }
+          
+          if (parts.length > 0) {
+            rulesText = parts.join(', ');
+          }
+        }
+      } catch (e) {
+        console.error('Error reading rules for summary:', e);
+      }
+      
+      summaryRules.textContent = rulesText;
       // Update submit button label based on whether user requested extraction fields
       updateSubmitButtonLabel();
     }
@@ -669,6 +718,12 @@
     
     // Initialize on step 1
     navigateToStep(1);
+    
+    // Ensure status displays are hidden on page load
+    if (processingStatus) processingStatus.style.display = 'none';
+    if (successStatus) successStatus.style.display = 'none';
+    if (errorStatus) errorStatus.style.display = 'none';
+    if (submitBtn) submitBtn.style.display = 'block';
   }
   
   // Initialize when DOM is ready
