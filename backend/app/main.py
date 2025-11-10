@@ -113,6 +113,10 @@ app.include_router(watch_folder_router)
 from app.routes.agent_routes import router as agent_router
 app.include_router(agent_router)
 
+# Contact form routes
+from app.routes.contact_routes import router as contact_router
+app.include_router(contact_router)
+
 # Rules routes (if exists)
 try:
     from app.routes.rules import router as rules_router

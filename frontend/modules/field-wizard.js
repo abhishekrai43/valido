@@ -17,11 +17,6 @@ function initFieldWizard() {
   const fieldColumnSection = document.getElementById('fieldColumnSection');
   const fieldColumnInput = document.getElementById('fieldColumnInput');
   const fieldsList = document.getElementById('fieldsList');
-  
-  // Get between markers elements
-  const betweenMarkersSection = document.getElementById('betweenMarkersSection');
-  const startMarkerInput = document.getElementById('startMarkerInput');
-  const endMarkerInput = document.getElementById('endMarkerInput');
 
   // Toggle column section visibility
   if (fieldInTableCheckbox) {
@@ -29,20 +24,6 @@ function initFieldWizard() {
       fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
       if (!e.target.checked) {
         fieldColumnInput.value = '';
-      }
-    });
-  }
-
-  // Toggle between markers section based on strategy
-  if (fieldStrategySelect && betweenMarkersSection) {
-    fieldStrategySelect.addEventListener('change', (e) => {
-      const isBetween = e.target.value === 'between';
-      betweenMarkersSection.style.display = isBetween ? 'block' : 'none';
-      fieldStrategySection.querySelector('.wizard-label').textContent = 
-        isBetween ? 'Extraction Strategy' : 'If Multiple Matches Found';
-      if (!isBetween) {
-        startMarkerInput.value = '';
-        endMarkerInput.value = '';
       }
     });
   }
@@ -73,8 +54,6 @@ function initFieldWizard() {
       fieldLookForInput.value = '';
       fieldInTableCheckbox.checked = false;
       fieldColumnInput.value = '';
-      startMarkerInput.value = '';
-      endMarkerInput.value = '';
       document.querySelectorAll('input[name="fieldType"]').forEach(radio => {
         radio.checked = radio.value === 'text';
       });
@@ -83,7 +62,6 @@ function initFieldWizard() {
       // Reset visibility states
       fieldStrategySection.style.display = 'block';
       fieldColumnSection.style.display = 'none';
-      betweenMarkersSection.style.display = 'none';
       validationRulesSection.style.display = 'none';
       
       // Reset validation checkboxes
@@ -208,6 +186,86 @@ function initFieldWizard() {
 
       // Close modal and refresh
       fieldWizardModal.style.display = 'none';
+      renderFields();
+      if (typeof buildRulesPreview === 'function') buildRulesPreview();
+    });
+  }
+  
+  // ===== Between Words Modal Handlers =====
+  const addBetweenWordsBtn = document.getElementById('addBetweenWordsBtn');
+  const betweenWordsModal = document.getElementById('betweenWordsModal');
+  const betweenWordsClose = document.getElementById('betweenWordsClose');
+  const betweenWordsCancel = document.getElementById('betweenWordsCancel');
+  const betweenWordsSave = document.getElementById('betweenWordsSave');
+  
+  // Open between words modal
+  if (addBetweenWordsBtn) {
+    addBetweenWordsBtn.addEventListener('click', () => {
+      // Reset inputs
+      document.getElementById('betweenFieldName').value = '';
+      document.getElementById('betweenStartWord').value = '';
+      document.getElementById('betweenEndWord').value = '';
+      document.querySelectorAll('input[name="betweenFieldType"]').forEach(radio => {
+        radio.checked = radio.value === 'text';
+      });
+      
+      // Show modal
+      betweenWordsModal.style.display = 'flex';
+    });
+  }
+  
+  // Close between words modal
+  if (betweenWordsClose) {
+    betweenWordsClose.addEventListener('click', () => {
+      betweenWordsModal.style.display = 'none';
+    });
+  }
+  
+  if (betweenWordsCancel) {
+    betweenWordsCancel.addEventListener('click', () => {
+      betweenWordsModal.style.display = 'none';
+    });
+  }
+  
+  // Save between words field
+  if (betweenWordsSave) {
+    betweenWordsSave.addEventListener('click', () => {
+      const name = document.getElementById('betweenFieldName').value.trim();
+      const startWord = document.getElementById('betweenStartWord').value.trim();
+      const endWord = document.getElementById('betweenEndWord').value.trim();
+      const type = document.querySelector('input[name="betweenFieldType"]:checked')?.value || 'text';
+      
+      // Validation
+      if (!name) {
+        alert('Please enter a field name');
+        return;
+      }
+      if (!startWord || !endWord) {
+        alert('Please enter both start and end words');
+        return;
+      }
+      
+      // Check for duplicate field names
+      const exists = fields.some(f => f.name === name);
+      if (exists) {
+        alert('A field with this name already exists');
+        return;
+      }
+      
+      // Add field with between strategy
+      const newField = {
+        name,
+        type,
+        strategy: 'between',
+        startMarker: startWord,
+        endMarker: endWord,
+        validations: []
+      };
+      
+      fields.push(newField);
+      
+      // Close modal and refresh
+      betweenWordsModal.style.display = 'none';
       renderFields();
       if (typeof buildRulesPreview === 'function') buildRulesPreview();
     });

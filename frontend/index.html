@@ -348,18 +348,30 @@
             <!-- Field Extraction Section -->
             <div id="fieldBuilder" class="field-builder">
               <h3>Extract Information</h3>
-              <p class="helper">Define fields to extract from your documents. Click "Add Field" to open the guided wizard.</p>
+              <p class="helper">Define what information to extract from your documents.</p>
+              
+              <!-- Extraction Actions -->
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                <button type="button" id="addFieldWizardBtn" class="btn btn-secondary">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Add Field to Extract
+                </button>
+                
+                <button type="button" id="addBetweenWordsBtn" class="btn btn-secondary">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M7 8L3 12L7 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M17 8L21 12L17 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Extract Text Between Words
+                </button>
+              </div>
               
               <div id="fieldsList" class="fields-list">
                 <!-- Fields will be added here dynamically -->
               </div>
-
-              <button type="button" id="addFieldWizardBtn" class="btn btn-secondary btn-large" style="margin-top: 15px;">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Add Field to Extract
-              </button>
             </div>
 
             <!-- Calculations Section -->
@@ -456,26 +468,12 @@
             </div>
 
             <div class="wizard-step" id="fieldStrategySection">
-              <label class="wizard-label">Extraction Strategy</label>
+              <label class="wizard-label">If Multiple Matches Found</label>
               <select id="fieldStrategySelect" class="wizard-select">
                 <option value="first">Extract first occurrence</option>
                 <option value="last">Extract last occurrence</option>
                 <option value="all">Extract all occurrences</option>
-                <option value="between">Extract between two markers</option>
               </select>
-            </div>
-
-            <!-- Between Markers Section (conditional) -->
-            <div class="wizard-step" id="betweenMarkersSection" style="display: none;">
-              <label class="wizard-label">Start Marker</label>
-              <input type="text" id="startMarkerInput" class="wizard-input" 
-                     placeholder="e.g., Total Amount:, Invoice #, Date:" />
-              <label class="wizard-label" style="margin-top: 12px;">End Marker</label>
-              <input type="text" id="endMarkerInput" class="wizard-input" 
-                     placeholder="e.g., USD, [newline], Tax:" />
-              <p style="font-size: 0.85em; color: #6b7280; margin-top: 8px;">
-                Extract text found between these two markers. Use <code>[newline]</code> to indicate a line break.
-              </p>
             </div>
 
             <!-- Column Selection (for multi-column tables) -->
@@ -555,6 +553,72 @@
             <div class="wizard-actions">
               <button type="button" id="fieldWizardCancel" class="wizard-btn wizard-btn-cancel">Cancel</button>
               <button type="button" id="fieldWizardSave" class="wizard-btn wizard-btn-save">Add Field</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extract Between Words Modal -->
+        <div id="betweenWordsModal" class="wizard-modal" style="display: none;">
+          <div class="wizard-content">
+            <div class="wizard-header">
+              <h3>Extract Text Between Words</h3>
+              <button type="button" id="betweenWordsClose" class="wizard-close" title="Close">×</button>
+            </div>
+            
+            <div class="wizard-body">
+              <div class="wizard-step">
+                <label class="wizard-label">Field Name</label>
+                <input type="text" id="betweenFieldName" class="wizard-input" 
+                       placeholder="e.g. Invoice Number, Employee ID" />
+                <p class="wizard-hint">A label to identify this field in your results</p>
+              </div>
+
+              <div class="wizard-step">
+                <label class="wizard-label">Start Word</label>
+                <input type="text" id="betweenStartWord" class="wizard-input" 
+                       placeholder="e.g. Invoice #, Total:, Name:" />
+                <p class="wizard-hint">The text that appears BEFORE what you want to extract</p>
+              </div>
+
+              <div class="wizard-step">
+                <label class="wizard-label">End Word</label>
+                <input type="text" id="betweenEndWord" class="wizard-input" 
+                       placeholder="e.g. Date, USD, (or type [newline] for line break)" />
+                <p class="wizard-hint">The text that appears AFTER what you want to extract</p>
+              </div>
+
+              <div class="wizard-step">
+                <label class="wizard-label">Field Type</label>
+                <div style="display: flex; gap: 20px;">
+                  <label class="radio-option">
+                    <input type="radio" name="betweenFieldType" value="text" checked />
+                    <span>Text</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="betweenFieldType" value="number" />
+                    <span>Number</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="betweenFieldType" value="date" />
+                    <span>Date</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="wizard-example" style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <strong style="display: block; margin-bottom: 8px;">Example:</strong>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                  If your PDF has: <code>"Invoice #12345 Date: 2024-01-15"</code><br>
+                  Start Word: <code>Invoice #</code><br>
+                  End Word: <code> Date</code> (with space)<br>
+                  Result: <code>12345</code>
+                </p>
+              </div>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" id="betweenWordsCancel" class="wizard-btn wizard-btn-cancel">Cancel</button>
+              <button type="button" id="betweenWordsSave" class="wizard-btn wizard-btn-save">Add Field</button>
             </div>
           </div>
         </div>
@@ -866,6 +930,48 @@
         </div>
       </div>
 
+      <!-- Contact Form Modal -->
+      <div id="contactFormModal" class="wizard-modal" style="display: none;">
+        <div class="wizard-content">
+          <div class="wizard-header">
+            <h3>Contact Support</h3>
+            <button type="button" id="contactFormClose" class="wizard-close" title="Close">×</button>
+          </div>
+          
+          <div class="wizard-body">
+            <div class="wizard-step">
+              <label class="wizard-label">Your Name <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="contactName" class="wizard-input" placeholder="John Doe" />
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Your Email <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="contactEmail" class="wizard-input" placeholder="you@example.com" />
+              <p class="wizard-hint">We'll use this to get back to you</p>
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Subject (Optional)</label>
+              <input type="text" id="contactSubject" class="wizard-input" placeholder="e.g., Bug Report, Feature Request" />
+            </div>
+
+            <div class="wizard-step">
+              <label class="wizard-label">Message <span style="color: #ef4444;">*</span></label>
+              <textarea id="contactMessage" class="wizard-input" rows="5" 
+                        placeholder="Describe your issue or question..."></textarea>
+              <p class="wizard-hint">Include steps to reproduce if reporting a bug</p>
+            </div>
+
+            <div id="contactFormStatus" style="display: none; padding: 12px; border-radius: 8px; background: #f3f4f6; margin-top: 10px;"></div>
+          </div>
+
+          <div class="wizard-actions">
+            <button type="button" id="contactFormCancel" class="wizard-btn wizard-btn-cancel">Cancel</button>
+            <button type="button" id="contactFormSend" class="wizard-btn wizard-btn-save">Send Message</button>
+          </div>
+        </div>
+      </div>
+
       <!-- How To Section -->
       <section id="howToSection" style="display:none">
         <div class="card">
@@ -884,14 +990,15 @@
             <h3>Quick Start</h3>
             <ol class="how-to-steps">
               <li><strong>Upload PDFs:</strong> Click "Choose Files" or drag PDFs into the upload area</li>
-              <li><strong>Choose Validation Type:</strong> Use "Simple Checks" for quick validations or "AI Rules" for complex requirements</li>
-              <li><strong>Configure Rules:</strong> Select what you want to check (signatures, dates, specific text, etc.)</li>
+              <li><strong>Build Rules:</strong> Use the guided wizard to define what to check and extract</li>
+              <li><strong>Configure Validations:</strong> Check for signatures, specific text, page count, etc.</li>
+              <li><strong>Extract Data:</strong> Pull out information like names, dates, amounts</li>
               <li><strong>Run Validation:</strong> Click "Validate Documents" and wait for results</li>
-              <li><strong>Download Results:</strong> Get a ZIP file with CSV, Excel, PDF reports and validated documents</li>
+              <li><strong>Download Results:</strong> Get a ZIP file with CSV, Excel, PDF reports</li>
             </ol>
           </div>
 
-          <!-- Simple Checks -->
+          <!-- Document Validations -->
           <div class="how-to-card">
             <div class="how-to-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -899,18 +1006,18 @@
                 <path d="M8 12H16M12 8V16" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-            <h3>Simple Checks</h3>
-            <p class="how-to-desc">For common validation needs:</p>
+            <h3>Document Validations</h3>
+            <p class="how-to-desc">Check document properties:</p>
             <ul class="how-to-list">
               <li><strong>Signature Check:</strong> Detects if document is digitally signed</li>
-              <li><strong>Date Check:</strong> Finds dates in the document (any format)</li>
-              <li><strong>Text Contains:</strong> Checks if document contains specific text (e.g., "PAID", "Approved")</li>
-              <li><strong>Text Does NOT Contain:</strong> Ensures document doesn't have unwanted text (e.g., "DRAFT", "VOID")</li>
+              <li><strong>Must Contain Text:</strong> Ensures specific text is present (e.g., "PAID", "Approved")</li>
+              <li><strong>Must NOT Contain Text:</strong> Rejects documents with unwanted text (e.g., "DRAFT", "VOID")</li>
               <li><strong>Page Count:</strong> Validates number of pages (at least, at most, exactly)</li>
+              <li><strong>Case Sensitivity:</strong> Choose whether text matching should be exact or flexible</li>
             </ul>
           </div>
 
-          <!-- AI Rules -->
+          <!-- Extract Information -->
           <div class="how-to-card">
             <div class="how-to-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -919,17 +1026,37 @@
                 <path d="M19.07 4.93L16.95 7.05M7.05 16.95L4.93 19.07M19.07 19.07L16.95 16.95M7.05 7.05L4.93 4.93" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-            <h3>AI-Powered Rules</h3>
-            <p class="how-to-desc">For advanced validation and data extraction:</p>
+            <h3>Extract Information</h3>
+            <p class="how-to-desc">Pull data from your documents:</p>
             <ul class="how-to-list">
-              <li><strong>Document Type:</strong> Tell AI what kind of document (Invoice, Contract, Report Card, etc.)</li>
-              <li><strong>Extract Fields:</strong> List what data to pull out (Invoice Number, Total Amount, Student Name, etc.)</li>
-              <li><strong>Text Rules:</strong> What text must or must NOT be present</li>
-              <li><strong>Numeric Rules:</strong> Validate numbers (e.g., "GPA > 3.0", "Total Amount > 0")</li>
-              <li><strong>Additional Notes:</strong> Any special requirements (e.g., "Must be dated in 2024")</li>
+              <li><strong>Add Field:</strong> Extract text, numbers, or dates by searching for labels</li>
+              <li><strong>Extract Between Words:</strong> Get text between two markers (e.g., "Invoice #" to "Date")</li>
+              <li><strong>Field Types:</strong> Text, Number, Date with automatic type detection</li>
+              <li><strong>Validations:</strong> Set rules like min/max length, number ranges, date boundaries</li>
+              <li><strong>Multi-Column Tables:</strong> Extract from specific table columns</li>
+              <li><strong>Strategies:</strong> Choose first, last, or all occurrences when text appears multiple times</li>
             </ul>
-            <div class="privacy-notice" style="margin-top: 12px; font-size: 12px;">
-              AI only analyzes your requirements, not your documents. All PDFs stay on your computer.
+          </div>
+
+          <!-- Calculations -->
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
+                <path d="M8 8h8M8 12h8M8 16h4" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Calculations</h3>
+            <p class="how-to-desc">Perform math on extracted values:</p>
+            <ul class="how-to-list">
+              <li><strong>Simple Formulas:</strong> Gross Salary - PF - Income Tax</li>
+              <li><strong>Percentages:</strong> Basic Salary * 15% calculates 15%</li>
+              <li><strong>Math Functions:</strong> sqrt, log, abs, round, floor, ceil, sin, cos, tan, exp, pow, min, max</li>
+              <li><strong>Field Names:</strong> Use plain field names, no special syntax needed</li>
+              <li><strong>Validation:</strong> Verify calculations match expected values</li>
+            </ul>
+            <div class="helper" style="margin-top: 8px; font-size: 13px;">
+              Example: "Net Salary = Gross Salary - PF - Professional Tax"
             </div>
           </div>
 
@@ -990,8 +1117,8 @@
               <li><strong>summary.pdf:</strong> Beautiful PDF report with branding</li>
               <li><strong>results.json:</strong> Raw data for developers/integrations</li>
               <li><strong>PASS/FAIL:</strong> Clear status for each document</li>
-              <li><strong>Extracted Data:</strong> All fields you requested (if using AI rules)</li>
-              <li><strong>Validation Details:</strong> Which checks passed/failed</li>
+              <li><strong>Extracted Data:</strong> All fields you requested from your documents</li>
+              <li><strong>Validation Details:</strong> Which checks passed/failed with reasons</li>
             </ul>
           </div>
 
@@ -1007,9 +1134,10 @@
             <ul class="how-to-list">
               <li><strong>100% Local:</strong> Valido runs entirely on your computer</li>
               <li><strong>No Cloud Upload:</strong> Your PDFs never leave your system</li>
-              <li><strong>No Internet Required:</strong> Works offline (except AI rule generation)</li>
-              <li><strong>AI Privacy:</strong> When using AI rules, only your requirements are sent to OpenAI, never your documents</li>
-              <li><strong>Your Data, Your Control:</strong> Delete anytime, no data retention</li>
+              <li><strong>No Internet Required:</strong> Works completely offline</li>
+              <li><strong>Your Data, Your Control:</strong> All processing happens locally</li>
+              <li><strong>No External Services:</strong> No data sent to third parties</li>
+              <li><strong>Instant Processing:</strong> Fast validation without network latency</li>
             </ul>
           </div>
 
@@ -1042,13 +1170,18 @@
             </div>
             <h3>Troubleshooting</h3>
             <ul class="how-to-list">
-              <li><strong>PDF won't upload:</strong> Ensure it's a PDF file, not an image or scanned document</li>
-              <li><strong>No results found:</strong> PDF might be image-based. Try converting to text-based PDF first</li>
-              <li><strong>Wrong data extracted:</strong> Try using more specific field names (e.g., "Invoice Total Amount" instead of just "Total")</li>
+              <li><strong>No text extracted:</strong> PDF might be image-based (scanned). Valido extracts text from text-based PDFs only</li>
+              <li><strong>Wrong data extracted:</strong> Use more specific search terms (e.g., "Invoice Total Amount" instead of "Total")</li>
               <li><strong>Processing stuck:</strong> Refresh page and try again with fewer documents (50-100 at a time)</li>
-              <li><strong>AI rules not generating:</strong> Please contact support if rule generation fails repeatedly</li>
-              <li><strong>Need help?</strong> Use the diagnostics export feature and email to support@valido.app</li>
+              <li><strong>Large files slow:</strong> PDFs over 10MB may take longer. Consider splitting them</li>
+              <li><strong>Multi-column tables:</strong> Use the column selector to specify which column to extract from</li>
             </ul>
+            <button type="button" onclick="window.open('https://github.com/abhishekrai43/valido/issues/new', '_blank')" class="btn btn-secondary" style="margin-top: 15px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Report Issue / Contact Support
+            </button>
           </div>
         </div>
       </section>
@@ -1146,6 +1279,9 @@
   
   <!-- Load main orchestrator -->
   <script src="/modules/rules-builder-main.js"></script>
+  
+  <!-- Load contact form -->
+  <script src="/modules/contact-form.js"></script>
   
   <!-- Load other main files -->
   <script src="/automation.js"></script>
