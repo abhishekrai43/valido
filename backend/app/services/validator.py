@@ -1,6 +1,12 @@
 from typing import Dict, Optional, List, Any, Tuple
 import re
 from app.utils.logger import get_logger
+from app.services.extractor import (
+    extract_between_markers,
+    extract_with_lookfor,
+    apply_extraction_strategy,
+    extract_column_from_value
+)
 
 logger = get_logger("ValidoValidator")
 
@@ -332,140 +338,67 @@ def _extract_field(
     field_name: str, 
     strategy: str = "first", 
     look_for: Optional[str] = None,
-    column: Optional[str] = None  # Column name from table header OR "first"/"last"/"all"
+    column: Optional[str] = None,
+    start_marker: Optional[str] = None,
+    end_marker: Optional[str] = None
 ) -> str:
     """
-    Extract field value from text with optional column selection for tables.
+    Extract field value from text with multiple extraction strategies.
     
     Args:
         text: Full document text
         field_name: Name of the field (fallback if look_for not provided)
-        strategy: "first", "last", or "all" for multiple matches
-        look_for: Specific text to search for (overrides field_name)
-        column: For multi-column tables:
-            - Column header name: "Per Month", "Monthly", "Annual", etc.
-            - Position: "first", "second", "last" 
-            - Index: "1", "2", "3" (1-based)
-            - None: returns all columns (may be multiple values)
+        strategy: "first", "last", "all", or "between" for multiple matches
+        look_for: Specific text to search for (overrides field_name) - for standard extraction
+        column: For multi-column tables (column name, "first", "last", "1", "2", etc.)
+        start_marker: Starting marker for "between" strategy
+        end_marker: Ending marker for "between" strategy
     
     Returns:
-        Extracted value as string. For multi-column matches without column specified,
-        returns all values space-separated.
+        Extracted value as string. For "all" strategy, returns multiple values joined by " | "
     
-    Example:
-        Table:
-                            Per Month    Per Annum
-        (-) PF Employee     ₹ 1,800      ₹ 21,600
+    Examples:
+        Standard extraction:
+            _extract_field(text, "Employee Name", look_for="Name:", strategy="first")
         
-        column="Per Month" → "₹ 1,800"
-        column="Per Annum" → "₹ 21,600"
-        column="first" → "₹ 1,800"
-        column=None → "₹ 1,800 ₹ 21,600"
-    """
-    """
-    Extract a field value from text.
-    If look_for is provided, it searches for that exact text followed by the value.
-    Otherwise, it falls back to searching by field_name.
+        Between markers:
+            _extract_field(text, "Invoice Number", strategy="between", 
+                         start_marker="Invoice #", end_marker=" Date")
+        
+        Multi-column table:
+            _extract_field(text, "PF Amount", look_for="PF Employee", 
+                         strategy="first", column="Per Month")
     """
     if not text:
         return ""
     
-    # Use look_for if provided, otherwise fall back to field_name
+    # Handle "between" strategy
+    if strategy == "between":
+        if not start_marker or not end_marker:
+            logger.warning(f"Between strategy requires start_marker and end_marker for field '{field_name}'")
+            return ""
+        return extract_between_markers(text, start_marker, end_marker, strategy)
+    
+    # Standard extraction using look_for patterns
     search_term = look_for if look_for else field_name
     if not search_term:
         return ""
     
-    # Escape special regex characters in the search term
-    escaped_term = re.escape(search_term)
-    
-    # Check if search_term already ends with colon
-    has_colon = search_term.rstrip().endswith(':')
-    
-    patterns = [
-        # Pattern 1a: "SearchTerm: value" or "SearchTerm value" - UNIVERSAL colon-separated pattern
-        # If lookFor has colon, match it directly; otherwise match optional period/space then colon
-        # Captures everything until newline or double-space (common in tables)
-        rf"{escaped_term}\s*([^\n\r]+?)(?:\s{{2,}}|\n|$)" if has_colon else rf"{escaped_term}[.\s]*[:]\s*([^\n\r]+?)(?:\s{{2,}}|\n|$)",
-        
-        # Pattern 1b: "SearchTerm value" - for descriptive phrases (no colon)
-        # Stops at common transition words - UNIVERSAL for any language
-        rf"{escaped_term}\s+([A-Z][^\n\r]+?)(?:\s+(?:within|at|in the|on the|by the|with the|from the|to the|as the|is|are)\s|\s{{2,}}|\n|$)",
-        
-        # Pattern 2: "SearchTerm (X) value" - handles parenthetical markers
-        # UNIVERSAL for tables with markers like "(A)", "(1)", etc.
-        rf"{escaped_term}\s*\([A-Za-z0-9]\)\s*([^\n\r]+?)(?:\s{{2,}}|\n|$)",
-        
-        # Pattern 3: "(-) SearchTerm value" or "(+) SearchTerm value" - prefix operators
-        # UNIVERSAL for financial tables showing deductions/additions
-        rf"\([+\-]\)\s*{escaped_term}\s+([^\n\r]+?)(?:\s{{2,}}|\n|$)",
-        
-        # Pattern 4: "SearchTerm value" - UNIVERSAL number/word capture
-        # Handles: currency symbols (₹$€£¥₨), numbers with commas (both styles), 
-        # slashes, dashes, parentheses, and multi-word values
-        # Stops at double-space (table columns), newline, or sentence boundaries
-        rf"{escaped_term}\s+([+\-₹$€£¥₨]?[\w₹$€£¥₨,.\/\-\(\)@–]+(?:\s+[\w₹$€£¥₨,.\/\-\(\)@–]+)*?)(?:\s{{2,}}|\n|\.\s+[A-Z]|$)",
-        
-        # Pattern 5: "SearchTerm" on one line, value on next line
-        # UNIVERSAL for documents with term-value on separate lines
-        rf"{escaped_term}\s*\n+\s*([^\n\r]+?)(?:\s{{2,}}|\n|$)",
-    ]
-    
-    # Collect all matches with their positions
-    match_list: List[tuple[int, str]] = []  # (position, value)
-    for pat in patterns:
-        try:
-            for m in re.finditer(pat, text, flags=re.IGNORECASE if not look_for else 0):
-                v = m.group(1).strip()
-                # Clean up extra whitespace
-                v = re.sub(r"\s{2,}", " ", v)
-                # Remove ONLY trailing colons/semicolons (not commas - they might be significant)
-                v = re.sub(r'[;:]+$', '', v).strip()
-                if v and len(v) > 0:
-                    # Store position and value, avoid duplicates
-                    if not any(existing_v == v for _, existing_v in match_list):
-                        match_list.append((m.start(), v))
-        except re.error:
-            continue
+    # Get all matches with positions
+    match_list = extract_with_lookfor(text, search_term, strategy)
     
     if not match_list:
         return ""
     
-    # Sort by position to get document order
-    match_list.sort(key=lambda x: x[0])
+    # Extract just the values
     matches = [v for _, v in match_list]
     
-    # Apply strategy first
-    if strategy == "last":
-        selected_value = matches[-1]
-    elif strategy == "all":
-        selected_value = " | ".join(matches)
-    else:  # "first"
-        selected_value = matches[0]
+    # Apply strategy to select value(s)
+    selected_value = apply_extraction_strategy(matches, strategy)
     
     # If column is specified, extract from multi-column value
     if column and selected_value:
-        # Split by multiple spaces (table column separator)
-        columns = re.split(r'\s{2,}', selected_value.strip())
-        
-        if len(columns) > 1:  # Multi-column detected
-            # Handle column selection
-            if column == "first":
-                return columns[0]
-            elif column == "last":
-                return columns[-1]
-            elif column == "all":
-                return " | ".join(columns)
-            elif column.isdigit():
-                # 1-based index
-                idx = int(column) - 1
-                if 0 <= idx < len(columns):
-                    return columns[idx]
-            else:
-                # Try to match column name (case-insensitive)
-                # Look backwards in text to find table headers
-                # For now, just return first column if no match
-                # TODO: Implement header detection
-                return columns[0]
+        selected_value = extract_column_from_value(selected_value, column)
     
     return selected_value
 
@@ -558,8 +491,20 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 # Extract column if specified
                 col = f.get("column") if isinstance(f, dict) else None
                 
+                # Get markers for "between" strategy
+                start_marker = f.get("startMarker") if isinstance(f, dict) else None
+                end_marker = f.get("endMarker") if isinstance(f, dict) else None
+                
                 # Extract value
-                value = _extract_field(text, name, strat, look_for, col)
+                value = _extract_field(
+                    text, 
+                    name, 
+                    strat, 
+                    look_for, 
+                    col,
+                    start_marker,
+                    end_marker
+                )
                 display = name.replace("_", " ").title()
                 report["extractions"][display] = value
                 
