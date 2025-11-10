@@ -258,6 +258,10 @@ def _compute_formula(formula: str, extractions: dict) -> Optional[str]:
     if not formula or not extractions:
         return None
     
+    # Create case-insensitive lookup for extractions
+    # The extractions dict has title-cased keys, but formula may use original casing
+    extractions_lower = {k.lower(): v for k, v in extractions.items()}
+    
     # Detect if any source field has currency
     has_currency = False
     currency_symbol = ''
@@ -266,10 +270,20 @@ def _compute_formula(formula: str, extractions: dict) -> Optional[str]:
     expression = formula
     
     # Sort field names by length (longest first) to avoid partial matches
-    field_names = sorted(extractions.keys(), key=len, reverse=True)
+    # Use the original casing from formula for matching
+    field_names_in_formula = sorted(
+        set(re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', formula)),
+        key=len, 
+        reverse=True
+    )
     
-    for field_name in field_names:
-        field_value = extractions.get(field_name)
+    for field_name in field_names_in_formula:
+        # Try case-insensitive lookup
+        field_value = extractions_lower.get(field_name.lower())
+        if not field_value:
+            # Try exact match as fallback
+            field_value = extractions.get(field_name)
+        
         if not field_value:
             continue
         

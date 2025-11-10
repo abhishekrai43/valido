@@ -19,6 +19,33 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from contextlib import contextmanager
 import time
+import shutil
+
+
+class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
+    """
+    TimedRotatingFileHandler that handles Windows file locking issues gracefully.
+    If rotation fails, it continues logging to the current file instead of crashing.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._rotation_failed = False
+    
+    def doRollover(self):
+        """
+        Override doRollover to handle Windows PermissionError gracefully.
+        """
+        try:
+            super().doRollover()
+            self._rotation_failed = False  # Reset on successful rotation
+        except (PermissionError, OSError) as e:
+            # On Windows, the file might be locked by another process
+            # Just continue writing to the current file
+            # Only log once to avoid spamming
+            if not self._rotation_failed:
+                self._rotation_failed = True
+                if sys.stderr:
+                    sys.stderr.write(f"[WARNING] Log rotation skipped (file in use). Continuing with current file.\n")
 
 
 # Global log directory - handle PyInstaller frozen app
@@ -95,7 +122,7 @@ class ValidoLogger:
         
         # Error log file - separate file for quick scanning (daily rotation)
         error_log = os.path.join(LOG_DIR, 'errors.log')
-        error_handler = TimedRotatingFileHandler(
+        error_handler = SafeTimedRotatingFileHandler(
             error_log,
             when='midnight',
             interval=1,
@@ -107,7 +134,7 @@ class ValidoLogger:
         
         # Validation log - track all PDF processing
         validation_log = os.path.join(LOG_DIR, 'validation.log')
-        validation_handler = TimedRotatingFileHandler(
+        validation_handler = SafeTimedRotatingFileHandler(
             validation_log,
             when='midnight',
             interval=1,

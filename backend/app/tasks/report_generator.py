@@ -222,7 +222,7 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         return None
 
 
-def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str, rules: Optional[Dict] = None) -> Optional[str]:
+def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str, rules: Optional[Dict] = None, job_metadata: Optional[Dict] = None) -> Optional[str]:
     """
     Generate professional PDF summary report.
     
@@ -231,6 +231,7 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
         output_path: Directory path where PDF file will be saved
         timestamp: Timestamp string for filename
         rules: Optional rules dictionary for additional context
+        job_metadata: Optional job metadata (name, input/output paths, schedule)
         
     Returns:
         PDF filename if successful, None otherwise
@@ -303,6 +304,49 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
             f"Generated on {datetime.utcnow().strftime('%B %d, %Y at %I:%M %p UTC')}", 
             subtitle_style
         ))
+        
+        # Job Information (if available)
+        if job_metadata:
+            flowables.append(Paragraph("Job Information", heading_style))
+            
+            job_info_data = []
+            
+            if job_metadata.get('name'):
+                job_info_data.append(['Job Name', job_metadata['name']])
+            
+            if job_metadata.get('input_path'):
+                job_info_data.append(['Input Folder', job_metadata['input_path']])
+            
+            if job_metadata.get('output_path'):
+                job_info_data.append(['Output Folder', job_metadata['output_path']])
+            
+            if job_metadata.get('execution_type'):
+                job_info_data.append(['Execution Type', job_metadata['execution_type']])
+            
+            if job_metadata.get('schedule_times'):
+                job_info_data.append(['Schedule', job_metadata['schedule_times']])
+            
+            if job_metadata.get('ruleset_name'):
+                job_info_data.append(['Ruleset', job_metadata['ruleset_name']])
+            
+            if job_info_data:
+                job_info_table = Table(job_info_data, colWidths=[2*inch, 4*inch])
+                job_info_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.9, 0.95, 1.0)),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                    ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                    ('TOPPADDING', (0, 0), (-1, -1), 8),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ]))
+                
+                flowables.append(job_info_table)
+                flowables.append(Spacer(1, 20))
         
         # Executive Summary
         flowables.append(Paragraph("Executive Summary", heading_style))

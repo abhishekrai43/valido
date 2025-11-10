@@ -51,8 +51,19 @@ def extract_between_markers(
     # Pattern: start_marker + optional whitespace + (captured text) + optional whitespace + end_marker
     pattern = rf"{start_marker_pattern}\s*(.*?)\s*{end_marker_pattern}"
     
+    # Debug logging
+    from app.utils.logger import get_logger
+    logger = get_logger('extractor')
+    logger.debug(f"Between extraction - start_marker: '{start_marker}', end_marker: '{end_marker}'")
+    logger.debug(f"Pattern: {pattern}")
+    logger.debug(f"Text sample (first 500 chars): {text[:500]}")
+    
     try:
         matches = re.findall(pattern, text, flags=re.DOTALL | re.IGNORECASE)
+        
+        logger.debug(f"Raw matches found: {len(matches)}")
+        if matches:
+            logger.debug(f"First match: '{matches[0][:100] if matches[0] else 'empty'}'")
         
         if not matches:
             return ""

@@ -19,11 +19,15 @@ from datetime import datetime
 # Core dependencies
 from app.services.parser import extract_text_from_bytes, is_valid_pdf
 from app.services.validator import validate_text
+from app.utils.logger import get_logger
 from PyPDF2 import PdfReader
 
 # Import modularized report and packaging functions
 from app.tasks.report_generator import generate_excel_report, generate_pdf_summary
 from app.tasks.result_packager import create_results_zip
+
+# Initialize logger
+logger = get_logger('worker_tasks')
 
 
 def process_in_chunks_worker(items: List[Any], chunk_size: int = 50):
@@ -45,6 +49,7 @@ def process_pdfs_sync(
     username: Optional[str] = None,
     results_dir: Optional[str] = None,
     progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+    job_metadata: Optional[Dict] = None,
 ) -> Dict:
     def _emit_progress(state: str, meta: Dict[str, Any]):
         try:
@@ -445,12 +450,14 @@ def process_pdfs_sync(
 
         # Use extractions from validation report (which used lookFor text)
         extractions = report.get('extractions', {}) if report else {}
-        for field in extraction_fields:
-            field_name = field.get('name', field) if isinstance(field, dict) else field
-            field_display = field_name.replace('_', ' ').title()
-            # Get value from validation report extractions (already correctly extracted)
-            extracted_value = extractions.get(field_name, '')
-            row[field_display] = extracted_value
+        logger.info(f"DEBUG: Extractions for {fname}: {extractions}")
+        logger.info(f"DEBUG: extraction_fields: {extraction_fields}")
+        
+        # Add all extracted fields (both regular fields and calculations)
+        # The extractions dict already has everything including calculated fields
+        for display_name, value in extractions.items():
+            logger.info(f"DEBUG: Adding column '{display_name}' with value '{value}'")
+            row[display_name] = value
 
         if err:
             row['Error Details'] = err
@@ -484,8 +491,8 @@ def process_pdfs_sync(
     # Generate Excel report
     excel_filename = generate_excel_report(csv_rows, results_dir, timestamp)
     
-    # Generate PDF summary
-    pdf_filename = generate_pdf_summary(csv_rows, results_dir, timestamp, rules)
+    # Generate PDF summary with job metadata
+    pdf_filename = generate_pdf_summary(csv_rows, results_dir, timestamp, rules, job_metadata)
     
     # Generate JSON report for API
     report_json_path = os.path.join(results_dir, 'report.json')
@@ -546,16 +553,8 @@ def process_pdfs_sync(
             
             log_file.write("\n")
     
-    # Create ZIP file with all results using modular packager
-    zip_filename = create_results_zip(
-        results_dir=results_dir,
-        timestamp=timestamp,
-        csv_filename=os.path.basename(csv_path),
-        excel_filename=excel_filename,
-        pdf_filename=pdf_filename,
-        log_filename=os.path.basename(log_path),
-        json_filename=os.path.basename(report_json_path)
-    )
+    # No longer creating ZIP file - users can download individual files
+    zip_filename = None
 
     if username:
         try:
