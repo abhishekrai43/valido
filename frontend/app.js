@@ -58,9 +58,9 @@
     let selectedFiles = [];
     
     // Navigation
-    function navigateToStep(stepNum) {
-      // Prevent going backwards - one-way flow only
-      if (stepNum < currentStep) {
+    function navigateToStep(stepNum, forceReset = false) {
+      // Prevent going backwards - one-way flow only (unless forcing reset)
+      if (stepNum < currentStep && !forceReset) {
         return; // Ignore backward navigation
       }
       
@@ -233,6 +233,12 @@
       navigateToStep(2);
     });
     
+    // Listen for rules updates
+    document.addEventListener('rulesUpdated', () => {
+      console.log('Rules updated event received, calling updateSummary');
+      updateSummary();
+    });
+    
     function updateSummary() {
       // Update file summary
       const fileCount = selectedFiles.length;
@@ -303,8 +309,18 @@
   updateSubmitButtonLabel();
     
     // Form submission with user-friendly status
+    let isSubmitting = false;  // Prevent duplicate submissions
+    
     form && form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      
+      // Prevent duplicate submissions
+      if (isSubmitting) {
+        console.log('Submission already in progress, ignoring duplicate');
+        return;
+      }
+      
+      isSubmitting = true;
       
       const files = filesInput.files;
       const rulesEl = document.getElementById('rules');
@@ -322,6 +338,7 @@
       console.log('Submitting with rules:', rules);
       
       if (!files || files.length === 0) {
+        isSubmitting = false;  // Reset flag
         showError('Please select at least one file to validate.');
         navigateToStep(1);
         return;
@@ -329,6 +346,7 @@
 
       // Limit to 500 files per batch
       if (files.length > 500) {
+        isSubmitting = false;  // Reset flag
         showError('Maximum 500 files allowed per batch. Please split your files into smaller batches.');
         navigateToStep(1);
         return;
@@ -336,6 +354,7 @@
       
       // Hide submit button, show processing status
       submitBtn.style.display = 'none';
+      submitBtn.disabled = true;  // Disable button as extra safety
       processingStatus.style.display = 'flex';
       successStatus.style.display = 'none';
       errorStatus.style.display = 'none';
@@ -473,9 +492,20 @@
     }
     
     function showSuccess(taskId, taskResult) {
+      isSubmitting = false;  // Reset submission flag
       processingStatus.style.display = 'none';
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
+      
+      // Change Step 3 indicator to green (completed)
+      steps.forEach(step => {
+        const num = parseInt(step.dataset.step);
+        if (num === 3) {
+          step.classList.add('completed');
+          step.classList.remove('active');
+        }
+      });
+      
       // Clear previous results
       if (resultsOutput) resultsOutput.innerHTML = '';
 
@@ -569,10 +599,12 @@
     }
     
     function showError(message) {
+      isSubmitting = false;  // Reset submission flag
       processingStatus.style.display = 'none';
       errorStatus.style.display = 'flex';
       errorMessage.textContent = message;
       submitBtn.style.display = 'inline-flex';
+      submitBtn.disabled = false;  // Re-enable button
     }
     
     function recordHistory(taskId) {
@@ -615,8 +647,8 @@
       // Reset rules
       if (window.resetBuilder) window.resetBuilder();
       
-      // Go back to step 1
-      navigateToStep(1);
+      // Go back to step 1 (force reset)
+      navigateToStep(1, true);
     });
     
     // Navigation between sections
@@ -676,6 +708,9 @@
         navPricing.classList.remove('active');
         navAutomation.classList.remove('active');
         navHowTo.classList.remove('active');
+        
+        // Reset to Step 1 (force reset)
+        navigateToStep(1, true);
       });
 
       // Automation tab

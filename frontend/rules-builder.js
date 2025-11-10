@@ -37,8 +37,8 @@
   // Toggle column section visibility
   if (fieldInTableCheckbox) {
     fieldInTableCheckbox.addEventListener('change', (e) => {
-      fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
-      if (!e.target.checked) {
+      if (fieldColumnSection) fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
+      if (!e.target.checked && fieldColumnInput) {
         fieldColumnInput.value = '';
       }
     });
@@ -58,16 +58,16 @@
       
       // Show/hide formula section for computed type
       if (type === 'computed') {
-        fieldFormulaSection.style.display = 'block';
-        fieldStrategySection.style.display = 'none';
-        validationRulesSection.style.display = 'none';
+        if (fieldFormulaSection) fieldFormulaSection.style.display = 'block';
+        if (fieldStrategySection) fieldStrategySection.style.display = 'none';
+        if (validationRulesSection) validationRulesSection.style.display = 'none';
       } else {
-        fieldFormulaSection.style.display = 'none';
-        fieldStrategySection.style.display = 'block';
-        validationRulesSection.style.display = 'block';
-        textValidations.style.display = type === 'text' ? 'block' : 'none';
-        numberValidations.style.display = type === 'number' ? 'block' : 'none';
-        dateValidations.style.display = type === 'date' ? 'block' : 'none';
+        if (fieldFormulaSection) fieldFormulaSection.style.display = 'none';
+        if (fieldStrategySection) fieldStrategySection.style.display = 'block';
+        if (validationRulesSection) validationRulesSection.style.display = 'block';
+        if (textValidations) textValidations.style.display = type === 'text' ? 'block' : 'none';
+        if (numberValidations) numberValidations.style.display = type === 'number' ? 'block' : 'none';
+        if (dateValidations) dateValidations.style.display = type === 'date' ? 'block' : 'none';
       }
     });
   });
@@ -75,6 +75,8 @@
   let fields = [];  // Array of {name, lookFor, type, strategy, validations, column, formula}
 
   function renderFields(){
+    if (!fieldsList) return;
+    
     fieldsList.innerHTML = '';
     
     if (fields.length === 0) {
@@ -170,52 +172,52 @@
   if (addFieldWizardBtn) {
     addFieldWizardBtn.addEventListener('click', () => {
       // Reset wizard inputs
-      fieldNameInput.value = '';
-      fieldLookForInput.value = '';
-      fieldFormulaInput.value = '';
-      fieldInTableCheckbox.checked = false;
-      fieldColumnInput.value = '';
+      if (fieldNameInput) fieldNameInput.value = '';
+      if (fieldLookForInput) fieldLookForInput.value = '';
+      if (fieldFormulaInput) fieldFormulaInput.value = '';
+      if (fieldInTableCheckbox) fieldInTableCheckbox.checked = false;
+      if (fieldColumnInput) fieldColumnInput.value = '';
       document.querySelectorAll('input[name="fieldType"]').forEach(radio => {
         radio.checked = radio.value === 'text';
       });
-      fieldStrategySelect.value = 'first';
+      if (fieldStrategySelect) fieldStrategySelect.value = 'first';
       
       // Reset visibility states
-      fieldFormulaSection.style.display = 'none';
-      fieldStrategySection.style.display = 'block';
-      fieldColumnSection.style.display = 'none';
-      validationRulesSection.style.display = 'none';
+      if (fieldFormulaSection) fieldFormulaSection.style.display = 'none';
+      if (fieldStrategySection) fieldStrategySection.style.display = 'block';
+      if (fieldColumnSection) fieldColumnSection.style.display = 'none';
+      if (validationRulesSection) validationRulesSection.style.display = 'none';
       
       // Reset validation checkboxes
       document.querySelectorAll('.validation-checkbox input[type="checkbox"]').forEach(cb => cb.checked = false);
       document.querySelectorAll('.inline-number, .inline-text, .inline-date').forEach(input => input.value = '');
       
       // Show modal
-      fieldWizardModal.style.display = 'flex';
+      if (fieldWizardModal) fieldWizardModal.style.display = 'flex';
     });
   }
 
   if (fieldWizardClose) {
     fieldWizardClose.addEventListener('click', () => {
-      fieldWizardModal.style.display = 'none';
+      if (fieldWizardModal) fieldWizardModal.style.display = 'none';
     });
   }
 
   if (fieldWizardCancel) {
     fieldWizardCancel.addEventListener('click', () => {
-      fieldWizardModal.style.display = 'none';
+      if (fieldWizardModal) fieldWizardModal.style.display = 'none';
     });
   }
 
   if (fieldWizardSave) {
     fieldWizardSave.addEventListener('click', () => {
-      const name = fieldNameInput.value.trim();
-      const lookFor = fieldLookForInput.value.trim();
+      const name = fieldNameInput ? fieldNameInput.value.trim() : '';
+      const lookFor = fieldLookForInput ? fieldLookForInput.value.trim() : '';
       const type = document.querySelector('input[name="fieldType"]:checked')?.value || 'text';
-      const strategy = fieldStrategySelect.value;
+      const strategy = fieldStrategySelect ? fieldStrategySelect.value : 'first';
       const inTable = fieldInTableCheckbox?.checked || false;
-      const column = inTable ? fieldColumnInput.value.trim() : null;
-      const formula = fieldFormulaInput.value.trim();
+      const column = inTable && fieldColumnInput ? fieldColumnInput.value.trim() : null;
+      const formula = fieldFormulaInput ? fieldFormulaInput.value.trim() : '';
 
       // Validation
       if (!name) {
@@ -347,14 +349,24 @@
     }
     
     // Convert fields array to object format with lookFor and type
-    rules.fields = fields.map(f => ({
-      name: f.name,
-      lookFor: f.lookFor,
-      type: f.type,
-      strategy: f.strategy || 'first',
-      validations: f.validations || [],
-      ...(f.column && { column: f.column })
-    }));
+    rules.fields = fields.map(f => {
+      const field = {
+        name: f.name,
+        lookFor: f.lookFor,
+        type: f.type,
+        strategy: f.strategy || 'first',
+        validations: f.validations || [],
+        ...(f.column && { column: f.column })
+      };
+      
+      // Include startMarker and endMarker for 'between' strategy
+      if (f.strategy === 'between') {
+        field.startMarker = f.startMarker;
+        field.endMarker = f.endMarker;
+      }
+      
+      return field;
+    });
     
     // Add calculations if available
     if (typeof getCalculations === 'function') {
@@ -548,6 +560,14 @@
     if (Object.keys(rules.validations).length === 0) delete rules.validations;
     if (!rules.fields || rules.fields.length===0) delete rules.fields;
     
+    // Include calculations if present
+    if (typeof window.getCalculations === 'function') {
+      const calcs = window.getCalculations();
+      if (calcs && calcs.length > 0) {
+        rules.calculations = calcs;
+      }
+    }
+    
     return rules;
   }
 
@@ -697,7 +717,9 @@
   }
 
   function loadRuleset(ruleset) {
+    console.log('loadRuleset called with:', ruleset);
     const rules = ruleset.rules || {};
+    console.log('Rules to load:', rules);
     
     // Load validations
     if (chkSigned) chkSigned.checked = !!rules.validations?.signed;
@@ -743,6 +765,8 @@
       return field;
     });
     
+    console.log('Fields loaded:', fields);
+    
     // Update global fields reference
     window.fields = fields;
     
@@ -752,7 +776,9 @@
     }
     
     renderFields();
+    console.log('About to call buildRulesPreview');
     buildRulesPreview();
+    console.log('buildRulesPreview completed');
     
     // Show success message
     const successMsg = document.createElement('div');
@@ -790,8 +816,9 @@
   // Load saved rulesets on init
   loadSavedRulesets();
 
-  // Export buildRulesPreview for use by other scripts
+  // Export functions for use by other scripts
   window.buildRulesPreview = buildRulesPreview;
+  window.loadRuleset = loadRuleset;
 }
 
 if (document.readyState === 'loading') {

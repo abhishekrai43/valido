@@ -71,7 +71,11 @@ function initCalculations() {
       // Close modal and refresh
       calculationModal.style.display = 'none';
       renderCalculations();
-      buildRulesPreview();
+      if (typeof buildRulesPreview === 'function') {
+        buildRulesPreview();
+      } else if (typeof window.buildRulesPreview === 'function') {
+        window.buildRulesPreview();
+      }
     });
   }
 }
@@ -172,7 +176,11 @@ function removeCalculation(index) {
   if (confirm('Remove this calculation?')) {
     calculations.splice(index, 1);
     renderCalculations();
-    buildRulesPreview();
+    if (typeof buildRulesPreview === 'function') {
+      buildRulesPreview();
+    } else if (typeof window.buildRulesPreview === 'function') {
+      window.buildRulesPreview();
+    }
   }
 }
 
@@ -195,3 +203,7 @@ if (typeof module !== 'undefined' && module.exports) {
     setCalculations
   };
 }
+
+// Export to window for browser usage
+window.getCalculations = getCalculations;
+window.setCalculations = setCalculations;

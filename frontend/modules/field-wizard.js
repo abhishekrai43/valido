@@ -97,20 +97,14 @@ function initFieldWizard() {
       const strategy = fieldStrategySelect.value;
       const inTable = fieldInTableCheckbox?.checked || false;
       const column = inTable ? fieldColumnInput.value.trim() : null;
-      const startMarker = startMarkerInput.value.trim();
-      const endMarker = endMarkerInput.value.trim();
 
       // Validation
       if (!name) {
         alert('Please enter a field name');
         return;
       }
-      if (strategy !== 'between' && !lookFor) {
+      if (!lookFor) {
         alert('Please enter text to look for');
-        return;
-      }
-      if (strategy === 'between' && (!startMarker || !endMarker)) {
-        alert('Please enter both start and end markers');
         return;
       }
       if (inTable && !column) {
@@ -164,21 +158,14 @@ function initFieldWizard() {
         }
       }
 
-      // Add field
+      // Add field (regular extraction with lookFor)
       const newField = {
         name,
+        lookFor,
         type,
         validations,
         strategy
       };
-      
-      // Add lookFor or markers based on strategy
-      if (strategy === 'between') {
-        newField.startMarker = startMarker;
-        newField.endMarker = endMarker;
-      } else {
-        newField.lookFor = lookFor;
-      }
       
       // Add column if specified
       if (column) {

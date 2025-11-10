@@ -1,0 +1,217 @@
+/* Toast Notification Styles */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 400px;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #0078d4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast-show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.toast-message {
+    flex: 1;
+    color: #333;
+    line-height: 1.5;
+}
+
+.toast-close {
+    flex-shrink: 0;
+    padding: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.toast-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+/* Toast Types */
+
+.toast-success {
+    border-left-color: #28a745;
+}
+
+.toast-success .toast-icon {
+    background: #d4edda;
+    color: #28a745;
+}
+
+.toast-error {
+    border-left-color: #dc3545;
+}
+
+.toast-error .toast-icon {
+    background: #f8d7da;
+    color: #dc3545;
+}
+
+.toast-warning {
+    border-left-color: #ffc107;
+}
+
+.toast-warning .toast-icon {
+    background: #fff3cd;
+    color: #ffc107;
+}
+
+.toast-info {
+    border-left-color: #0078d4;
+}
+
+.toast-info .toast-icon {
+    background: #cfe2ff;
+    color: #0078d4;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .toast-container {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .toast {
+        transform: translateY(-100px);
+    }
+    
+    .toast-show {
+        transform: translateY(0);
+    }
+}
+
+/* Confirmation Dialog */
+.toast-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.toast-overlay-show {
+    opacity: 1;
+}
+
+.toast-confirm-dialog {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.toast-confirm-show {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.toast-confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: #fff3cd;
+    color: #ffc107;
+}
+
+.toast-confirm-message {
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.toast-confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.toast-confirm-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+}
+
+.toast-confirm-cancel {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.toast-confirm-cancel:hover {
+    background: #e0e0e0;
+}
+
+.toast-confirm-ok {
+    background: #0078d4;
+    color: white;
+}
+
+.toast-confirm-ok:hover {
+    background: #005a9e;
+}

@@ -19,13 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSavedRulesets() {
   const savedRulesetsListDiv = document.getElementById('savedRulesetsList');
-  if (!savedRulesetsListDiv) return;
+  if (!savedRulesetsListDiv) {
+    console.error('savedRulesetsList element not found');
+    return;
+  }
   
   try {
+    console.log('Fetching rulesets from API...');
     const response = await fetch('/api/v1/rulesets/');
     if (!response.ok) throw new Error('Failed to load rulesets');
     
     const rulesets = await response.json(); // API returns array directly
+    console.log('Loaded rulesets:', rulesets);
     
     if (rulesets.length === 0) {
       savedRulesetsListDiv.innerHTML = '<div class="no-rulesets">No saved rulesets yet</div>';
@@ -46,16 +51,19 @@ async function loadSavedRulesets() {
       
       const loadBtn = document.createElement('button');
       loadBtn.type = 'button';
-      loadBtn.className = 'btn btn-ghost btn-small';
+      loadBtn.className = 'btn btn-secondary btn-small';
       loadBtn.textContent = 'Load';
+      loadBtn.style.cssText = 'padding: 0.5rem 1rem; background: #0078d4; color: white; border: none; font-weight: 600;';
       loadBtn.onclick = () => {
-        if (typeof loadRuleset === 'function') loadRuleset(ruleset);
+        console.log('Load button clicked for ruleset:', ruleset.name);
+        loadRuleset(ruleset);
       };
       
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.className = 'btn btn-ghost btn-small';
       deleteBtn.textContent = 'Delete';
+      deleteBtn.style.cssText = 'padding: 0.5rem 1rem; color: #dc3545;';
       deleteBtn.onclick = () => deleteRuleset(ruleset.id, ruleset.name);
       
       actions.appendChild(loadBtn);
