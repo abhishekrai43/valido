@@ -215,6 +215,14 @@
             <h2>Step 1: Upload Your Documents</h2>
             <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 2000 pages total.</strong></p>
             
+            <div class="helper-text" style="margin-bottom: 16px; padding: 12px; background-color: #e8f4fd; border-left: 3px solid #0078d4; border-radius: 4px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
+                <circle cx="8" cy="8" r="7" stroke="#0078d4" stroke-width="1.5" fill="none"/>
+                <path d="M8 11V8M8 5H8.01" stroke="#0078d4" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <strong>Perfect for testing and tweaking:</strong> Use this manual upload to validate your rules and make adjustments. Once you're satisfied with the results, head to the Automation tab to set up recurring batch processing for your documents.
+            </div>
+            
             <div class="privacy-notice" style="margin-bottom: 16px;">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
                 <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
@@ -574,17 +582,17 @@
               </div>
 
               <div class="wizard-step">
-                <label class="wizard-label">Start Word</label>
+                <label class="wizard-label">Start Marker (Word or Phrase)</label>
                 <input type="text" id="betweenStartWord" class="wizard-input" 
-                       placeholder="e.g. Invoice #, Total:, Name:" />
-                <p class="wizard-hint">The text that appears BEFORE what you want to extract</p>
+                       placeholder="e.g. Invoice Number:, Total Amount:, Employee Name" />
+                <p class="wizard-hint">The text/phrase that appears BEFORE what you want to extract. Be specific to avoid multiple matches!</p>
               </div>
 
               <div class="wizard-step">
-                <label class="wizard-label">End Word</label>
+                <label class="wizard-label">End Marker (Word or Phrase)</label>
                 <input type="text" id="betweenEndWord" class="wizard-input" 
-                       placeholder="e.g. Date, USD, (or type [newline] for line break)" />
-                <p class="wizard-hint">The text that appears AFTER what you want to extract</p>
+                       placeholder="e.g. Date of Issue, USD, Signature (or [newline] for line break)" />
+                <p class="wizard-hint">The text/phrase that appears AFTER what you want to extract. Be specific!</p>
               </div>
 
               <div class="wizard-step">
@@ -624,12 +632,7 @@
         </div>
 
         <div class="card-actions">
-          <button type="button" class="btn btn-ghost" id="backToFiles">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back to Files
-          </button>
+          <!-- Back button removed - one-way flow to prevent state loss -->
           <button type="button" class="btn btn-secondary" id="saveRulesetBtn">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M16 18H4C3.44772 18 3 17.5523 3 17V3C3 2.44772 3.44772 2 4 2H12L17 7V17C17 17.5523 16.5523 18 16 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -712,12 +715,7 @@
             </div>
 
             <div class="card-actions">
-              <button type="button" class="btn btn-ghost" id="backToRules">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Back to Rules
-              </button>
+              <!-- Back button removed - one-way flow to prevent state loss -->
               <button id="submitBtn" class="btn btn-primary btn-large" type="submit">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -738,13 +736,47 @@
       <!-- Recent/History section removed to reduce complexity -->
 
       <section id="automationSection" style="display:none">
+        <!-- Jobs Management Section -->
+        <div class="card" id="jobsManagementCard">
+          <div class="card-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 12h6M9 16h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Your Automation Jobs</h2>
+          <p class="card-description">Manage your configured watch folders and scheduled processing jobs</p>
+
+          <!-- Jobs List Container -->
+          <div id="jobsListContainer" style="margin-top: 2rem;">
+            <div id="jobsListLoading" style="text-align: center; padding: 2rem; color: #666;">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style="animation: spin 1s linear infinite;">
+                <circle cx="20" cy="20" r="16" stroke="#ddd" stroke-width="4" fill="none"/>
+                <path d="M20 4a16 16 0 0 1 16 16" stroke="#0078d4" stroke-width="4" stroke-linecap="round" fill="none"/>
+              </svg>
+              <p style="margin-top: 1rem;">Loading jobs...</p>
+            </div>
+            <div id="jobsListEmpty" style="display: none; text-align: center; padding: 3rem 2rem; background: #f9f9f9; border-radius: 8px; border: 2px dashed #ddd;">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="opacity: 0.3; margin: 0 auto;">
+                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <h3 style="margin-top: 1rem; color: #666;">No automation jobs configured yet</h3>
+              <p style="color: #999; margin-top: 0.5rem;">Create your first watch folder below to automate document processing</p>
+            </div>
+            <div id="jobsList" style="display: none;">
+              <!-- Jobs will be populated here dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Create/Edit Watch Folder Section -->
         <div class="card">
           <div class="card-icon">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
               <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <h2>Automated Folder Processing</h2>
+          <h2 id="watchFolderFormTitle">Create New Automation Job</h2>
           <p class="card-description">Configure folders to automatically validate PDFs on a schedule</p>
 
           <!-- Watch Folder Configuration Form -->
@@ -1277,11 +1309,11 @@
   <script src="/modules/rules-preview.js"></script>
   <script src="/modules/ruleset-loader.js"></script>
   
+  <!-- Load rules builder -->
+  <script src="/rules-builder.js"></script>
+  
   <!-- Load main orchestrator -->
   <script src="/modules/rules-builder-main.js"></script>
-  
-  <!-- Load contact form -->
-  <script src="/modules/contact-form.js"></script>
   
   <!-- Load other main files -->
   <script src="/automation.js"></script>

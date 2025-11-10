@@ -7,8 +7,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
     # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
     # Set not needed items to zero 0.
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(1, 0, 0, 1),
+    prodvers=(1, 0, 0, 1),
     # Contains a bitmask that specifies the valid bits 'flags'
     mask=0x3f,
     # Contains a bitmask that specifies the Boolean attributes of the file.
@@ -30,14 +30,15 @@ VSVersionInfo(
       [
       StringTable(
         u'040904B0',
-        [StringStruct(u'CompanyName', u'Valido Software'),
-        StringStruct(u'FileDescription', u'Valido - PDF Validation and Automation Tool'),
-        StringStruct(u'FileVersion', u'1.0.0.0'),
-        StringStruct(u'InternalName', u'Valido'),
-        StringStruct(u'LegalCopyright', u'Copyright © 2025 Valido Software. All rights reserved.'),
-        StringStruct(u'OriginalFilename', u'Valido.exe'),
-        StringStruct(u'ProductName', u'Valido'),
-        StringStruct(u'ProductVersion', u'1.0.0.0')])
+        [StringStruct(u'CompanyName', u'Abhishek Rai'),
+        StringStruct(u'FileDescription', u'Valido - PDF Validation and Data Extraction Tool'),
+        StringStruct(u'FileVersion', u'1.0.0-beta'),
+        StringStruct(u'InternalName', u'valido-beta'),
+        StringStruct(u'LegalCopyright', u'Copyright © 2025 Abhishek Rai. All rights reserved.'),
+        StringStruct(u'OriginalFilename', u'valido-beta.exe'),
+        StringStruct(u'ProductName', u'Valido PDF Validator'),
+        StringStruct(u'ProductVersion', u'1.0.0-beta'),
+        StringStruct(u'Comments', u'Beta version for testing purposes')])
       ]), 
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]

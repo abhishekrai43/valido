@@ -84,10 +84,5 @@ def get_license_banner() -> Optional[str]:
     """Get license banner text for UI display."""
     license_info = LicenseManager.get_license_info()
 
-    if license_info["type"] == "trial":
-        days = license_info.get("days_remaining", 0)
-        return f"Trial Version - {days} days remaining"
-    elif not license_info.get("valid", False):
-        return "License Invalid - Please contact support"
-    else:
-        return None
+    # Removed trial version messaging
+    return None

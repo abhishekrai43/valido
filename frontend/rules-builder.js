@@ -522,17 +522,27 @@
       };
     }
     
+    // Use global fields array from field-wizard.js
+    const fields = window.fields || [];
     rules.fields = fields.map(f => {
       if (typeof f === 'string') {
         return {name: f, strategy: 'first'};
       }
-      return {
+      const field = {
         name: f.name, 
         lookFor: f.lookFor || f.name,  // Use lookFor if available, otherwise fall back to name
         type: f.type || 'text',         // Include field type
         strategy: f.strategy || 'first',
         validations: f.validations || []  // Include field-level validations
       };
+      
+      // Include startMarker and endMarker for 'between' strategy
+      if (f.strategy === 'between') {
+        field.startMarker = f.startMarker;
+        field.endMarker = f.endMarker;
+      }
+      
+      return field;
     });
     
     if (Object.keys(rules.validations).length === 0) delete rules.validations;
@@ -715,7 +725,7 @@
       if (typeof f === 'string') {
         return {name: f, lookFor: '', type: 'text', strategy: 'first', validations: []};
       }
-      return {
+      const field = {
         name: f.name || '',
         lookFor: f.lookFor || '',
         type: f.type || 'text',
@@ -723,7 +733,18 @@
         validations: f.validations || [],
         ...(f.column && { column: f.column })
       };
+      
+      // Preserve startMarker and endMarker for 'between' strategy
+      if (f.strategy === 'between') {
+        field.startMarker = f.startMarker || '';
+        field.endMarker = f.endMarker || '';
+      }
+      
+      return field;
     });
+    
+    // Update global fields reference
+    window.fields = fields;
     
     // Load calculations if present
     if (rules.calculations && typeof setCalculations === 'function') {

@@ -67,14 +67,16 @@ class ValidoLogger:
         """Set up console, file, and error file handlers."""
         self.logger.setLevel(logging.INFO)
         
-        # Console handler - colorized for development
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        console_formatter = StructuredFormatter(
-            fmt='%(asctime)s [%(levelname)s] %(name)s - %(message)s %(context_str)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        console_handler.setFormatter(console_formatter)
+        # Console handler - colorized for development (only if stdout is available)
+        if sys.stdout is not None:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(logging.INFO)
+            console_formatter = StructuredFormatter(
+                fmt='%(asctime)s [%(levelname)s] %(name)s - %(message)s %(context_str)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            console_handler.setFormatter(console_formatter)
+            self.logger.addHandler(console_handler)
         
         # Main log file - rotating by size (10MB max, keep 10 backups)
         main_log = os.path.join(LOG_DIR, 'valido.log')
@@ -117,7 +119,6 @@ class ValidoLogger:
         # Only log from validation-related modules
         validation_handler.addFilter(lambda r: 'validator' in r.name.lower() or 'worker' in r.name.lower())
         
-        self.logger.addHandler(console_handler)
         self.logger.addHandler(file_handler)
         self.logger.addHandler(error_handler)
         self.logger.addHandler(validation_handler)

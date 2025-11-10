@@ -53,87 +53,90 @@ async function loadRulesetsForDropdown() {
     }
 }
 
-// Render watch folders list
+// Render watch folders list in the new Jobs section
 function renderWatchFolders() {
-    const container = document.getElementById('watchFoldersList');
+    const loadingEl = document.getElementById('jobsListLoading');
+    const emptyEl = document.getElementById('jobsListEmpty');
+    const listEl = document.getElementById('jobsList');
+    
+    // Hide loading
+    if (loadingEl) loadingEl.style.display = 'none';
     
     if (watchFolders.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <p>No watch folders configured yet</p>
-                <p class="helper">Configure your first watch folder above</p>
-            </div>
-        `;
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (listEl) listEl.style.display = 'none';
         return;
     }
     
-    container.innerHTML = watchFolders.map(folder => `
-        <div class="watch-folder-card">
-            <div class="watch-folder-header">
-                <div class="watch-folder-info">
-                    <h4>${folder.name}</h4>
-                    <span class="watch-folder-status ${folder.enabled ? 'active' : 'inactive'}">
-                        <span class="status-dot"></span>
-                        ${folder.enabled ? 'Active' : 'Inactive'}
-                    </span>
+    // Show list, hide empty state
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (listEl) {
+        listEl.style.display = 'block';
+        listEl.innerHTML = watchFolders.map(folder => `
+            <div class="watch-folder-card" style="margin-bottom: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; background: white;">
+                <div class="watch-folder-header" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                    <div class="watch-folder-info">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 1.25em; color: #333;">${folder.name}</h4>
+                        <span class="watch-folder-status ${folder.enabled ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875em; font-weight: 600; ${folder.enabled ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                            <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 0.5rem;"></span>
+                            ${folder.enabled ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <div class="watch-folder-actions" style="display: flex; gap: 0.5rem;">
+                        <button class="btn-icon" onclick="toggleWatchFolder(${folder.id})" title="${folder.enabled ? 'Disable' : 'Enable'}" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                ${folder.enabled ? 
+                                    '<path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
+                                    '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2"/><path d="M3 3L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}
+                            </svg>
+                        </button>
+                        <button class="btn-icon" onclick="editWatchFolder(${folder.id})" title="Edit" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M14 2L18 6L7 17H3V13L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="btn-icon" onclick="deleteWatchFolder(${folder.id})" title="Delete" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #dc3545;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M3 5H17M8 9V15M12 9V15M4 5L5 17C5 18 6 19 7 19H13C14 19 15 18 15 17L16 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div class="watch-folder-actions">
-                    <button class="btn-icon" onclick="toggleWatchFolder(${folder.id})" title="${folder.enabled ? 'Disable' : 'Enable'}">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            ${folder.enabled ? 
-                                '<path d="M4 10L8 14L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
-                                '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2"/><path d="M3 3L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}
-                        </svg>
-                    </button>
-                    <button class="btn-icon" onclick="editWatchFolder(${folder.id})" title="Edit">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M14 2L18 6L7 17H3V13L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="btn-icon" onclick="deleteWatchFolder(${folder.id})" title="Delete">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M3 5H17M8 9V15M12 9V15M4 5L5 17C5 18 6 19 7 19H13C14 19 15 18 15 17L16 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+                
+                <div class="watch-folder-details" style="display: grid; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div class="detail-row" style="display: flex; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                        <span class="detail-label" style="font-weight: 600; color: #666; min-width: 140px;">Input Folder:</span>
+                        <span class="detail-value" style="color: #333; word-break: break-all;">${folder.input_path}</span>
+                    </div>
+                    <div class="detail-row" style="display: flex; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                        <span class="detail-label" style="font-weight: 600; color: #666; min-width: 140px;">Output Folder:</span>
+                        <span class="detail-value" style="color: #333; word-break: break-all;">${folder.output_path}</span>
+                    </div>
+                    <div class="detail-row" style="display: flex; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                        <span class="detail-label" style="font-weight: 600; color: #666; min-width: 140px;">Schedule:</span>
+                        <span class="detail-value" style="color: #333;">${formatSchedule(folder.schedule_times)}</span>
+                    </div>
+                    <div class="detail-row" style="display: flex; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                        <span class="detail-label" style="font-weight: 600; color: #666; min-width: 140px;">After Processing:</span>
+                        <span class="detail-value" style="color: #333;">${formatAfterProcessing(folder)}</span>
+                    </div>
                 </div>
+                
+                ${folder.last_run || (folder.files_processed_total && folder.files_processed_total > 0) ? `
+                <div class="watch-folder-stats" style="display: flex; gap: 2rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                    <div class="stat">
+                        <span class="stat-label" style="display: block; font-size: 0.875em; color: #666; margin-bottom: 0.25rem;">Last Run</span>
+                        <span class="stat-value" style="font-weight: 600; color: #333;">${folder.last_run ? new Date(folder.last_run).toLocaleString() : 'Never'}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label" style="display: block; font-size: 0.875em; color: #666; margin-bottom: 0.25rem;">Files Processed</span>
+                        <span class="stat-value" style="font-weight: 600; color: #333;">${folder.files_processed_total || 0}</span>
+                    </div>
+                </div>
+                ` : ''}
             </div>
-            
-            <div class="watch-folder-details">
-                <div class="detail-row">
-                    <span class="detail-label">Input Folder</span>
-                    <span class="detail-value">${folder.input_path}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Output Folder</span>
-                    <span class="detail-value">${folder.output_path}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Schedule</span>
-                    <span class="detail-value">${formatSchedule(folder.schedule_times)}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">After Processing</span>
-                    <span class="detail-value">${formatAfterProcessing(folder)}</span>
-                </div>
-            </div>
-            
-            ${folder.last_run || folder.files_processed_total > 0 ? `
-            <div class="watch-folder-stats">
-                <div class="stat">
-                    <span class="stat-label">Last Run</span>
-                    <span class="stat-value">${folder.last_run ? new Date(folder.last_run).toLocaleString() : 'Never'}</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Files Processed</span>
-                    <span class="stat-value">${folder.files_processed_total || 0}</span>
-                </div>
-            </div>
-            ` : ''}
-        </div>
-    `).join('');
+        `).join('');
+    }
 }
 
 // Format schedule times
@@ -210,6 +213,10 @@ function toggleProcessedPathField() {
 
 // Clear watch folder form
 function clearWatchFolderForm() {
+    // Reset form title
+    const titleEl = document.getElementById('watchFolderFormTitle');
+    if (titleEl) titleEl.textContent = 'Create New Automation Job';
+    
     document.getElementById('watchFolderName').value = '';
     document.getElementById('watchFolderInput').value = '';
     document.getElementById('watchFolderOutput').value = '';
@@ -331,6 +338,10 @@ async function editWatchFolder(id) {
     if (!folder) return;
     
     editingWatchFolderId = id;
+    
+    // Update form title
+    const titleEl = document.getElementById('watchFolderFormTitle');
+    if (titleEl) titleEl.textContent = 'Edit Automation Job';
     
     // Populate form fields
     document.getElementById('watchFolderName').value = folder.name;

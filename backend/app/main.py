@@ -4,6 +4,15 @@ Valido - PDF Validation Service
 Main application entry point. Registers routes and configures FastAPI app.
 """
 
+import sys
+import io
+
+# Fix for PyInstaller executable without console: redirect stdout/stderr to avoid AttributeError
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,15 +60,16 @@ async def _on_startup():
         logger.info(f"Results directory: {RESULTS_ROOT}")
         
         # Initialize database
-        from . import models  # noqa: F401
-        from .db import create_db_and_tables, SQLITE_URL
+        from app import models  # noqa: F401
+        from app.db import create_db_and_tables, SQLITE_URL
         logger.info(f"Database URL: {SQLITE_URL}")
         create_db_and_tables()
         logger.info("Database initialized successfully")
         
-        # Display license banner
+        # Display license banner (if any)
         banner = get_license_banner()
-        print("\n" + banner + "\n")
+        if banner:
+            print("\n" + banner + "\n")
         logger.info("Startup complete")
         
     except Exception as e:
@@ -113,10 +123,6 @@ app.include_router(watch_folder_router)
 from app.routes.agent_routes import router as agent_router
 app.include_router(agent_router)
 
-# Contact form routes
-from app.routes.contact_routes import router as contact_router
-app.include_router(contact_router)
-
 # Rules routes (if exists)
 try:
     from app.routes.rules import router as rules_router
@@ -126,18 +132,41 @@ except ImportError:
 
 
 # --- Static Files (Frontend) ---
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))
+# Handle both development and PyInstaller exe modes
+if getattr(sys, 'frozen', False):
+    # Running as compiled exe - frontend is in _MEIPASS temp directory
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    frontend_dir = os.path.join(base_path, "frontend")
+    logger.info(f"Running as exe. Base path: {base_path}")
+else:
+    # Running as script - frontend is relative to this file
+    frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))
+    logger.info(f"Running as script. Frontend dir: {frontend_dir}")
+
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-    logger.info(f"Serving frontend from: {frontend_dir}")
+    logger.info(f"✓ Serving frontend from: {frontend_dir}")
 else:
-    logger.warning(f"Frontend directory not found: {frontend_dir}")
+    logger.error(f"✗ Frontend directory not found: {frontend_dir}")
+    logger.error(f"  Checked path exists: {os.path.exists(frontend_dir)}")
+    logger.error(f"  sys.frozen: {getattr(sys, 'frozen', False)}")
+    logger.error(f"  sys._MEIPASS: {getattr(sys, '_MEIPASS', 'NOT FOUND')}")
+    logger.error(f"  sys.executable: {sys.executable}")
+    logger.error(f"  __file__: {__file__}")
 
 
 # --- Main Entry Point ---
-if __name__ == "__main__":
+# For PyInstaller, __name__ is not "__main__", so check frozen or __main__
+if __name__ == "__main__" or getattr(sys, 'frozen', False):
     import uvicorn
     import socket
+    import webbrowser
+    import threading
+    import time
+    
+    logger.info("=== Starting Valido application ===")
+    logger.info(f"__name__ = {__name__}")
+    logger.info(f"sys.frozen = {getattr(sys, 'frozen', False)}")
     
     # Get network info
     def get_local_ip():
@@ -161,10 +190,40 @@ if __name__ == "__main__":
     print(f"📁 Results: {RESULTS_ROOT}")
     print("="*60 + "\n")
     
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False,
-        log_level="info"
-    )
+    # Auto-open browser after server starts (only when running as exe)
+    def open_browser():
+        try:
+            time.sleep(3)  # Wait for server to start
+            logger.info(f"Opening browser to http://localhost:{port}")
+            webbrowser.open(f"http://localhost:{port}")
+            logger.info("Browser open command sent")
+        except Exception as e:
+            logger.error(f"Browser open failed: {e}")
+    
+    logger.info(f"Checking frozen status: {getattr(sys, 'frozen', False)}")
+    
+    if getattr(sys, 'frozen', False):
+        # Running as compiled exe - auto-open browser
+        logger.info("Detected exe mode - will auto-open browser in 3 seconds")
+        try:
+            threading.Thread(target=open_browser, daemon=True).start()
+            logger.info("Browser thread started")
+        except Exception as e:
+            logger.error(f"Failed to start browser thread: {e}")
+    else:
+        logger.info("Running as script - not auto-opening browser")
+    
+    try:
+        logger.info(f"About to start uvicorn on port {port}")
+        uvicorn.run(
+            app,  # Pass the app object directly, not the string (for PyInstaller)
+            host="0.0.0.0",
+            port=port,
+            reload=False,
+            log_level="info"
+        )
+        logger.info("Uvicorn started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start uvicorn: {e}")
+        import traceback
+        logger.error(traceback.format_exc())

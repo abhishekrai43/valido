@@ -145,7 +145,8 @@ async def submit_files(
     # Submit to local worker
     try:
         import sys
-        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Go up 3 levels: validation_routes.py -> routes -> app -> backend
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if backend_dir not in sys.path:
             sys.path.insert(0, backend_dir)
         
@@ -183,7 +184,8 @@ async def get_task_status(task_id: str):
     # Query local worker for status
     try:
         import sys
-        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Go up 3 levels: validation_routes.py -> routes -> app -> backend
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if backend_dir not in sys.path:
             sys.path.insert(0, backend_dir)
         

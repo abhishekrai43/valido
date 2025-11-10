@@ -25,8 +25,7 @@ async function loadSavedRulesets() {
     const response = await fetch('/api/v1/rulesets/');
     if (!response.ok) throw new Error('Failed to load rulesets');
     
-    const data = await response.json();
-    const rulesets = data.rulesets || [];
+    const rulesets = await response.json(); // API returns array directly
     
     if (rulesets.length === 0) {
       savedRulesetsListDiv.innerHTML = '<div class="no-rulesets">No saved rulesets yet</div>';

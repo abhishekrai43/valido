@@ -389,25 +389,26 @@ def process_pdfs_sync(
         if is_scanned:
             row['Error Details'] = scanned_message
 
-        # Signature detection (text and digital)
-        is_signed, signed_value = detect_signed(text)
-        is_digital, digital_value = detect_digital_signature(content_bytes)
-        sig_type = []
-        if is_signed == 'Yes':
-            sig_type.append('Text')
-        if is_digital == 'Yes':
-            sig_type.append('Digital')
-        if not sig_type:
-            sig_type_str = 'None'
-        else:
-            sig_type_str = ', '.join(sig_type)
-        row['Signature Type'] = sig_type_str
-        row['Signed'] = is_signed
-        if signed_value:
-            row['Signature Details'] = signed_value
-        row['Digital Signed'] = is_digital
-        if digital_value:
-            row['Digital Signature Details'] = digital_value
+        # Signature detection (text and digital) - only if requested in rules
+        if 'signed' in validation_checks:
+            is_signed, signed_value = detect_signed(text)
+            is_digital, digital_value = detect_digital_signature(content_bytes)
+            sig_type = []
+            if is_signed == 'Yes':
+                sig_type.append('Text')
+            if is_digital == 'Yes':
+                sig_type.append('Digital')
+            if not sig_type:
+                sig_type_str = 'None'
+            else:
+                sig_type_str = ', '.join(sig_type)
+            row['Signature Type'] = sig_type_str
+            row['Signed'] = is_signed
+            if signed_value:
+                row['Signature Details'] = signed_value
+            row['Digital Signed'] = is_digital
+            if digital_value:
+                row['Digital Signature Details'] = digital_value
 
         if 'dated' in validation_checks:
             is_dated, date_value = detect_dated(text)

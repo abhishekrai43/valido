@@ -59,6 +59,11 @@
     
     // Navigation
     function navigateToStep(stepNum) {
+      // Prevent going backwards - one-way flow only
+      if (stepNum < currentStep) {
+        return; // Ignore backward navigation
+      }
+      
       currentStep = stepNum;
       
       // Update step indicator

@@ -472,6 +472,10 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                     strat = f.get("strategy", "first")
                     look_for = f.get("lookFor") or f.get("look_for")
                     field_config = f  # Keep full config for validation
+                    
+                    # Debug logging for between strategy
+                    if strat == "between":
+                        logger.info(f"DEBUG: Processing between field '{name}': {f}")
                 else:
                     name = str(f)
                     strat = "first"

@@ -1,7 +1,9 @@
 // Field Wizard Module
 // Handles the field extraction wizard modal
 
-let fields = [];
+// Make fields globally accessible for rules-builder.js
+window.fields = window.fields || [];
+let fields = window.fields;
 
 function initFieldWizard() {
   const addFieldWizardBtn = document.getElementById('addFieldWizardBtn');
@@ -376,6 +378,7 @@ function getFields() {
 
 function setFields(newFields) {
   fields = newFields || [];
+  window.fields = fields; // Keep global reference in sync
   renderFields();
 }
 

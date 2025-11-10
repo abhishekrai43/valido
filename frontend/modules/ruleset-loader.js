@@ -15,7 +15,7 @@ function loadRuleset(ruleset) {
       if (typeof f === 'string') {
         return {name: f, lookFor: '', type: 'text', strategy: 'first', validations: []};
       }
-      return {
+      const field = {
         name: f.name || '',
         lookFor: f.lookFor || '',
         type: f.type || 'text',
@@ -23,6 +23,14 @@ function loadRuleset(ruleset) {
         validations: f.validations || [],
         ...(f.column && { column: f.column })
       };
+      
+      // Preserve startMarker and endMarker for 'between' strategy
+      if (f.strategy === 'between') {
+        field.startMarker = f.startMarker || '';
+        field.endMarker = f.endMarker || '';
+      }
+      
+      return field;
     });
     setFields(fields);
   }
