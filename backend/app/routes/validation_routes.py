@@ -107,24 +107,12 @@ async def submit_files(
                 detail=f"Only PDF and ZIP files allowed: {f.filename}"
             )
         
-        # Check file size (limit to 50MB per file)
+        # No file size limit for local desktop app
         content = await f.read()
-        if len(content) > 50 * 1024 * 1024:
-            logger.warning(f"File too large: {f.filename}, {len(content)} bytes")
-            raise HTTPException(
-                status_code=400, 
-                detail=f"File too large (max 50MB): {f.filename}"
-            )
         total_size += len(content)
         await f.seek(0)  # Reset for later read
 
-    # Check total upload size
-    if total_size > 500 * 1024 * 1024:  # 500MB total
-        logger.warning(f"Total upload too large: {total_size} bytes")
-        raise HTTPException(
-            status_code=400, 
-            detail="Total upload size exceeds 500MB"
-        )
+    # No total upload size limit for local desktop app
 
     # Parse rules with defensive handling
     parsed_rules = None

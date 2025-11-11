@@ -197,6 +197,9 @@ function initFieldWizard() {
       document.querySelectorAll('input[name="betweenFieldType"]').forEach(radio => {
         radio.checked = radio.value === 'text';
       });
+      document.querySelectorAll('input[name="betweenOccurrence"]').forEach(radio => {
+        radio.checked = radio.value === 'first';
+      });
       
       // Show modal
       betweenWordsModal.style.display = 'flex';
@@ -223,6 +226,7 @@ function initFieldWizard() {
       const startWord = document.getElementById('betweenStartWord').value.trim();
       const endWord = document.getElementById('betweenEndWord').value.trim();
       const type = document.querySelector('input[name="betweenFieldType"]:checked')?.value || 'text';
+      const occurrence = document.querySelector('input[name="betweenOccurrence"]:checked')?.value || 'first';
       
       // Validation
       if (!name) {
@@ -248,6 +252,7 @@ function initFieldWizard() {
         strategy: 'between',
         startMarker: startWord,
         endMarker: endWord,
+        occurrence: occurrence,
         validations: []
       };
       

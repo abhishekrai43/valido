@@ -86,6 +86,11 @@
         card.style.display = cardStep === currentStep ? 'block' : 'none';
       });
       
+      // Refresh rules preview when entering step 2
+      if (stepNum === 2 && typeof window.buildRulesPreview === 'function') {
+        window.buildRulesPreview();
+      }
+      
       // Reset validation status when entering step 3
       if (stepNum === 3) {
         // Hide all status displays

@@ -56,6 +56,18 @@ def extract_between_markers(
     logger = get_logger('extractor')
     logger.debug(f"Between extraction - start_marker: '{start_marker}', end_marker: '{end_marker}'")
     logger.debug(f"Pattern: {pattern}")
+    
+    # Check if markers exist in text
+    start_found = start_marker in text
+    end_found = end_marker in text
+    logger.debug(f"Start marker found in text: {start_found}")
+    logger.debug(f"End marker found in text: {end_found}")
+    
+    if not start_found:
+        logger.warning(f"Start marker '{start_marker}' not found in text")
+    if not end_found:
+        logger.warning(f"End marker '{end_marker}' not found in text")
+    
     logger.debug(f"Text sample (first 500 chars): {text[:500]}")
     
     try:

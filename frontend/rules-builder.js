@@ -72,7 +72,10 @@
     });
   });
 
-  let fields = [];  // Array of {name, lookFor, type, strategy, validations, column, formula}
+  // Initialize fields from window or empty array
+  let fields = window.fields || [];
+  // Keep window.fields in sync
+  window.fields = fields;
 
   function renderFields(){
     if (!fieldsList) return;
@@ -244,10 +247,11 @@
         return;
       }
 
-      // Check for duplicate field names
-      const exists = fields.some(f => f.name === name);
-      if (exists) {
-        alert('A field with this name already exists');
+      // Check for duplicate field names (case-insensitive, trimmed)
+      const normalizedName = name.trim().toLowerCase();
+      const duplicate = fields.find(f => f.name.trim().toLowerCase() === normalizedName);
+      if (duplicate) {
+        alert(`A field with the name "${duplicate.name}" already exists. Please use a different name.`);
         return;
       }
 
@@ -359,10 +363,11 @@
         ...(f.column && { column: f.column })
       };
       
-      // Include startMarker and endMarker for 'between' strategy
+      // Include startMarker, endMarker, and occurrence for 'between' strategy
       if (f.strategy === 'between') {
         field.startMarker = f.startMarker;
         field.endMarker = f.endMarker;
+        field.occurrence = f.occurrence || 'first';
       }
       
       return field;
@@ -445,10 +450,24 @@
             }
           }
           
+          // Determine the occurrence label for between strategy
+          let occurrenceLabel = strategyLabel;
+          if (field.strategy === 'between' && field.occurrence) {
+            occurrenceLabel = field.occurrence === 'first' ? 'first match' : 'all matches';
+          }
+          
+          // Build the field description based on strategy
+          let fieldDescription = '';
+          if (field.strategy === 'between') {
+            fieldDescription = `<div class="preview-field-lookfor">Between: "${escapeHtml(field.startMarker || '')}" and "${escapeHtml(field.endMarker || '')}" (${occurrenceLabel})</div>`;
+          } else {
+            fieldDescription = `<div class="preview-field-lookfor">Look for: "${escapeHtml(field.lookFor)}"</div>`;
+          }
+          
           summaryHtml += `<div class="preview-field-item">
             <strong>${escapeHtml(field.name)}</strong> 
-            <span class="preview-field-meta">(${typeLabel}, ${strategyLabel})</span>${validationsDesc}
-            <div class="preview-field-lookfor">Look for: "${escapeHtml(field.lookFor)}"</div>
+            <span class="preview-field-meta">(${typeLabel}, ${field.strategy === 'between' ? 'between' : strategyLabel})</span>${validationsDesc}
+            ${fieldDescription}
           </div>`;
         });
         summaryHtml += '</div>';
@@ -495,6 +514,19 @@
     
     // Store canonical JSON for backend
   try { rulesTextarea.dataset.json = JSON.stringify(rules); } catch(e) { rulesTextarea.dataset.json = '{}'; }
+  
+  // Enable/disable "Continue to Validation" button based on rules
+  const continueBtn = document.getElementById('continueToValidate');
+  const hasRules = Object.keys(rules).length > 0;
+  if (continueBtn) {
+    continueBtn.disabled = !hasRules;
+    if (hasRules) {
+      continueBtn.classList.remove('btn-disabled');
+    } else {
+      continueBtn.classList.add('btn-disabled');
+    }
+  }
+  
   // Notify other parts of the app (frontend) that rules changed so UI can update (button label, summaries, etc.)
   try { document.dispatchEvent(new CustomEvent('rulesUpdated', { detail: rules })); } catch (e) { /* non-fatal */ }
   }
@@ -585,6 +617,12 @@
   // initial render
   renderFields();
   buildRulesPreview();
+  
+  // Initialize "Continue to Validation" button state
+  const continueBtn = document.getElementById('continueToValidate');
+  if (continueBtn) {
+    continueBtn.disabled = true; // Disabled by default until rules are added
+  }
 
   // Ensure rules are up-to-date before the form submits
   const form = document.getElementById('uploadForm');
@@ -649,16 +687,35 @@
           const successMsg = document.createElement('div');
           successMsg.className = 'status-message success-message';
           successMsg.textContent = `✓ Ruleset "${name}" saved successfully!`;
-          successMsg.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;';
+          successMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#10b981;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
           document.body.appendChild(successMsg);
           setTimeout(() => successMsg.remove(), 3000);
           
-          // Refresh saved rulesets list
-          loadSavedRulesets();
+          // Refresh saved rulesets list and auto-select the newly saved one
+          await loadSavedRulesets();
+          
+          // Auto-select the newly saved ruleset in the dropdown (with small delay for rendering)
+          setTimeout(() => {
+            const rulesetSelect = document.getElementById('rulesetSelect');
+            if (rulesetSelect && saved.id) {
+              rulesetSelect.value = saved.id;
+              // Highlight it briefly
+              rulesetSelect.style.background = '#e8f4fd';
+              setTimeout(() => {
+                rulesetSelect.style.background = '';
+              }, 1500);
+            }
+          }, 100);
           
         } catch (err) {
           console.error('Error saving ruleset:', err);
-          alert('Failed to save ruleset. Please try again.');
+          
+          // Show error message
+          const errorMsg = document.createElement('div');
+          errorMsg.textContent = '✗ Failed to save ruleset';
+          errorMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#dc2626;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
+          document.body.appendChild(errorMsg);
+          setTimeout(() => errorMsg.remove(), 3000);
         }
       };
     });
@@ -682,9 +739,15 @@
       
       container.innerHTML = '';
       
+      // Create label
+      const label = document.createElement('div');
+      label.style.cssText = 'margin-bottom: 0.5rem; color: #666; font-size: 0.9rem;';
+      label.textContent = 'Select a ruleset to load or create new rules above';
+      container.appendChild(label);
+      
       // Create dropdown
       const selectWrapper = document.createElement('div');
-      selectWrapper.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;';
+      selectWrapper.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
       
       const select = document.createElement('select');
       select.id = 'rulesetSelect';
@@ -770,7 +833,9 @@
     }
     
     // Load fields - preserve all properties
-    fields = (rules.fields || []).map(f => {
+    // Clear the existing array and populate it (maintains reference)
+    fields.length = 0;
+    const loadedFields = (rules.fields || []).map(f => {
       if (typeof f === 'string') {
         return {name: f, lookFor: '', type: 'text', strategy: 'first', validations: []};
       }
@@ -783,19 +848,22 @@
         ...(f.column && { column: f.column })
       };
       
-      // Preserve startMarker and endMarker for 'between' strategy
+      // Preserve startMarker, endMarker, and occurrence for 'between' strategy
       if (f.strategy === 'between') {
         field.startMarker = f.startMarker || '';
         field.endMarker = f.endMarker || '';
+        field.occurrence = f.occurrence || 'first';
       }
       
       return field;
     });
     
-    console.log('Fields loaded:', fields);
+    // Push all loaded fields into the existing array
+    fields.push(...loadedFields);
     
-    // Update global fields reference
-    window.fields = fields;
+    console.log('Fields loaded:', fields);
+    console.log('window.fields:', window.fields);
+    console.log('Same reference?', fields === window.fields);
     
     // Load calculations if present
     if (rules.calculations && typeof setCalculations === 'function') {
@@ -811,13 +879,59 @@
     const successMsg = document.createElement('div');
     successMsg.className = 'status-message success-message';
     successMsg.textContent = `✓ Loaded ruleset "${ruleset.name}"`;
-    successMsg.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;';
+    successMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#10b981;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
     document.body.appendChild(successMsg);
     setTimeout(() => successMsg.remove(), 2000);
   }
 
-  async function deleteRuleset(id, name) {
-    if (!confirm(`Are you sure you want to delete the ruleset "${name}"?`)) return;
+  function showDeleteConfirmation(id, name) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    
+    // Create modal content
+    const content = document.createElement('div');
+    content.style.cssText = 'background:white;padding:24px;border-radius:8px;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Delete Ruleset';
+    title.style.cssText = 'margin:0 0 12px 0;color:#dc2626;font-size:18px;';
+    
+    const message = document.createElement('p');
+    message.textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+    message.style.cssText = 'margin:0 0 20px 0;color:#666;line-height:1.5;';
+    
+    const buttonRow = document.createElement('div');
+    buttonRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.onclick = () => modal.remove();
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.style.cssText = 'background:#dc2626;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;';
+    deleteBtn.onclick = async () => {
+      modal.remove();
+      await performDelete(id, name);
+    };
+    
+    buttonRow.appendChild(cancelBtn);
+    buttonRow.appendChild(deleteBtn);
+    content.appendChild(title);
+    content.appendChild(message);
+    content.appendChild(buttonRow);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Close on overlay click
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+  }
+
+  async function performDelete(id, name) {
     
     try {
       const res = await fetch(`/api/v1/rulesets/${id}`, { method: 'DELETE' });
@@ -827,7 +941,7 @@
       const successMsg = document.createElement('div');
       successMsg.className = 'status-message success-message';
       successMsg.textContent = `✓ Deleted ruleset "${name}"`;
-      successMsg.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;';
+      successMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#10b981;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
       document.body.appendChild(successMsg);
       setTimeout(() => successMsg.remove(), 2000);
       
@@ -836,16 +950,80 @@
       
     } catch (err) {
       console.error('Error deleting ruleset:', err);
-      alert('Failed to delete ruleset. Please try again.');
+      
+      // Show error message
+      const errorMsg = document.createElement('div');
+      errorMsg.textContent = '✗ Failed to delete ruleset';
+      errorMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#dc2626;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
+      document.body.appendChild(errorMsg);
+      setTimeout(() => errorMsg.remove(), 3000);
     }
   }
+  
+  function deleteRuleset(id, name) {
+    showDeleteConfirmation(id, name);
+  }
 
+  // Reset builder function for "Validate More" button
+  function resetBuilder() {
+    // Clear all fields
+    fields.length = 0;
+    
+    // Clear calculations if they exist
+    if (typeof window.calculations !== 'undefined') {
+      window.calculations = [];
+    }
+    
+    // Reset all validation checkboxes
+    const checkboxes = [
+      'chkSignature',
+      'chkMustContain',
+      'chkMustNotContain',
+      'chkPageCount'
+    ];
+    
+    checkboxes.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) checkbox.checked = false;
+    });
+    
+    // Clear all text inputs
+    const textInputs = [
+      'mustContainText',
+      'mustNotContainText',
+      'pageCountValue'
+    ];
+    
+    textInputs.forEach(id => {
+      const input = document.getElementById(id);
+      if (input) input.value = '';
+    });
+    
+    // Reset dropdown selectors
+    const pageCountOperator = document.getElementById('pageCountOperator');
+    if (pageCountOperator) pageCountOperator.value = '>=';
+    
+    // Reset UI
+    renderFields();
+    buildRulesPreview();
+    
+    // Clear saved ruleset list selection if any
+    const rulesetsList = document.getElementById('savedRulesetsList');
+    if (rulesetsList) {
+      const items = rulesetsList.querySelectorAll('.ruleset-item');
+      items.forEach(item => item.classList.remove('selected'));
+    }
+    
+    console.log('Builder reset - all fields and validations cleared');
+  }
+  
   // Load saved rulesets on init
   loadSavedRulesets();
 
   // Export functions for use by other scripts
   window.buildRulesPreview = buildRulesPreview;
   window.loadRuleset = loadRuleset;
+  window.resetBuilder = resetBuilder;
 }
 
 if (document.readyState === 'loading') {

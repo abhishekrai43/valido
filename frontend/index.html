@@ -416,10 +416,9 @@
         </div>
 
         <div class="saved-rules-section">
-          <h3>Saved Rules</h3>
-          <p class="helper">Load previously saved rulesets to reuse them.</p>
+          <h3>Saved Rulesets</h3>
           <div id="savedRulesetsList" class="saved-rulesets-list">
-            <div class="loading-rulesets">Loading saved rules...</div>
+            <div class="loading-rulesets">Loading saved rulesets...</div>
           </div>
         </div>
 
@@ -624,6 +623,21 @@
                     <span>Date</span>
                   </label>
                 </div>
+              </div>
+
+              <div class="wizard-step">
+                <label class="wizard-label">Which Occurrence?</label>
+                <div style="display: flex; gap: 20px;">
+                  <label class="radio-option">
+                    <input type="radio" name="betweenOccurrence" value="first" checked />
+                    <span>First Match</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="betweenOccurrence" value="all" />
+                    <span>All Matches</span>
+                  </label>
+                </div>
+                <p class="wizard-hint">If markers appear multiple times, extract first match or all matches</p>
               </div>
 
               <div class="wizard-example" style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 15px;">

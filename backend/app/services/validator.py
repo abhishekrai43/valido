@@ -394,11 +394,14 @@ def _extract_field(
     if not text:
         return ""
     
-    # Handle "between" strategy
-    if strategy == "between":
+    # Handle "between" strategy - check if markers are provided
+    # Note: When strategy=="between", the caller passes occurrence ("first"/"all") as strategy parameter
+    # and provides start_marker/end_marker to indicate between extraction
+    if start_marker and end_marker:
         if not start_marker or not end_marker:
             logger.warning(f"Between strategy requires start_marker and end_marker for field '{field_name}'")
             return ""
+        # strategy parameter contains the occurrence ("first", "all", etc.)
         return extract_between_markers(text, start_marker, end_marker, strategy)
     
     # Standard extraction using look_for patterns
@@ -495,12 +498,21 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                     look_for = f.get("lookFor") or f.get("look_for")
                     field_config = f  # Keep full config for validation
                     
+                    # For "between" strategy, check if there's a separate occurrence field
+                    # If strategy="between" and occurrence exists, use occurrence for matching strategy
+                    if strat == "between" and "occurrence" in f:
+                        occurrence_strat = f.get("occurrence", "first")
+                        logger.info(f"DEBUG: Between field '{name}' - using occurrence: {occurrence_strat}")
+                    else:
+                        occurrence_strat = strat
+                    
                     # Debug logging for between strategy
                     if strat == "between":
                         logger.info(f"DEBUG: Processing between field '{name}': {f}")
                 else:
                     name = str(f)
                     strat = "first"
+                    occurrence_strat = "first"
                     look_for = None
                     col = None
                     field_config = {"name": name, "type": "text", "validations": []}
@@ -521,11 +533,14 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 start_marker = f.get("startMarker") if isinstance(f, dict) else None
                 end_marker = f.get("endMarker") if isinstance(f, dict) else None
                 
+                # For between strategy, use occurrence_strat instead of strat for matching
+                extraction_strategy = occurrence_strat if strat == "between" else strat
+                
                 # Extract value
                 value = _extract_field(
                     text, 
                     name, 
-                    strat, 
+                    extraction_strategy, 
                     look_for, 
                     col,
                     start_marker,
@@ -538,17 +553,23 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 validation_result = _validate_field_value(value, field_config)
                 
                 # Add detailed log entry
+                # For between strategy, show markers instead of lookFor
+                if strat == "between":
+                    look_for_display = f"Between: '{start_marker}' and '{end_marker}'"
+                else:
+                    look_for_display = look_for or name
+                
                 log_entry = {
                     "field_name": name,
-                    "look_for_text": look_for or name,
+                    "look_for_text": look_for_display,
                     "strategy": strat,
                     "extracted_value": value,
                     "found": value is not None and value != "",
                     "validation": validation_result  # Add validation results
                 }
                 
-                # Find where the lookFor text appears in PDF
-                if look_for:
+                # Find where the lookFor text appears in PDF (skip for between strategy)
+                if look_for and strat != "between":
                     search_text = look_for.lower() if not look_for else look_for
                     idx = text.lower().find(search_text.lower()) if text else -1
                     if idx != -1:
