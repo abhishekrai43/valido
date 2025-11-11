@@ -14,6 +14,35 @@ function initCalculations() {
   const calculationsList = document.getElementById('calculationsList');
   const availableFieldsList = document.getElementById('availableFieldsList');
 
+  // Operator button handlers
+  document.querySelectorAll('.operator-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const operator = btn.dataset.operator;
+      insertIntoFormula(operator);
+    });
+  });
+
+  // Helper function to insert text into formula
+  function insertIntoFormula(text) {
+    const start = calcFormulaInput.selectionStart;
+    const end = calcFormulaInput.selectionEnd;
+    const value = calcFormulaInput.value;
+    const before = value.substring(0, start);
+    const after = value.substring(end);
+    
+    // Add space before and after operator (except for parentheses)
+    const needsSpaces = ![' ', '(', ')', ''].includes(text);
+    const spaceBefore = needsSpaces && before.length > 0 && before[before.length - 1] !== ' ' ? ' ' : '';
+    const spaceAfter = needsSpaces ? ' ' : '';
+    
+    calcFormulaInput.value = before + spaceBefore + text + spaceAfter + after;
+    calcFormulaInput.focus();
+    
+    // Set cursor after inserted text
+    const newPos = start + spaceBefore.length + text.length + spaceAfter.length;
+    calcFormulaInput.setSelectionRange(newPos, newPos);
+  }
+
   // Open modal
   if (addCalculationBtn) {
     addCalculationBtn.addEventListener('click', () => {
@@ -87,41 +116,85 @@ function updateAvailableFields() {
   if (!availableFieldsList || !calcFormulaInput) return;
 
   // Get fields from the global fields array (assumed to be available from rules-builder.js)
-  if (typeof fields === 'undefined' || !fields || fields.length === 0) {
+  const hasFields = typeof fields !== 'undefined' && fields && fields.length > 0;
+  const hasCalculations = calculations && calculations.length > 0;
+  
+  if (!hasFields && !hasCalculations) {
     availableFieldsList.innerHTML = '<p style="color: #9ca3af; font-size: 14px; margin: 0;">No fields defined yet. Add extraction fields first.</p>';
     return;
   }
 
   availableFieldsList.innerHTML = '';
   
-  fields.forEach(field => {
-    const chip = document.createElement('div');
-    chip.className = 'field-chip';
-    chip.innerHTML = `
-      <svg viewBox="0 0 20 20" fill="currentColor">
-        <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      ${field.name}
-    `;
+  // Add extracted fields section
+  if (hasFields) {
+    const fieldsHeader = document.createElement('div');
+    fieldsHeader.style.cssText = 'font-weight: 600; color: #374151; margin-bottom: 0.5rem; font-size: 13px;';
+    fieldsHeader.textContent = 'Extracted Fields:';
+    availableFieldsList.appendChild(fieldsHeader);
     
-    chip.addEventListener('click', () => {
-      // Insert field name at cursor position
-      const start = calcFormulaInput.selectionStart;
-      const end = calcFormulaInput.selectionEnd;
-      const text = calcFormulaInput.value;
-      const before = text.substring(0, start);
-      const after = text.substring(end);
+    fields.forEach(field => {
+      const chip = document.createElement('div');
+      chip.className = 'field-chip';
+      chip.innerHTML = `
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        ${field.name}
+      `;
       
-      calcFormulaInput.value = before + field.name + after;
-      calcFormulaInput.focus();
+      chip.addEventListener('click', () => {
+        // Insert field name at cursor position using helper function
+        insertIntoFormula(field.name);
+      });
       
-      // Set cursor after inserted text
-      const newPos = start + field.name.length;
-      calcFormulaInput.setSelectionRange(newPos, newPos);
+      availableFieldsList.appendChild(chip);
     });
+  }
+  
+  // Add previous calculations section (for chained calculations)
+  if (hasCalculations) {
+    const calcHeader = document.createElement('div');
+    calcHeader.style.cssText = 'font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 13px;';
+    calcHeader.textContent = 'Previous Calculations:';
+    availableFieldsList.appendChild(calcHeader);
     
-    availableFieldsList.appendChild(chip);
-  });
+    calculations.forEach(calc => {
+      const chip = document.createElement('div');
+      chip.className = 'field-chip';
+      chip.style.cssText = 'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af; border: 1px solid #93c5fd;';
+      chip.innerHTML = `
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width: 14px; height: 14px;">
+          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+        </svg>
+        ${calc.name}
+      `;
+      chip.title = `Formula: ${calc.formula}`;
+      
+      chip.addEventListener('click', () => {
+        // Insert calculation name at cursor position
+        insertIntoFormula(calc.name);
+      });
+      
+      availableFieldsList.appendChild(chip);
+    });
+  }
+
+  // Helper function to insert text into formula (moved inside updateAvailableFields scope)
+  function insertIntoFormula(text) {
+    const start = calcFormulaInput.selectionStart;
+    const end = calcFormulaInput.selectionEnd;
+    const value = calcFormulaInput.value;
+    const before = value.substring(0, start);
+    const after = value.substring(end);
+    
+    calcFormulaInput.value = before + text + after;
+    calcFormulaInput.focus();
+    
+    // Set cursor after inserted text
+    const newPos = start + text.length;
+    calcFormulaInput.setSelectionRange(newPos, newPos);
+  }
 }
 
 function renderCalculations() {

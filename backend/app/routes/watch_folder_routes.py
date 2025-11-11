@@ -14,7 +14,7 @@ if str(backend_dir) not in sys.path:
 import local_worker
 
 from app.db import engine
-from app.models import WatchFolder, Ruleset
+from app.models import WatchFolder, Ruleset, JobRun
 from app.utils.logger import get_logger
 
 logger = get_logger("WatchFolderRoutes")
@@ -71,6 +71,17 @@ def create_watch_folder(watch_folder: WatchFolder):
         session.commit()
         session.refresh(watch_folder)
         logger.info(f"Watch folder created: {watch_folder.id}")
+        
+        # Schedule the job if enabled
+        if watch_folder.enabled and watch_folder.schedule_times:
+            try:
+                from app.scheduler import get_scheduler
+                scheduler = get_scheduler()
+                scheduler.schedule_job(watch_folder.id, watch_folder.schedule_times)
+                logger.info(f"Scheduled watch folder {watch_folder.id}")
+            except Exception as e:
+                logger.error(f"Failed to schedule watch folder {watch_folder.id}: {e}")
+        
         return watch_folder
 
 
@@ -110,6 +121,20 @@ def update_watch_folder(watch_folder_id: int, updated: WatchFolder):
         session.commit()
         session.refresh(watch_folder)
         logger.info(f"Watch folder updated: {watch_folder_id}")
+        
+        # Update schedule
+        try:
+            from app.scheduler import get_scheduler
+            scheduler = get_scheduler()
+            if watch_folder.enabled and watch_folder.schedule_times:
+                scheduler.schedule_job(watch_folder.id, watch_folder.schedule_times)
+                logger.info(f"Updated schedule for watch folder {watch_folder.id}")
+            else:
+                scheduler.remove_job(watch_folder.id)
+                logger.info(f"Removed schedule for watch folder {watch_folder.id}")
+        except Exception as e:
+            logger.error(f"Failed to update schedule for watch folder {watch_folder.id}: {e}")
+        
         return watch_folder
 
 
@@ -129,6 +154,16 @@ def delete_watch_folder(watch_folder_id: int):
         session.delete(watch_folder)
         session.commit()
         logger.info(f"Watch folder deleted: {watch_folder_id}")
+        
+        # Remove from scheduler
+        try:
+            from app.scheduler import get_scheduler
+            scheduler = get_scheduler()
+            scheduler.remove_job(watch_folder_id)
+            logger.info(f"Removed schedule for deleted watch folder {watch_folder_id}")
+        except Exception as e:
+            logger.error(f"Failed to remove schedule: {e}")
+        
         return {"ok": True}
 
 
@@ -150,6 +185,20 @@ def toggle_watch_folder(watch_folder_id: int):
         session.commit()
         session.refresh(watch_folder)
         logger.info(f"Watch folder {watch_folder_id} enabled: {watch_folder.enabled}")
+        
+        # Update schedule based on enabled status
+        try:
+            from app.scheduler import get_scheduler
+            scheduler = get_scheduler()
+            if watch_folder.enabled and watch_folder.schedule_times:
+                scheduler.schedule_job(watch_folder.id, watch_folder.schedule_times)
+                logger.info(f"Enabled schedule for watch folder {watch_folder.id}")
+            else:
+                scheduler.remove_job(watch_folder.id)
+                logger.info(f"Disabled schedule for watch folder {watch_folder.id}")
+        except Exception as e:
+            logger.error(f"Failed to update schedule: {e}")
+        
         return watch_folder
 
 
@@ -211,6 +260,23 @@ def run_watch_folder_now(watch_folder_id: int):
             logger.info(f"No PDF files found in {watch_folder.input_path}")
             raise HTTPException(status_code=400, detail="No PDF files found in input folder")
         
+        # Create JobRun record to track execution
+        import socket
+        job_run = JobRun(
+            watch_folder_id=watch_folder_id,
+            status="running",
+            files_found=len(pdf_files),
+            files_processed=0,
+            files_succeeded=0,
+            files_failed=0,
+            pc_name=socket.gethostname(),
+            output_path=watch_folder.output_path
+        )
+        session.add(job_run)
+        session.commit()
+        session.refresh(job_run)
+        logger.info(f"Created job run {job_run.id} for watch folder {watch_folder_id}")
+        
         # Read PDF files into memory for processing
         files_list = []
         for filename in pdf_files:
@@ -224,11 +290,25 @@ def run_watch_folder_now(watch_folder_id: int):
                 })
             except Exception as e:
                 logger.error(f"Failed to read {filepath}: {e}")
+                # Update job run with error
+                job_run.files_failed += 1
+                session.add(job_run)
+                session.commit()
                 continue
         
         if not files_list:
+            # Mark job as failed
+            job_run.status = "failed"
+            job_run.completed_at = datetime.utcnow()
+            job_run.error_message = "Failed to read any PDF files"
+            session.add(job_run)
+            session.commit()
             logger.error(f"Failed to read any PDF files from {watch_folder.input_path}")
             raise HTTPException(status_code=500, detail="Failed to read PDF files")
+        
+        job_run.files_processed = len(files_list)
+        session.add(job_run)
+        session.commit()
         
         # Create a unique output folder for this task (use task ID as folder name)
         import uuid
@@ -243,7 +323,8 @@ def run_watch_folder_now(watch_folder_id: int):
             'output_path': watch_folder.output_path,
             'execution_type': 'Manual Trigger',
             'schedule_times': watch_folder.schedule_times or 'Not scheduled',
-            'ruleset_name': ruleset.name if ruleset else 'Unknown'
+            'ruleset_name': ruleset.name if ruleset else 'Unknown',
+            'job_run_id': job_run.id  # Pass job run ID so worker can update it
         }
         
         # Submit task to local worker
@@ -257,9 +338,15 @@ def run_watch_folder_now(watch_folder_id: int):
         
         logger.info(f"Submitted watch folder {watch_folder_id} as task {task_id} with {len(files_list)} files")
         
+        # Update watch folder last_run
+        watch_folder.last_run = datetime.utcnow()
+        session.add(watch_folder)
+        session.commit()
+        
         return {
             "task_id": task_id,
             "watch_folder_id": watch_folder_id,
+            "job_run_id": job_run.id,
             "files_count": len(files_list),
             "message": f"Processing {len(files_list)} PDF files"
         }
@@ -336,3 +423,30 @@ def cancel_task(task_id: str):
     logger.info(f"Task {task_id} marked as REVOKED")
     
     return {"message": "Task cancelled", "task_id": task_id}
+
+
+@router.get("/{watch_folder_id}/runs", response_model=List[JobRun])
+def get_job_runs(watch_folder_id: int, limit: int = 20):
+    """Get execution history for a watch folder job."""
+    logger.info(f"Getting job runs for watch folder {watch_folder_id}")
+    if watch_folder_id <= 0:
+        logger.warning(f"Invalid watch folder ID: {watch_folder_id}")
+        raise HTTPException(status_code=400, detail="Invalid watch folder ID")
+    
+    with Session(engine) as session:
+        # Verify watch folder exists
+        watch_folder = session.get(WatchFolder, watch_folder_id)
+        if not watch_folder:
+            logger.warning(f"Watch folder not found: {watch_folder_id}")
+            raise HTTPException(status_code=404, detail="Watch folder not found")
+        
+        # Get recent runs, ordered by most recent first
+        statement = (
+            select(JobRun)
+            .where(JobRun.watch_folder_id == watch_folder_id)
+            .order_by(JobRun.started_at.desc())
+            .limit(limit)
+        )
+        runs = session.exec(statement).all()
+        logger.info(f"Found {len(runs)} job runs for watch folder {watch_folder_id}")
+        return runs

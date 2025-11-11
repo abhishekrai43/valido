@@ -681,34 +681,61 @@
       }
       
       container.innerHTML = '';
+      
+      // Create dropdown
+      const selectWrapper = document.createElement('div');
+      selectWrapper.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;';
+      
+      const select = document.createElement('select');
+      select.id = 'rulesetSelect';
+      select.className = 'form-input';
+      select.style.cssText = 'flex: 1; font-size: 1rem; padding: 0.6rem;';
+      
+      // Add placeholder option
+      const placeholderOption = document.createElement('option');
+      placeholderOption.value = '';
+      placeholderOption.textContent = 'Select a saved ruleset...';
+      placeholderOption.disabled = true;
+      placeholderOption.selected = true;
+      select.appendChild(placeholderOption);
+      
+      // Add rulesets as options
       rulesets.forEach(ruleset => {
-        const card = document.createElement('div');
-        card.className = 'ruleset-card';
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'ruleset-name';
-        nameSpan.textContent = ruleset.name;
-        
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'ruleset-actions';
-        
-        const loadBtn = document.createElement('button');
-        loadBtn.className = 'btn btn-secondary btn-small';
-        loadBtn.textContent = 'Load';
-        loadBtn.onclick = () => loadRuleset(ruleset);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn btn-ghost btn-small';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.onclick = () => deleteRuleset(ruleset.id, ruleset.name);
-        
-        btnContainer.appendChild(loadBtn);
-        btnContainer.appendChild(deleteBtn);
-        
-        card.appendChild(nameSpan);
-        card.appendChild(btnContainer);
-        container.appendChild(card);
+        const option = document.createElement('option');
+        option.value = ruleset.id;
+        option.textContent = ruleset.name;
+        option.dataset.ruleset = JSON.stringify(ruleset);
+        select.appendChild(option);
       });
+      
+      // Load button
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'btn btn-primary';
+      loadBtn.textContent = 'Load';
+      loadBtn.onclick = () => {
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+          const ruleset = JSON.parse(selectedOption.dataset.ruleset);
+          loadRuleset(ruleset);
+        }
+      };
+      
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-ghost';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.onclick = () => {
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+          const ruleset = JSON.parse(selectedOption.dataset.ruleset);
+          deleteRuleset(ruleset.id, ruleset.name);
+        }
+      };
+      
+      selectWrapper.appendChild(select);
+      selectWrapper.appendChild(loadBtn);
+      selectWrapper.appendChild(deleteBtn);
+      container.appendChild(selectWrapper);
       
     } catch (err) {
       console.error('Error loading rulesets:', err);

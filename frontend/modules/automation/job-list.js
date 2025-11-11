@@ -128,8 +128,30 @@ export class JobListManager {
                         ` : ''}
                     </div>
                 ` : ''}
+
+                <!-- Execution History Section -->
+                <div class="execution-history" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h5 style="margin: 0; font-size: 1em; color: #666;">Recent Executions</h5>
+                        <button onclick="window.jobManager.loadJobRuns(${job.id})" style="padding: 0.25rem 0.75rem; font-size: 0.875em; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #0066cc;">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="jobRuns_${job.id}" style="min-height: 50px;">
+                        <div style="text-align: center; color: #999; padding: 1rem;">
+                            <small>Loading execution history...</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Auto-load execution history after rendering
+        setTimeout(() => {
+            if (window.jobManager && window.jobManager.loadJobRuns) {
+                window.jobManager.loadJobRuns(job.id);
+            }
+        }, 100);
     }
 
     /**

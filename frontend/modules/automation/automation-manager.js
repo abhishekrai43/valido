@@ -70,6 +70,64 @@ export class AutomationManager {
     deleteJob(jobId) {
         this.jobActions.deleteJob(jobId);
     }
+
+    async loadJobRuns(jobId) {
+        const container = document.getElementById(`jobRuns_${jobId}`);
+        if (!container) return;
+        
+        container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>Loading...</small></div>';
+        
+        try {
+            const response = await fetch(`/api/v1/watch-folders/${jobId}/runs`);
+            const runs = await response.json();
+            
+            if (!runs || runs.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
+                return;
+            }
+            
+            container.innerHTML = runs.map(run => {
+                const statusColors = {
+                    'running': { bg: '#fff3cd', color: '#856404', icon: '⏳' },
+                    'success': { bg: '#d4edda', color: '#155724', icon: '✓' },
+                    'failed': { bg: '#f8d7da', color: '#721c24', icon: '✗' },
+                    'partial': { bg: '#ffeaa7', color: '#856404', icon: '⚠' }
+                };
+                const style = statusColors[run.status] || statusColors['running'];
+                const duration = run.completed_at ? 
+                    Math.round((new Date(run.completed_at) - new Date(run.started_at)) / 1000) + 's' :
+                    'In progress...';
+                
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; background: ${style.bg}; border-left: 3px solid ${style.color}; border-radius: 4px;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                <span style="font-size: 1.2em;">${style.icon}</span>
+                                <span style="font-weight: 600; color: ${style.color};">${run.status.toUpperCase()}</span>
+                                <span style="color: #666; font-size: 0.875em;">${new Date(run.started_at).toLocaleString()}</span>
+                            </div>
+                            <div style="font-size: 0.875em; color: #666; margin-bottom: 0.25rem;">
+                                ${run.files_found} files found, ${run.files_succeeded} succeeded, ${run.files_failed} failed
+                                ${run.error_message ? `<br><span style="color: ${style.color};">Error: ${run.error_message}</span>` : ''}
+                            </div>
+                            ${run.pc_name || run.output_path ? `
+                                <div style="font-size: 0.75em; color: #888; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.1);">
+                                    ${run.pc_name ? `<div><strong>PC:</strong> ${run.pc_name}</div>` : ''}
+                                    ${run.output_path ? `<div><strong>Results:</strong> ${run.output_path}</div>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="text-align: right; color: #666; font-size: 0.875em;">
+                            ${duration}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Failed to load job runs:', error);
+            container.innerHTML = '<div style="text-align: center; color: #dc3545; padding: 1rem;"><small>Failed to load execution history</small></div>';
+        }
+    }
 }
 
 // Global instance

@@ -46,7 +46,7 @@
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 4V16M10 4L6 8M10 4L14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Try It Now
+            Upload & Validate
           </button>
           <button id="navAutomation" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -141,6 +141,17 @@
               </div>
               <h3>Professional Reports</h3>
               <p>Export results as CSV, Excel, PDF, or JSON. Clean formatting, ready to share.</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#0066ff" stroke-width="2"/>
+                  <path d="M9 22V12H15V22" stroke="#0066ff" stroke-width="2"/>
+                </svg>
+              </div>
+              <h3>Network Ready</h3>
+              <p>Run on one Windows PC, access from any device (Mac, Windows, Linux) over your network. Perfect for mixed-platform teams.</p>
             </div>
           </div>
         </div>
@@ -914,14 +925,21 @@
             </div>
 
             <div class="wizard-step">
-              <label class="wizard-label">Formula</label>
+              <label class="wizard-label">Build Formula</label>
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="+">+</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="-">−</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="*">×</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="/">÷</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="(">(</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator=")">)</button>
+                <button type="button" class="btn btn-secondary operator-btn" data-operator="%">%</button>
+              </div>
               <textarea id="calcFormulaInput" class="wizard-input" rows="3" 
-                        placeholder="e.g., Basic Salary + HRA + DA - PF"></textarea>
+                        placeholder="Click fields and operators to build your formula"></textarea>
               <p class="wizard-hint">
-                <strong>Use exact field names</strong> from your extraction fields above.<br>
-                <strong>Operators:</strong> + - * / ( )<br>
-                <strong>Percentage:</strong> Use % symbol (e.g., <code>Basic Salary * 15%</code> calculates 15% of Basic Salary)<br>
-                <strong>Functions:</strong> log(), sqrt(), abs(), round(), floor(), ceil(), sin(), cos(), tan(), exp(), pow(), min(), max()
+                <strong>Example:</strong> Click "Basic Salary" → "+" → "HRA" → "−" → "PF"<br>
+                <strong>Percentage:</strong> Use % for percentages (e.g., Basic Salary * 15%)
               </p>
             </div>
 
@@ -930,7 +948,7 @@
               <div id="availableFieldsList" class="available-fields">
                 <!-- Will be populated dynamically -->
               </div>
-              <p class="wizard-hint">Click a field name to insert it into the formula</p>
+              <p class="wizard-hint">Click a field name to add it to the formula</p>
             </div>
           </div>
 
@@ -960,48 +978,6 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-ghost" id="modalCancel">Cancel</button>
             <button type="button" class="btn btn-primary" id="modalSave">Save Rules</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Contact Form Modal -->
-      <div id="contactFormModal" class="wizard-modal" style="display: none;">
-        <div class="wizard-content">
-          <div class="wizard-header">
-            <h3>Contact Support</h3>
-            <button type="button" id="contactFormClose" class="wizard-close" title="Close">×</button>
-          </div>
-          
-          <div class="wizard-body">
-            <div class="wizard-step">
-              <label class="wizard-label">Your Name <span style="color: #ef4444;">*</span></label>
-              <input type="text" id="contactName" class="wizard-input" placeholder="John Doe" />
-            </div>
-
-            <div class="wizard-step">
-              <label class="wizard-label">Your Email <span style="color: #ef4444;">*</span></label>
-              <input type="email" id="contactEmail" class="wizard-input" placeholder="you@example.com" />
-              <p class="wizard-hint">We'll use this to get back to you</p>
-            </div>
-
-            <div class="wizard-step">
-              <label class="wizard-label">Subject (Optional)</label>
-              <input type="text" id="contactSubject" class="wizard-input" placeholder="e.g., Bug Report, Feature Request" />
-            </div>
-
-            <div class="wizard-step">
-              <label class="wizard-label">Message <span style="color: #ef4444;">*</span></label>
-              <textarea id="contactMessage" class="wizard-input" rows="5" 
-                        placeholder="Describe your issue or question..."></textarea>
-              <p class="wizard-hint">Include steps to reproduce if reporting a bug</p>
-            </div>
-
-            <div id="contactFormStatus" style="display: none; padding: 12px; border-radius: 8px; background: #f3f4f6; margin-top: 10px;"></div>
-          </div>
-
-          <div class="wizard-actions">
-            <button type="button" id="contactFormCancel" class="wizard-btn wizard-btn-cancel">Cancel</button>
-            <button type="button" id="contactFormSend" class="wizard-btn wizard-btn-save">Send Message</button>
           </div>
         </div>
       </div>
@@ -1206,16 +1182,17 @@
             <ul class="how-to-list">
               <li><strong>No text extracted:</strong> PDF might be image-based (scanned). Valido extracts text from text-based PDFs only</li>
               <li><strong>Wrong data extracted:</strong> Use more specific search terms (e.g., "Invoice Total Amount" instead of "Total")</li>
-              <li><strong>Processing stuck:</strong> Refresh page and try again with fewer documents (50-100 at a time)</li>
-              <li><strong>Large files slow:</strong> PDFs over 10MB may take longer. Consider splitting them</li>
               <li><strong>Multi-column tables:</strong> Use the column selector to specify which column to extract from</li>
             </ul>
-            <button type="button" onclick="window.open('https://github.com/abhishekrai43/valido/issues/new', '_blank')" class="btn btn-secondary" style="margin-top: 15px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
-                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Report Issue / Contact Support
-            </button>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-left: 4px solid #0066cc; border-radius: 4px;">
+              <h4 style="margin: 0 0 10px 0; color: #0066cc;">🖥️ Platform Flexibility</h4>
+              <p style="margin: 0; color: #333; line-height: 1.6;">
+                <strong>Mixed Environment?</strong> Even if your team uses Mac systems, you can run Valido on a single Windows PC. 
+                Users can access it over the network from any device (Mac, Windows, Linux) using just a web browser. 
+                Results are stored on the Windows PC and accessible to all network users.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -1283,21 +1260,13 @@
               </div>
               <div class="footer-badge">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2L9.5 6.5L14 8L9.5 9.5L8 14L6.5 9.5L2 8L6.5 6.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8 1L10 5L14 6L11 9L12 13L8 11L4 13L5 9L2 6L6 5L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>AI-Powered</span>
+                <span>Lightning Fast</span>
               </div>
             </div>
             <div class="footer-copyright">
               © 2025 Valido. All rights reserved. Made with care for your privacy.
-            </div>
-          </div>
-
-          <div class="footer-bottom-right">
-            <div class="footer-social">
-              <a href="mailto:support@valido.app" class="footer-link" style="color: var(--text-secondary); text-decoration: none; font-size: 14px;">
-                Contact Support
-              </a>
             </div>
           </div>
         </div>

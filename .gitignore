@@ -104,6 +104,13 @@ package-lock.json
 dist/
 build/
 
+# Installer files
+*.exe
+*.msi
+*.ps1
+*.wxs
+installer/
+
 # Logs
 logs/
 *.log

@@ -83,6 +83,11 @@ function renderWatchFolders() {
                         </span>
                     </div>
                     <div class="watch-folder-actions" style="display: flex; gap: 0.5rem;">
+                        <button class="btn-icon" onclick="runWatchFolderNow(${folder.id})" title="Run Now" style="padding: 0.5rem; border: 1px solid #28a745; border-radius: 4px; background: white; cursor: pointer; color: #28a745;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M5 4L16 10L5 16V4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
                         <button class="btn-icon" onclick="toggleWatchFolder(${folder.id})" title="${folder.enabled ? 'Disable' : 'Enable'}" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                 ${folder.enabled ? 
@@ -134,8 +139,76 @@ function renderWatchFolders() {
                     </div>
                 </div>
                 ` : ''}
+                
+                <!-- Execution History Section -->
+                <div class="execution-history" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h5 style="margin: 0; font-size: 1em; color: #666;">Recent Executions</h5>
+                        <button onclick="loadJobRuns(${folder.id})" style="padding: 0.25rem 0.75rem; font-size: 0.875em; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #0066cc;">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="jobRuns_${folder.id}" style="min-height: 50px;">
+                        <div style="text-align: center; color: #999; padding: 1rem;">
+                            <small>Click Refresh to load execution history</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         `).join('');
+    }
+}
+
+// Load job runs for a specific watch folder
+async function loadJobRuns(watchFolderId) {
+    const container = document.getElementById(`jobRuns_${watchFolderId}`);
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>Loading...</small></div>';
+    
+    try {
+        const response = await fetch(`/api/v1/watch-folders/${watchFolderId}/runs`);
+        const runs = await response.json();
+        
+        if (!runs || runs.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
+            return;
+        }
+        
+        container.innerHTML = runs.map(run => {
+            const statusColors = {
+                'running': { bg: '#fff3cd', color: '#856404', icon: '⏳' },
+                'success': { bg: '#d4edda', color: '#155724', icon: '✓' },
+                'failed': { bg: '#f8d7da', color: '#721c24', icon: '✗' },
+                'partial': { bg: '#ffeaa7', color: '#856404', icon: '⚠' }
+            };
+            const style = statusColors[run.status] || statusColors['running'];
+            const duration = run.completed_at ? 
+                Math.round((new Date(run.completed_at) - new Date(run.started_at)) / 1000) + 's' :
+                'In progress...';
+            
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; background: ${style.bg}; border-left: 3px solid ${style.color}; border-radius: 4px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <span style="font-size: 1.2em;">${style.icon}</span>
+                            <span style="font-weight: 600; color: ${style.color};">${run.status.toUpperCase()}</span>
+                            <span style="color: #666; font-size: 0.875em;">${new Date(run.started_at).toLocaleString()}</span>
+                        </div>
+                        <div style="font-size: 0.875em; color: #666;">
+                            ${run.files_found} files found, ${run.files_succeeded} succeeded, ${run.files_failed} failed
+                            ${run.error_message ? `<br><span style="color: ${style.color};">Error: ${run.error_message}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align: right; color: #666; font-size: 0.875em;">
+                        ${duration}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Failed to load job runs:', error);
+        container.innerHTML = '<div style="text-align: center; color: #dc3545; padding: 1rem;"><small>Failed to load execution history</small></div>';
     }
 }
 
@@ -394,6 +467,42 @@ async function toggleWatchFolder(id) {
         }
     } catch (error) {
         console.error('Failed to toggle watch folder:', error);
+    }
+}
+
+// Run watch folder job immediately
+async function runWatchFolderNow(id) {
+    const container = document.getElementById(`jobRuns_${id}`);
+    if (container) {
+        container.innerHTML = '<div style="text-align: center; color: #0066cc; padding: 1rem;"><small>Starting job...</small></div>';
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/watch-folders/${id}/run`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to start job');
+        }
+        
+        const result = await response.json();
+        
+        // Show success message
+        showToast(`Job started! Processing ${result.files_count} files...`, 'success');
+        
+        // Reload watch folders to update stats
+        await loadWatchFolders();
+        
+        // Load job runs after a short delay to see the new run
+        setTimeout(() => loadJobRuns(id), 2000);
+    } catch (error) {
+        console.error('Failed to run watch folder:', error);
+        showToast(error.message || 'Failed to start job', 'error');
+        if (container) {
+            container.innerHTML = `<div style="text-align: center; color: #dc3545; padding: 1rem;"><small>Error: ${error.message}</small></div>`;
+        }
     }
 }
 

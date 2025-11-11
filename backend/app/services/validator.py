@@ -269,15 +269,18 @@ def _compute_formula(formula: str, extractions: dict) -> Optional[str]:
     # Build expression by finding field names and replacing with values
     expression = formula
     
-    # Sort field names by length (longest first) to avoid partial matches
-    # Use the original casing from formula for matching
-    field_names_in_formula = sorted(
-        set(re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', formula)),
-        key=len, 
+    # Get all field names from extractions and sort by length (longest first) to avoid partial matches
+    field_names_to_try = sorted(
+        list(extractions.keys()) + list(extractions_lower.keys()),
+        key=len,
         reverse=True
     )
     
-    for field_name in field_names_in_formula:
+    for field_name in field_names_to_try:
+        # Skip if field name not in formula (case-insensitive check)
+        if field_name.lower() not in formula.lower():
+            continue
+        
         # Try case-insensitive lookup
         field_value = extractions_lower.get(field_name.lower())
         if not field_value:
@@ -300,9 +303,14 @@ def _compute_formula(formula: str, extractions: dict) -> Optional[str]:
         if clean_num is None:
             continue
         
-        # Replace field name with the clean number
-        # Use word boundaries to avoid partial replacements
-        expression = re.sub(r'\b' + re.escape(field_name) + r'\b', str(clean_num), expression)
+        # Replace field name with the clean number (case-insensitive)
+        # Use regex with case-insensitive flag
+        expression = re.sub(
+            r'\b' + re.escape(field_name) + r'\b', 
+            str(clean_num), 
+            expression, 
+            flags=re.IGNORECASE
+        )
     
     # Handle percentage notation: "10%" becomes "0.10"
     # Find patterns like "number%" and replace with "number/100"
@@ -556,6 +564,8 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 report["extraction_log"].append(log_entry)
         
         # Process calculations (if any) after all fields are extracted
+        # Calculations are processed in order, and each calculation's result
+        # is added to the extractions dict so subsequent calculations can reference it
         calculations = rules.get("calculations", [])
         if calculations and isinstance(calculations, list):
             for calc in calculations:
@@ -568,10 +578,18 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 if not calc_name or not formula:
                     continue
                 
-                # Evaluate formula using extracted field values
+                # Evaluate formula using extracted field values AND previous calculation results
+                # This enables chained calculations: Calc1 = A + B, Calc2 = Calc1 + C
                 value = _compute_formula(formula, report["extractions"])
                 display = calc_name.replace("_", " ").title()
+                
+                # Add result to extractions dict IMMEDIATELY so next calculation can use it
                 report["extractions"][display] = value
+                
+                # Also add with original name (without title case) for formula matching
+                # This ensures both "Gross Salary" and "Gross_Salary" work in formulas
+                if display != calc_name:
+                    report["extractions"][calc_name] = value
                 
                 # Add log entry for calculation
                 log_entry = {

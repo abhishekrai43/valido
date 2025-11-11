@@ -573,6 +573,41 @@ def process_pdfs_sync(
         except Exception:
             pass
 
+    # Update JobRun record if this is from an automation job
+    if job_metadata and 'job_run_id' in job_metadata:
+        try:
+            from app.db import get_session
+            from app.models import JobRun
+            
+            job_run_id = job_metadata['job_run_id']
+            
+            # Count successes and failures
+            files_succeeded = sum(1 for r in reports if 'report' in r and 'error' not in r)
+            files_failed = sum(1 for r in reports if 'error' in r)
+            
+            with get_session() as session:
+                job_run = session.get(JobRun, job_run_id)
+                if job_run:
+                    job_run.completed_at = datetime.now()
+                    job_run.files_processed = processed
+                    job_run.files_succeeded = files_succeeded
+                    job_run.files_failed = files_failed
+                    
+                    # Determine final status
+                    if files_failed == 0:
+                        job_run.status = "success"
+                    elif files_succeeded > 0:
+                        job_run.status = "partial"
+                    else:
+                        job_run.status = "failed"
+                        job_run.error_message = "All files failed to process"
+                    
+                    session.add(job_run)
+                    session.commit()
+                    print(f"Updated JobRun {job_run_id}: {job_run.status}, {files_succeeded} succeeded, {files_failed} failed")
+        except Exception as e:
+            print(f"Failed to update JobRun: {e}")
+
     return {
         'status': 'completed',
         'total': total,

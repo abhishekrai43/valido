@@ -100,6 +100,13 @@ export class JobRunner {
 
                     // Re-render to remove progress UI
                     this.jobListManager.render();
+                    
+                    // Auto-refresh job runs after completion
+                    setTimeout(() => {
+                        if (window.jobManager && window.jobManager.loadJobRuns) {
+                            window.jobManager.loadJobRuns(jobId);
+                        }
+                    }, 1000);
                 }
 
             } catch (error) {

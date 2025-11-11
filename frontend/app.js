@@ -542,6 +542,11 @@
       // Show download button for ZIP only
       if (zipFromResult) {
         // Fetch results path to show local directory
+        // Check if user is accessing locally or over network
+        const isLocalAccess = window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1' ||
+                             window.location.hostname === '';
+        
         fetch('/api/v1/results-path')
           .then(response => {
             console.log('Results path response status:', response.status);
@@ -550,6 +555,17 @@
           .then(pathData => {
             console.log('Results path data:', pathData);
             const resultsPath = pathData.results_directory;
+            
+            // Show path only for local users
+            const locationInfo = isLocalAccess ? `
+              <div class="results-location" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <p style="margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 0.9em; color: #475569;">
+                  <strong>📁 Results Location:</strong><br>
+                  <code style="background: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; border-radius: 3px; font-family: 'Courier New', monospace;">${resultsPath}</code>
+                </p>
+              </div>
+            ` : '';
+            
             downloadLink.innerHTML = `
               <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -558,12 +574,7 @@
                 </svg>
                 Download Results
               </a>
-              <div class="results-location" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-                <p style="margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 0.9em; color: #475569;">
-                  <strong>📁 Results Location:</strong><br>
-                  <code style="background: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; border-radius: 3px; font-family: 'Courier New', monospace;">${resultsPath}</code>
-                </p>
-              </div>
+              ${locationInfo}
             `;
           })
           .catch(error => {

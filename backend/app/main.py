@@ -66,6 +66,12 @@ async def _on_startup():
         create_db_and_tables()
         logger.info("Database initialized successfully")
         
+        # Initialize and start job scheduler
+        from app.scheduler import get_scheduler
+        scheduler = get_scheduler()
+        scheduler.reload_schedules()
+        logger.info("Job scheduler initialized and schedules loaded")
+        
         # Display license banner (if any)
         banner = get_license_banner()
         if banner:
@@ -74,6 +80,17 @@ async def _on_startup():
         
     except Exception as e:
         logger.error(f"Startup error: {e}", exc_info=True)
+
+
+@app.on_event("shutdown")
+async def _on_shutdown():
+    """Cleanup on application shutdown."""
+    try:
+        from app.scheduler import shutdown_scheduler
+        shutdown_scheduler()
+        logger.info("Job scheduler stopped")
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}", exc_info=True)
 
 
 # --- Debug: List all routes ---
