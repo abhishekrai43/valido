@@ -1,8 +1,8 @@
 #define MyAppName "Valido"
-#define MyAppVersion "1.0"
-#define MyAppPublisher "Your Company"
-#define MyAppURL "https://yourcompany.com"
-#define MyAppExeName "valido.exe"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "Valido"
+#define MyAppURL "https://github.com/abhishekrai43/valido"
+#define MyAppExeName "valido-beta.exe"
 
 [Setup]
 AppId={{12345678-1234-1234-1234-123456789ABC}
@@ -12,28 +12,27 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-OutputDir=installer
-OutputBaseFilename=valido-setup
+OutputDir=..\installer
+OutputBaseFilename=Valido-Setup
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
+SetupIconFile=..\valido-icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "serviceinstall"; Description: "Install as Windows Service"; GroupDescription: "Windows Service"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "frontend\*"; DestDir: "{app}\frontend"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "nssm_install.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "service_pywin32.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\frontend\*"; DestDir: "{app}\frontend"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\valido-icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 Name: "{app}\results"; Permissions: everyone-full
@@ -41,11 +40,10 @@ Name: "{app}\logs"; Permissions: everyone-full
 Name: "{app}\data"; Permissions: everyone-full
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\valido-icon.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\valido-icon.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\nssm_install.bat"; Description: "Install Windows Service"; Tasks: serviceinstall; Flags: postinstall runascurrentuser
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
