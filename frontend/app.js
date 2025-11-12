@@ -19,6 +19,108 @@
         });
     }
 
+    // Fetch and display usage information
+    function updateUsageIndicator() {
+      const usageIndicator = document.getElementById('usageIndicator');
+      const usageText = document.getElementById('usageText');
+      
+      if (!usageIndicator || !usageText) return;
+      
+      fetch('/api/v1/usage')
+        .then(response => response.json())
+        .then(data => {
+          const { count, limit, remaining, exceeded, warning } = data;
+          
+          // Update text
+          usageText.textContent = `${count}/${limit} PDFs`;
+          
+          // Update styling based on status
+          usageIndicator.classList.remove('warning', 'exceeded');
+          if (exceeded) {
+            usageIndicator.classList.add('exceeded');
+            usageIndicator.title = `Free tier limit reached. You've processed ${count} PDFs this month.`;
+          } else if (warning) {
+            usageIndicator.classList.add('warning');
+            usageIndicator.title = `${remaining} PDFs remaining this month`;
+          } else {
+            usageIndicator.title = `${remaining} PDFs remaining out of ${limit} free PDFs this month`;
+          }
+        })
+        .catch(error => {
+          console.warn('Failed to fetch usage info:', error);
+          usageText.textContent = '0/300 PDFs';
+          usageIndicator.title = 'Usage tracking unavailable';
+        });
+    }
+    
+    // Update usage on page load
+    updateUsageIndicator();
+    
+    // Refresh usage every 30 seconds
+    setInterval(updateUsageIndicator, 30000);
+    
+    // Share button functionality
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', () => {
+        const modal = document.createElement('div');
+        modal.className = 'share-modal';
+        modal.innerHTML = `
+          <div class="share-modal-overlay"></div>
+          <div class="share-modal-content">
+            <div class="share-modal-header">
+              <h3>Share Valido</h3>
+              <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
+            </div>
+            <div class="share-modal-body">
+              <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+                Love Valido? Share it with your colleagues and help them streamline their document validation workflow!
+              </p>
+              
+              <div class="share-options">
+                <button class="share-option" onclick="window.open('mailto:?subject=Check out Valido - PDF Validation Tool&body=I found this amazing PDF validation tool that runs locally on your computer. No cloud upload, fully private!%0A%0ACheck it out: ${window.location.origin}', '_blank')">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                    <path d="M3 7L12 13L21 7" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>Share via Email</span>
+                </button>
+                
+                <button class="share-option" onclick="navigator.clipboard.writeText('${window.location.origin}').then(() => { alert('Link copied to clipboard!'); this.closest('.share-modal').remove(); })">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M8 5H6C4.89543 5 4 5.89543 4 7V19C4 20.1046 4.89543 21 6 21H16C17.1046 21 18 20.1046 18 19V18" stroke="currentColor" stroke-width="2"/>
+                    <rect x="8" y="3" width="12" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>Copy Link</span>
+                </button>
+                
+                <button class="share-option" onclick="window.open('https://twitter.com/intent/tweet?text=Check out Valido - a privacy-first PDF validation tool that runs locally on your computer!&url=${encodeURIComponent(window.location.origin)}', '_blank', 'width=550,height=420')">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>Share on Twitter</span>
+                </button>
+                
+                <button class="share-option" onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}', '_blank', 'width=550,height=420')">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>Share on LinkedIn</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Close on overlay click
+        modal.querySelector('.share-modal-overlay').addEventListener('click', () => {
+          modal.remove();
+        });
+      });
+    }
+
     // Elements
     const form = document.getElementById('uploadForm');
   const navUpload = document.getElementById('navUpload');
@@ -97,10 +199,15 @@
         if (processingStatus) processingStatus.style.display = 'none';
         if (successStatus) successStatus.style.display = 'none';
         if (errorStatus) errorStatus.style.display = 'none';
-        // Show submit button
-        if (submitBtn) submitBtn.style.display = 'block';
+        // Show submit button and ensure it's enabled
+        if (submitBtn) {
+          submitBtn.style.display = 'block';
+          submitBtn.disabled = false;  // CRITICAL: Enable submit button
+        }
         // Clear any previous results
         if (resultsOutput) resultsOutput.innerHTML = '';
+        // Reset submission flag
+        isSubmitting = false;
       }
       
       // Scroll to top
@@ -418,6 +525,11 @@
 
         if (result.state === 'SUCCESS') {
           showSuccess(taskId, result);
+        } else if (result.state === 'LIMIT_EXCEEDED') {
+          // Handle limit exceeded before any processing
+          const info = result.info || {};
+          const usageInfo = info.limit_info || info.usage_info || {};
+          showError(`Free tier limit reached (${usageInfo.count || 300}/${usageInfo.limit || 300} PDFs). Cannot process any more files. Upgrade to continue.`);
         } else if (result.state === 'FAILURE') {
           showError(result.info?.error || 'Validation failed. Please try again.');
         } else {
@@ -473,7 +585,7 @@
               }
             }
             
-            if (json.state === 'SUCCESS' || json.state === 'FAILURE' || json.state === 'REVOKED') {
+            if (json.state === 'SUCCESS' || json.state === 'FAILURE' || json.state === 'REVOKED' || json.state === 'LIMIT_EXCEEDED') {
               clearInterval(timer);
               progressFill.style.width = '100%';
               resolve(json);
@@ -502,6 +614,9 @@
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
       
+      // Update usage indicator after successful validation
+      updateUsageIndicator();
+      
       // Change Step 3 indicator to green (completed)
       steps.forEach(step => {
         const num = parseInt(step.dataset.step);
@@ -524,23 +639,54 @@
         }
       } catch (e) { /* ignore */ }
 
-      // Update success title/message depending on extraction vs validation
-      if (successTitleEl) successTitleEl.textContent = hasFields ? 'Extraction Complete!' : 'Validation Complete!';
-      if (successMessageEl) successMessageEl.textContent = hasFields ? 'Your documents have been processed and extracted successfully.' : 'Your documents have been validated successfully.';
+      // Check for partial processing (limit reached)
+      const resultInfo = (taskResult && taskResult.info) || {};
+      const status = resultInfo.status || 'completed';
+      const message = resultInfo.message;
+      const filesSkipped = resultInfo.files_skipped || 0;
+      const filesSucceeded = resultInfo.files_succeeded || 0;
+      const totalFiles = resultInfo.total || 0;
+      
+      let titleText, messageText, isPartial = false;
+      
+      if (status === 'partial' && filesSkipped > 0) {
+        // Partial processing due to limit
+        isPartial = true;
+        titleText = '⚠️ Partial Processing';
+        messageText = message || `Processed ${filesSucceeded} of ${totalFiles} files. ${filesSkipped} files skipped due to free tier limit.`;
+      } else {
+        // Normal completion
+        titleText = hasFields ? 'Extraction Complete!' : 'Validation Complete!';
+        messageText = hasFields ? 'Your documents have been processed and extracted successfully.' : 'Your documents have been validated successfully.';
+      }
+
+      // Update success title/message
+      if (successTitleEl) successTitleEl.textContent = titleText;
+      if (successMessageEl) {
+        successMessageEl.innerHTML = messageText;
+        
+        // Add upgrade CTA if partial
+        if (isPartial) {
+          successMessageEl.innerHTML += `<br><br><strong style="color: #d97706;">📈 Upgrade to process unlimited PDFs!</strong>`;
+          successMessageEl.style.color = '#92400e';
+        } else {
+          successMessageEl.style.color = '';
+        }
+      }
 
       // The API returns task result in 'info' field when state is SUCCESS
       // Worker may return progress/result either directly as top-level keys
       // or nested under a `result` key — handle both shapes.
-      const resultInfo = (taskResult && taskResult.info) || {};
+      const taskResultInfo = (taskResult && taskResult.info) || {};
 
       // Normalize to find result_files.zip regardless of nesting
       let zipFromResult = null;
-      if (resultInfo.result_files && resultInfo.result_files.zip) {
-        zipFromResult = resultInfo.result_files.zip;
-      } else if (resultInfo.result && resultInfo.result.result_files && resultInfo.result.result_files.zip) {
-        zipFromResult = resultInfo.result.result_files.zip;
-      } else if (resultInfo.zip) {
-        zipFromResult = resultInfo.zip;
+      if (taskResultInfo.result_files && taskResultInfo.result_files.zip) {
+        zipFromResult = taskResultInfo.result_files.zip;
+      } else if (taskResultInfo.result && taskResultInfo.result.result_files && taskResultInfo.result.result_files.zip) {
+        zipFromResult = taskResultInfo.result.result_files.zip;
+      } else if (taskResultInfo.zip) {
+        zipFromResult = taskResultInfo.zip;
       }
       if (!zipFromResult) zipFromResult = `/api/v1/tasks/${taskId}/results.zip`;
 
@@ -657,8 +803,10 @@
       successStatus.style.display = 'none';
       errorStatus.style.display = 'none';
       submitBtn.style.display = 'inline-flex';
+      submitBtn.disabled = false;  // CRITICAL: Re-enable submit button
       startNewBtn.style.display = 'none';
       downloadLink.innerHTML = '';
+      isSubmitting = false;  // Reset submission flag
       
       // Reset rules
       if (window.resetBuilder) window.resetBuilder();
@@ -759,6 +907,31 @@
         navPricing.classList.remove('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
+      });
+
+      // How To section tabs
+      const howtoTabs = document.querySelectorAll('.howto-tab');
+      const howtoTabContents = document.querySelectorAll('.howto-tab-content');
+      
+      howtoTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab;
+          
+          // Remove active class from all tabs and contents
+          howtoTabs.forEach(t => t.classList.remove('active'));
+          howtoTabContents.forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none'; // Explicitly hide
+          });
+          
+          // Add active class to clicked tab and corresponding content
+          tab.classList.add('active');
+          const targetContent = document.getElementById(tabName + 'Tab');
+          if (targetContent) {
+            targetContent.classList.add('active');
+            targetContent.style.display = 'block'; // Explicitly show
+          }
+        });
       });
 
       // Set default view to Features (landing page)

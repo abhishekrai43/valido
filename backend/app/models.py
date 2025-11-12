@@ -75,3 +75,12 @@ class JobRun(SQLModel, table=True):
     # Error tracking
     error_message: Optional[str] = Field(default=None)
     details: Optional[Any] = Field(default=None, sa_column=Column(JSON))  # Stores file-level results
+
+
+class UsageRecord(SQLModel, table=True):
+    """Tracks PDF processing for free tier limits."""
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    pdf_count: int = Field(default=0)  # Number of PDFs processed in this batch
+    processed_at: datetime = Field(default_factory=datetime.now, index=True)  # When processed

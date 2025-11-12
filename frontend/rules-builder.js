@@ -866,14 +866,43 @@
     console.log('Same reference?', fields === window.fields);
     
     // Load calculations if present
-    if (rules.calculations && typeof setCalculations === 'function') {
-      setCalculations(rules.calculations);
+    if (rules.calculations) {
+      if (typeof setCalculations === 'function') {
+        setCalculations(rules.calculations);
+      } else if (typeof window.setCalculations === 'function') {
+        window.setCalculations(rules.calculations);
+      }
+    } else {
+      // Clear calculations if none in the ruleset
+      if (typeof setCalculations === 'function') {
+        setCalculations([]);
+      } else if (typeof window.setCalculations === 'function') {
+        window.setCalculations([]);
+      }
     }
     
     renderFields();
     console.log('About to call buildRulesPreview');
     buildRulesPreview();
     console.log('buildRulesPreview completed');
+    
+    // CRITICAL: Ensure the Continue button is properly enabled after loading
+    setTimeout(() => {
+      const continueBtn = document.getElementById('continueToValidate');
+      const rulesTextarea = document.getElementById('rules');
+      if (continueBtn && rulesTextarea && rulesTextarea.dataset.json) {
+        try {
+          const rules = JSON.parse(rulesTextarea.dataset.json);
+          const hasRules = Object.keys(rules).length > 0;
+          continueBtn.disabled = !hasRules;
+          if (hasRules) {
+            continueBtn.classList.remove('btn-disabled');
+          }
+        } catch (e) {
+          console.error('Error checking rules after load:', e);
+        }
+      }
+    }, 100);
     
     // Show success message
     const successMsg = document.createElement('div');
@@ -969,8 +998,10 @@
     // Clear all fields
     fields.length = 0;
     
-    // Clear calculations if they exist
-    if (typeof window.calculations !== 'undefined') {
+    // Clear calculations using the proper setter if available
+    if (typeof window.setCalculations === 'function') {
+      window.setCalculations([]);
+    } else if (typeof window.calculations !== 'undefined') {
       window.calculations = [];
     }
     
@@ -1007,14 +1038,13 @@
     renderFields();
     buildRulesPreview();
     
-    // Clear saved ruleset list selection if any
-    const rulesetsList = document.getElementById('savedRulesetsList');
-    if (rulesetsList) {
-      const items = rulesetsList.querySelectorAll('.ruleset-item');
-      items.forEach(item => item.classList.remove('selected'));
+    // Reset dropdown selection if it exists
+    const rulesetSelect = document.getElementById('rulesetSelect');
+    if (rulesetSelect) {
+      rulesetSelect.selectedIndex = 0;  // Reset to placeholder
     }
     
-    console.log('Builder reset - all fields and validations cleared');
+    console.log('Builder reset - all fields, calculations, and validations cleared');
   }
   
   // Load saved rulesets on init

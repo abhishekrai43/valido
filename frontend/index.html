@@ -28,6 +28,27 @@
           </div>
           <div class="subtitle">Professional PDF validation and automation</div>
         </div>
+        <div class="header-actions">
+          <!-- Usage Indicator -->
+          <div id="usageIndicator" class="usage-indicator">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M21 12V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="usageText">Loading...</span>
+          </div>
+          
+          <!-- Share Button -->
+          <button id="shareBtn" class="btn btn-share" type="button" title="Share Valido">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+              <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+              <path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Share
+          </button>
+        </div>
         <div class="nav-buttons">
           <button id="navFeatures" class="btn btn-nav active" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -1001,8 +1022,16 @@
         <div class="card">
           <h2>How To Use Valido</h2>
           <p class="card-description">Everything you need to know to validate your documents efficiently</p>
+          
+          <!-- Tab Navigation -->
+          <div class="howto-tabs">
+            <button class="howto-tab active" data-tab="guides">Guides</button>
+            <button class="howto-tab" data-tab="troubleshooting">Troubleshooting</button>
+          </div>
         </div>
 
+        <!-- Guides Tab Content -->
+        <div class="howto-tab-content active" id="guidesTab">
         <div class="how-to-grid">
           <!-- Getting Started -->
           <div class="how-to-card">
@@ -1183,33 +1212,331 @@
             </ul>
           </div>
 
-          <!-- Troubleshooting -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
+          <!-- Platform Flexibility -->
+          <div class="how-to-card" style="border: 2px solid #0066cc;">
+            <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(0, 81, 217, 0.1));">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2Z" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 2V8H20" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 18V12M12 10H12.01" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
+                <rect x="2" y="3" width="20" height="14" rx="2" stroke="#0066cc" stroke-width="2"/>
+                <path d="M8 21H16" stroke="#0066cc" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 17V21" stroke="#0066cc" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-            <h3>Troubleshooting</h3>
+            <h3>Platform Flexibility</h3>
+            <p class="how-to-desc"><strong>Mixed Environment?</strong> Even if your team uses Mac systems, you can run Valido on a single Windows PC.</p>
             <ul class="how-to-list">
-              <li><strong>No text extracted:</strong> PDF might be image-based (scanned). Valido extracts text from text-based PDFs only</li>
-              <li><strong>Wrong data extracted:</strong> Use more specific search terms (e.g., "Invoice Total Amount" instead of "Total")</li>
-              <li><strong>Multi-column tables:</strong> Use the column selector to specify which column to extract from</li>
+              <li><strong>Network Access:</strong> Users access it from any device (Mac, Windows, Linux) via web browser</li>
+              <li><strong>Centralized Storage:</strong> Results stored on Windows PC, accessible to all network users</li>
+              <li><strong>No Client Install:</strong> Team members just need a browser - no software to install</li>
+              <li><strong>Single License:</strong> One installation serves your entire team</li>
             </ul>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-left: 4px solid #0066cc; border-radius: 4px;">
-              <h4 style="margin: 0 0 10px 0; color: #0066cc;">🖥️ Platform Flexibility</h4>
-              <p style="margin: 0; color: #333; line-height: 1.6;">
-                <strong>Mixed Environment?</strong> Even if your team uses Mac systems, you can run Valido on a single Windows PC. 
-                Users can access it over the network from any device (Mac, Windows, Linux) using just a web browser. 
-                Results are stored on the Windows PC and accessible to all network users.
-              </p>
+          </div>
+        </div>
+        </div>
+
+        <!-- Troubleshooting Tab Content -->
+        <div class="howto-tab-content" id="troubleshootingTab" style="display:none;">
+          <div class="troubleshooting-intro card" style="background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%); border-left: 4px solid #dc2626;">
+            <h3 style="color: #dc2626; margin: 0 0 12px 0;">🔧 Common Issues & Solutions</h3>
+            <p style="margin: 0; color: #555; line-height: 1.6;">
+              Having trouble extracting data or getting unexpected results? This guide covers the most common issues and how to fix them.
+            </p>
+          </div>
+
+          <div class="how-to-grid">
+            <!-- Issue 1: No Text Extracted -->
+            <div class="how-to-card" style="border-left: 4px solid #dc2626;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(185, 28, 28, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/>
+                  <path d="M12 8V12M12 16H12.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>No Text Extracted / Field Not Found</h3>
+              <p class="how-to-desc"><strong>Most Common Cause:</strong> Leading or trailing spaces, or the PDF is image-based</p>
+              
+              <div style="margin: 16px 0; padding: 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">⚠️ #1 Rule: Copy-Paste from PDF</h4>
+                <p style="margin: 0; color: #856404; line-height: 1.6; font-size: 14px;">
+                  <strong>ALWAYS</strong> copy the exact text you want to extract directly from the PDF and paste it into the "Text to Look For" field. 
+                  This ensures you match exactly what's in the document.
+                </p>
+              </div>
+
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Step-by-Step Fix:</h4>
+              <ol class="how-to-steps">
+                <li>
+                  <strong>Open your PDF in a viewer</strong> (Adobe Reader, browser, etc.)
+                </li>
+                <li>
+                  <strong>Select the text label</strong> (e.g., "Employee Name:", "Invoice Total:")
+                </li>
+                <li>
+                  <strong>Copy it</strong> (Ctrl+C or Cmd+C)
+                </li>
+                <li>
+                  <strong>Paste into "Text to Look For" field</strong> in Valido
+                </li>
+                <li>
+                  <strong>CRITICAL:</strong> Check for leading/trailing spaces
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Put cursor at start of text - is there a gap before first character?</li>
+                    <li>Put cursor at end of text - is there a gap after last character?</li>
+                    <li><strong>Remove any extra spaces</strong> you find</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Check the colon:</strong> Does the PDF have "Employee Name:" or "Employee Name" without colon? Match it exactly.
+                </li>
+              </ol>
+
+              <div style="margin: 16px 0; padding: 12px; background: #e8f4fd; border-left: 3px solid #0066ff; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #004085;">✓ Example</h4>
+                <p style="margin: 0 0 8px 0; color: #004085; font-size: 13px;"><strong>Wrong:</strong> "Invoice Number: " (has space after colon)</p>
+                <p style="margin: 0; color: #004085; font-size: 13px;"><strong>Right:</strong> "Invoice Number:" (exact match from PDF)</p>
+              </div>
+            </div>
+
+            <!-- Issue 2: Scanned/Image PDFs -->
+            <div class="how-to-card" style="border-left: 4px solid #f59e0b;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#f59e0b" stroke-width="2"/>
+                  <path d="M4 15L8 11L11 14L16 9L20 13" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="#f59e0b"/>
+                </svg>
+              </div>
+              <h3>Is Your PDF Actually an Image?</h3>
+              <p class="how-to-desc"><strong>Problem:</strong> Scanned documents or image-based PDFs cannot be processed</p>
+              
+              <h4 style="margin: 16px 0 8px 0; color: #333;">How to Test:</h4>
+              <ol class="how-to-steps">
+                <li>
+                  <strong>Open the PDF in any viewer</strong> (Adobe Reader, Chrome, etc.)
+                </li>
+                <li>
+                  <strong>Try to select text</strong> with your mouse
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>If you can select individual words → <span style="color: #10b981; font-weight: bold;">✓ Text-based PDF (works with Valido)</span></li>
+                    <li>If you can only select/highlight entire page or nothing → <span style="color: #dc2626; font-weight: bold;">✗ Image-based PDF (won't work)</span></li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Try copying text:</strong> Select and copy (Ctrl+C), then paste into Notepad
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>If actual text pastes → <span style="color: #10b981; font-weight: bold;">✓ Works</span></li>
+                    <li>If nothing pastes or garbled text → <span style="color: #dc2626; font-weight: bold;">✗ Won't work</span></li>
+                  </ul>
+                </li>
+              </ol>
+
+              <div style="margin: 16px 0; padding: 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #856404;">⚠️ Tricky Case</h4>
+                <p style="margin: 0; color: #856404; line-height: 1.6; font-size: 14px;">
+                  Sometimes you CAN copy text from a scanned PDF (if it has OCR layer), but the text position doesn't match the visual layout. 
+                  This causes extraction to fail. If your PDF is a scan, even with OCR, results may be unreliable.
+                </p>
+              </div>
+
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Solution for Scanned PDFs:</h4>
+              <ul class="how-to-list">
+                <li><strong>Use OCR software first:</strong> Adobe Acrobat, ABBYY FineReader, or free tools like Tesseract</li>
+                <li><strong>Re-export from source:</strong> If possible, export the original document as PDF (not scan)</li>
+                <li><strong>Request digital copies:</strong> Ask for native digital PDFs instead of scanned copies</li>
+              </ul>
+            </div>
+
+            <!-- Issue 3: Wrong Data Extracted -->
+            <div class="how-to-card" style="border-left: 4px solid #8b5cf6;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 11L12 14L22 4" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3>Wrong Value Extracted</h3>
+              <p class="how-to-desc"><strong>Problem:</strong> Valido finds the field but extracts the wrong value</p>
+              
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Common Causes & Fixes:</h4>
+              <ul class="how-to-list">
+                <li>
+                  <strong>Label appears multiple times:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Example: "Total" appears 3 times in document</li>
+                    <li><strong>Fix:</strong> Use more specific text like "Invoice Total:" or "Grand Total:"</li>
+                    <li><strong>Or:</strong> Change strategy to "Last" if you want the final occurrence</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Multi-column table confusion:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Example: Extracting "Amount" but PDF has columns "Quantity", "Unit Price", "Amount"</li>
+                    <li><strong>Fix:</strong> Enable "Is this field in a multi-column table?" checkbox</li>
+                    <li><strong>Specify column:</strong> Enter "Amount" or "last" or "3" to get the right column</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Inconsistent formatting:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Some PDFs have "Invoice #: 1234", others "Invoice Number: 1234"</li>
+                    <li><strong>Fix:</strong> Use shortest common text like "Invoice" then use "Extract Between Words" feature</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Issue 4: Date/Number Format Issues -->
+            <div class="how-to-card" style="border-left: 4px solid #06b6d4;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(8, 145, 178, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#06b6d4" stroke-width="2"/>
+                  <path d="M16 2V6M8 2V6M3 10H21" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>Date or Number Not Recognized</h3>
+              <p class="how-to-desc"><strong>Problem:</strong> Extracted text isn't recognized as date/number</p>
+              
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Solutions:</h4>
+              <ul class="how-to-list">
+                <li>
+                  <strong>Numbers with currency symbols:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Valido automatically removes: $, €, £, ₹, commas</li>
+                    <li>If still not working, check if PDF has hidden characters</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Date formats:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Supported: MM/DD/YYYY, DD-MM-YYYY, YYYY-MM-DD, Month DD, YYYY</li>
+                    <li>Example: "Jan 15, 2024", "15/01/2024", "2024-01-15" all work</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>When in doubt:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Use "Text" type instead of "Number" or "Date"</li>
+                    <li>Extract as text first, verify it's working</li>
+                    <li>Then change type to Number/Date if needed for calculations</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Issue 5: Calculations Not Working -->
+            <div class="how-to-card" style="border-left: 4px solid #10b981;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#10b981" stroke-width="2"/>
+                  <path d="M8 8h8M8 12h8M8 16h4" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>Calculations Failing</h3>
+              <p class="how-to-desc"><strong>Problem:</strong> Formula gives error or unexpected result</p>
+              
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Common Issues:</h4>
+              <ul class="how-to-list">
+                <li>
+                  <strong>Field names with spaces:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>✓ Correct: "Gross Salary - Income Tax" (use exact field name)</li>
+                    <li>✗ Wrong: Don't use quotes, brackets, or special syntax</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Missing field data:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>If any field in formula is empty/not found, calculation fails</li>
+                    <li><strong>Fix:</strong> Verify all fields extract successfully first</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Field extracted as text:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Calculation needs numbers, not text</li>
+                    <li><strong>Fix:</strong> Change field type to "Number" when adding field</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Percentages:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Use: "Basic Salary * 0.15" for 15%</li>
+                    <li>Or: "Basic Salary * 15%" - both work</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Issue 6: Performance/Timeout -->
+            <div class="how-to-card" style="border-left: 4px solid #64748b;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(100, 116, 139, 0.1), rgba(71, 85, 105, 0.1));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#64748b" stroke-width="2"/>
+                  <path d="M12 6V12L16 14" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>Slow Performance / Timeouts</h3>
+              <p class="how-to-desc"><strong>Problem:</strong> Processing takes too long or times out</p>
+              
+              <h4 style="margin: 16px 0 8px 0; color: #333;">Solutions:</h4>
+              <ul class="how-to-list">
+                <li>
+                  <strong>Batch size:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Process 50-100 documents at a time</li>
+                    <li>For larger batches (>2000 pages), use Watch Folders instead of browser upload</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>PDF size:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Very large PDFs (100+ pages each) take longer</li>
+                    <li>Consider splitting large PDFs if possible</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Complex rules:</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Extracting 20+ fields takes longer than extracting 5</li>
+                    <li>Start simple, add fields as needed</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Best Practices Summary -->
+            <div class="how-to-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981;">
+              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 12L11 14L15 10" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2"/>
+                </svg>
+              </div>
+              <h3>Troubleshooting Checklist</h3>
+              <p class="how-to-desc"><strong>Before reporting a bug, try these steps:</strong></p>
+              
+              <ol class="how-to-steps">
+                <li><strong>Open the PDF</strong> in a viewer and verify you can copy-paste text successfully</li>
+                <li><strong>Copy exact text</strong> from PDF and paste into "Text to Look For" - don't type it manually</li>
+                <li><strong>Remove leading/trailing spaces</strong> from the pasted text</li>
+                <li><strong>Check for special characters</strong> (colons, dashes, periods) and match them exactly</li>
+                <li><strong>Test with 1-2 PDFs first</strong> before batch processing</li>
+                <li><strong>Verify field types</strong> (Text/Number/Date) match the data you're extracting</li>
+                <li><strong>Use simple field names</strong> without special characters</li>
+                <li><strong>Check the results</strong> - sometimes "wrong" data is actually correct from Valido's perspective</li>
+              </ol>
+
+              <div style="margin: 16px 0; padding: 12px; background: white; border-left: 3px solid #10b981; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #065f46;">💡 Pro Tip</h4>
+                <p style="margin: 0; color: #065f46; line-height: 1.6; font-size: 14px;">
+                  Save time by testing your ruleset on 1-2 sample documents first. Verify all fields extract correctly before processing hundreds of documents. 
+                  Once you have a working ruleset, save it for reuse!
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
 
 
       <div class="footer-bar">
