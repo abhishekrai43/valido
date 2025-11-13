@@ -58,10 +58,10 @@ export class JobFormManager {
             if (el) el.value = '';
         });
         
-        // Set default output path to D:\Valido\results
+        // Leave output path empty - user will specify their own path
         const outputEl = document.getElementById('watchFolderOutput');
-        if (outputEl && !outputEl.value) {
-            outputEl.value = 'D:\\Valido\\results';
+        if (outputEl) {
+            outputEl.value = '';
         }
 
         const titleEl = document.getElementById('watchFolderFormTitle');

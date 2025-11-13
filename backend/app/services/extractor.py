@@ -96,7 +96,8 @@ def extract_between_markers(
         if strategy == "last":
             return cleaned_matches[-1]
         elif strategy == "all":
-            return " | ".join(cleaned_matches)
+            # Use newline separator for Excel-friendly display
+            return "\n".join(cleaned_matches)
         else:  # "first"
             return cleaned_matches[0]
             
@@ -153,18 +154,24 @@ def extract_with_lookfor(
     
     # Collect all matches with their positions
     match_list: List[Tuple[int, str]] = []
+    seen_positions = set()  # Track positions to avoid same match from multiple patterns
+    
     for pat in patterns:
         try:
             for m in re.finditer(pat, text, flags=re.IGNORECASE):
+                # Skip if we already captured this position
+                if m.start() in seen_positions:
+                    continue
+                    
                 v = m.group(1).strip()
                 # Clean up extra whitespace
                 v = re.sub(r"\s{2,}", " ", v)
                 # Remove ONLY trailing colons/semicolons (not commas)
                 v = re.sub(r'[;:]+$', '', v).strip()
                 if v and len(v) > 0:
-                    # Store position and value, avoid duplicates
-                    if not any(existing_v == v for _, existing_v in match_list):
-                        match_list.append((m.start(), v))
+                    # Store position and value - keep all occurrences including duplicates
+                    match_list.append((m.start(), v))
+                    seen_positions.add(m.start())
         except re.error:
             continue
     
@@ -185,7 +192,7 @@ def apply_extraction_strategy(
         strategy: "first", "last", or "all"
     
     Returns:
-        Selected value(s) as string
+        Selected value(s) as string. For "all", returns newline-separated values for Excel compatibility.
     """
     if not matches:
         return ""
@@ -193,7 +200,8 @@ def apply_extraction_strategy(
     if strategy == "last":
         return matches[-1]
     elif strategy == "all":
-        return " | ".join(matches)
+        # Use newline separator for Excel-friendly display
+        return "\n".join(matches)
     else:  # "first"
         return matches[0]
 

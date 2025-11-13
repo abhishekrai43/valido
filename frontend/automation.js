@@ -308,6 +308,29 @@ function setupBrowseButtons() {
     });
 }
 
+// Browse folder function (called by inline onclick in HTML)
+async function browseFolder(inputId) {
+    console.log('browseFolder called with inputId:', inputId);
+    if ('showDirectoryPicker' in window) {
+        console.log('showDirectoryPicker is supported');
+        try {
+            const dirHandle = await window.showDirectoryPicker();
+            const path = dirHandle.name; // Browser returns folder name only
+            console.log('Selected path:', path);
+            document.getElementById(inputId).value = path;
+        } catch (error) {
+            console.log('User cancelled directory picker or error:', error);
+        }
+    } else {
+        console.log('showDirectoryPicker NOT supported in this browser');
+        alert('Your browser does not support the directory picker. Please paste the full path manually (e.g., C:\\Folder or \\\\SERVER\\Share\\Folder)');
+    }
+}
+
+// Make browseFolder available globally
+window.browseFolder = browseFolder;
+console.log('browseFolder function exposed to window:', typeof window.browseFolder);
+
 // Toggle processed path field visibility
 function toggleProcessedPathField() {
     const moveRadio = document.querySelector('input[name="afterProcessing"][value="move"]');

@@ -1,7 +1,237 @@
 // Main application logic for Valido - user-friendly step-by-step validation
 (() => {
+  // Trial and License Management
+  const TrialManager = {
+    async getStatus() {
+      try {
+        const response = await fetch('/api/v1/users/trial-status');
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (error) {
+        console.error('Failed to fetch trial status:', error);
+      }
+      return null;
+    },
+    
+    async updateUI() {
+      const status = await this.getStatus();
+      if (!status) return;
+      
+      const trialStatusEl = document.getElementById('trialStatus');
+      const trialTextEl = document.getElementById('trialText');
+      const activateBtnEl = document.getElementById('activateLicenseBtn');
+      
+      if (!trialStatusEl || !trialTextEl) return;
+      
+      const { trial, access, license_active, license_type } = status;
+      
+      // Update UI based on status
+      if (license_active) {
+        // Licensed user
+        trialTextEl.textContent = `Licensed (${license_type})`;
+        trialStatusEl.classList.remove('warning', 'expired');
+        trialStatusEl.classList.add('licensed');
+        trialStatusEl.title = 'Thank you for your support!';
+        if (activateBtnEl) activateBtnEl.style.display = 'none';
+      } else if (trial.expired) {
+        // Trial expired
+        trialTextEl.textContent = 'Trial Expired';
+        trialStatusEl.classList.remove('warning', 'licensed');
+        trialStatusEl.classList.add('expired');
+        trialStatusEl.title = 'Purchase a license to continue';
+        if (activateBtnEl) activateBtnEl.style.display = 'inline-flex';
+        
+        // Show purchase prompt
+        this.showTrialExpiredModal();
+      } else {
+        // Trial active
+        const days = trial.days_remaining;
+        trialTextEl.textContent = `Trial: ${days} day${days !== 1 ? 's' : ''} left`;
+        trialStatusEl.classList.remove('expired', 'licensed');
+        if (days <= 3) {
+          trialStatusEl.classList.add('warning');
+          trialStatusEl.title = `${days} days remaining - consider purchasing`;
+        } else {
+          trialStatusEl.classList.remove('warning');
+          trialStatusEl.title = `${days} days remaining in trial`;
+        }
+        if (activateBtnEl) activateBtnEl.style.display = 'inline-flex';
+      }
+    },
+    
+    showTrialExpiredModal() {
+      // Only show once per session
+      if (sessionStorage.getItem('expiredModalShown')) return;
+      sessionStorage.setItem('expiredModalShown', 'true');
+      
+      const modal = document.createElement('div');
+      modal.className = 'trial-expired-modal';
+      modal.innerHTML = `
+        <div class="modal-overlay"></div>
+        <div class="modal-content" style="max-width: 500px;">
+          <div class="modal-header">
+            <h3>⏰ Trial Period Ended</h3>
+            <button class="modal-close" onclick="this.closest('.trial-expired-modal').remove()">×</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+              Your 14-day trial has ended. Thank you for trying Valido!
+            </p>
+            <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+              To continue using Valido, please purchase a license:
+            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <div style="margin-bottom: 10px;">
+                <strong>💳 Monthly:</strong> $14.99/month
+              </div>
+              <div>
+                <strong>🎁 Annual:</strong> $150/year <span style="color: #10b981;">(Save 17%!)</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button class="btn btn-primary" style="flex: 1;" onclick="window.open('https://gumroad.com/your-product-link', '_blank');">
+                Purchase License
+              </button>
+              <button class="btn btn-ghost" onclick="document.getElementById('activateLicenseBtn').click(); this.closest('.trial-expired-modal').remove();">
+                I Have a Key
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      modal.querySelector('.modal-overlay').addEventListener('click', () => {
+        modal.remove();
+      });
+    },
+    
+    showActivationModal() {
+      const modal = document.createElement('div');
+      modal.className = 'license-activation-modal';
+      modal.innerHTML = `
+        <div class="modal-overlay"></div>
+        <div class="modal-content" style="max-width: 500px;">
+          <div class="modal-header">
+            <h3>🔑 Activate License</h3>
+            <button class="modal-close" onclick="this.closest('.license-activation-modal').remove()">×</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom: 20px; color: #666;">
+              Enter your license key received after purchase:
+            </p>
+            
+            <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+              <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+                <strong>ℹ️ Internet Required:</strong> License activation requires internet connection to validate with our server. 
+                Your PDF files are processed 100% offline and never uploaded.
+              </p>
+            </div>
+            
+            <form id="licenseActivationForm">
+              <div style="margin-bottom: 15px;">
+                <label for="licenseKey" style="display: block; margin-bottom: 5px; font-weight: 500;">License Key:</label>
+                <input 
+                  type="text" 
+                  id="licenseKey" 
+                  name="licenseKey" 
+                  placeholder="XXXX-XXXX-XXXX-XXXX"
+                  style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;"
+                  required
+                />
+              </div>
+              <div style="margin-bottom: 20px;">
+                <label for="licenseType" style="display: block; margin-bottom: 5px; font-weight: 500;">License Type:</label>
+                <select 
+                  id="licenseType" 
+                  name="licenseType"
+                  style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                  required
+                >
+                  <option value="monthly">Monthly ($14.99/month)</option>
+                  <option value="annual">Annual ($150/year)</option>
+                </select>
+              </div>
+              <div id="activationError" style="display: none; color: #dc2626; margin-bottom: 15px; padding: 10px; background: #fee2e2; border-radius: 4px;"></div>
+              <div id="activationSuccess" style="display: none; color: #059669; margin-bottom: 15px; padding: 10px; background: #d1fae5; border-radius: 4px;"></div>
+              <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Activate</button>
+                <button type="button" class="btn btn-ghost" onclick="this.closest('.license-activation-modal').remove();">Cancel</button>
+              </div>
+            </form>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+              <p style="font-size: 13px; color: #999;">
+                Don't have a license yet? <a href="https://gumroad.com/your-product-link" target="_blank" style="color: #3b82f6;">Purchase here</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      // Handle form submission
+      const form = document.getElementById('licenseActivationForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const licenseKey = document.getElementById('licenseKey').value.trim();
+        const licenseType = document.getElementById('licenseType').value;
+        const errorEl = document.getElementById('activationError');
+        const successEl = document.getElementById('activationSuccess');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        // Reset messages
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Activating...';
+        
+        try {
+          const response = await fetch('/api/v1/users/activate-license', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ license_key: licenseKey, license_type: licenseType })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            successEl.textContent = 'License activated successfully! Reloading...';
+            successEl.style.display = 'block';
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            errorEl.textContent = data.detail || 'Invalid license key';
+            errorEl.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Activate';
+          }
+        } catch (error) {
+          errorEl.textContent = 'Failed to activate license. Please try again.';
+          errorEl.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Activate';
+        }
+      });
+      
+      modal.querySelector('.modal-overlay').addEventListener('click', () => {
+        modal.remove();
+      });
+    }
+  };
+  
+  window.TrialManager = TrialManager;
+  
   function init() {
-    // Fetch and display beta banner
+    // Update trial status on load
+    TrialManager.updateUI();
+    
+    // Refresh trial status every minute
+    setInterval(() => TrialManager.updateUI(), 60000);
+    
+    // Fetch and display beta banner (now trial/license banner)
     function updateBetaBanner() {
       const betaBanner = document.getElementById('betaBanner');
       
@@ -62,45 +292,15 @@
         });
     }
 
-    // Fetch and display usage information
-    function updateUsageIndicator() {
-      const usageIndicator = document.getElementById('usageIndicator');
-      const usageText = document.getElementById('usageText');
-      
-      if (!usageIndicator || !usageText) return;
-      
-      fetch('/api/v1/usage')
-        .then(response => response.json())
-        .then(data => {
-          const { count, limit, remaining, exceeded, warning } = data;
-          
-          // Update text
-          usageText.textContent = `${count}/${limit} PDFs`;
-          
-          // Update styling based on status
-          usageIndicator.classList.remove('warning', 'exceeded');
-          if (exceeded) {
-            usageIndicator.classList.add('exceeded');
-            usageIndicator.title = `Free tier limit reached. You've processed ${count} PDFs this month.`;
-          } else if (warning) {
-            usageIndicator.classList.add('warning');
-            usageIndicator.title = `${remaining} PDFs remaining this month`;
-          } else {
-            usageIndicator.title = `${remaining} PDFs remaining out of ${limit} free PDFs this month`;
-          }
-        })
-        .catch(error => {
-          console.warn('Failed to fetch usage info:', error);
-          usageText.textContent = '0/300 PDFs';
-          usageIndicator.title = 'Usage tracking unavailable';
-        });
+    // Usage tracking removed - will be replaced with trial/license status
+    
+    // License activation button
+    const activateLicenseBtn = document.getElementById('activateLicenseBtn');
+    if (activateLicenseBtn) {
+      activateLicenseBtn.addEventListener('click', () => {
+        TrialManager.showActivationModal();
+      });
     }
-    
-    // Update usage on page load
-    updateUsageIndicator();
-    
-    // Refresh usage every 30 seconds
-    setInterval(updateUsageIndicator, 30000);
     
     // Share button functionality
     const shareBtn = document.getElementById('shareBtn');
@@ -160,6 +360,96 @@
         // Close on overlay click
         modal.querySelector('.share-modal-overlay').addEventListener('click', () => {
           modal.remove();
+        });
+      });
+    }
+    
+    // Feedback button functionality
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    if (feedbackBtn) {
+      feedbackBtn.addEventListener('click', () => {
+        const modal = document.createElement('div');
+        modal.className = 'share-modal';
+        modal.innerHTML = `
+          <div class="share-modal-overlay"></div>
+          <div class="share-modal-content">
+            <div class="share-modal-header">
+              <h3>Report Issues / Request Features</h3>
+              <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
+            </div>
+            <div class="share-modal-body">
+              <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+                Found a bug? Have a feature request? We'd love to hear from you!
+              </p>
+              
+              <form id="feedbackForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Email (optional)</label>
+                  <input type="email" name="email" placeholder="your@email.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Type</label>
+                  <select name="type" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <option value="">Select...</option>
+                    <option value="bug">🐛 Bug Report</option>
+                    <option value="feature">✨ Feature Request</option>
+                    <option value="question">❓ Question</option>
+                    <option value="other">💬 Other</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Message *</label>
+                  <textarea name="message" required placeholder="Describe the issue or feature request..." rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                
+                <button type="submit" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                  Send Feedback
+                </button>
+              </form>
+              
+              <div id="feedbackSuccess" style="display: none; text-align: center; padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                <h3 style="color: #10b981; margin-bottom: 10px;">Thank you!</h3>
+                <p style="color: #666;">Your feedback has been sent successfully.</p>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Close on overlay click
+        modal.querySelector('.share-modal-overlay').addEventListener('click', () => {
+          modal.remove();
+        });
+        
+        // Handle form submission
+        const form = modal.querySelector('#feedbackForm');
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const formData = new FormData(form);
+          
+          try {
+            const response = await fetch(form.action, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              form.style.display = 'none';
+              modal.querySelector('#feedbackSuccess').style.display = 'block';
+              setTimeout(() => modal.remove(), 3000);
+            } else {
+              alert('Failed to send feedback. Please try again.');
+            }
+          } catch (error) {
+            alert('Failed to send feedback. Please check your internet connection.');
+          }
         });
       });
     }
@@ -568,11 +858,6 @@
 
         if (result.state === 'SUCCESS') {
           showSuccess(taskId, result);
-        } else if (result.state === 'LIMIT_EXCEEDED') {
-          // Handle limit exceeded before any processing
-          const info = result.info || {};
-          const usageInfo = info.limit_info || info.usage_info || {};
-          showError(`Free tier limit reached (${usageInfo.count || 300}/${usageInfo.limit || 300} PDFs). Cannot process any more files. Upgrade to continue.`);
         } else if (result.state === 'FAILURE') {
           showError(result.info?.error || 'Validation failed. Please try again.');
         } else {
@@ -656,6 +941,18 @@
       processingStatus.style.display = 'none';
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
+      
+      // Track successful validation and check if we should show share reminder
+      const validationCount = ShareReminder.incrementValidations();
+      
+      // Show share reminder after a short delay (let them see results first)
+      ShareReminder.shouldShowReminder().then(shouldShow => {
+        if (shouldShow) {
+          setTimeout(() => {
+            ShareReminder.showShareReminder();
+          }, 3000); // 3 second delay
+        }
+      });
       
       // Update usage indicator after successful validation
       updateUsageIndicator();
@@ -862,44 +1159,24 @@
     const navAutomation = document.getElementById('navAutomation');
     const navHowTo = document.getElementById('navHowTo');
     const navFeatures = document.getElementById('navFeatures');
-    const navPricing = document.getElementById('navPricing');
     const automationSection = document.getElementById('automationSection');
     const howToSection = document.getElementById('howToSection');
     const featuresSection = document.getElementById('featuresSection');
-    const pricingSection = document.getElementById('pricingSection');
     const networkInfo = document.getElementById('networkInfo');
 
-    if (navUpload && navAutomation && navHowTo && navFeatures && navPricing && uploadSection && automationSection && howToSection && featuresSection && pricingSection) {
+    if (navUpload && navAutomation && navHowTo && navFeatures && uploadSection && automationSection && howToSection && featuresSection) {
       // Features tab (default view)
       navFeatures.addEventListener('click', () => {
         uploadSection.style.display = 'none';
         automationSection.style.display = 'none';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'block';
-        pricingSection.style.display = 'none';
         networkInfo.style.display = 'none';
         navFeatures.classList.add('active');
         navUpload.classList.remove('active');
-        navPricing.classList.remove('active');
         navAutomation.classList.remove('active');
         navHowTo.classList.remove('active');
         featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-
-      // Pricing tab
-      navPricing.addEventListener('click', () => {
-        uploadSection.style.display = 'none';
-        automationSection.style.display = 'none';
-        howToSection.style.display = 'none';
-        featuresSection.style.display = 'none';
-        pricingSection.style.display = 'block';
-        networkInfo.style.display = 'none';
-        navPricing.classList.add('active');
-        navFeatures.classList.remove('active');
-        navUpload.classList.remove('active');
-        navAutomation.classList.remove('active');
-        navHowTo.classList.remove('active');
-        pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
 
       // Try It Now tab (upload section)
@@ -908,11 +1185,9 @@
         automationSection.style.display = 'none';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'none';
-        pricingSection.style.display = 'none';
         networkInfo.style.display = 'block';
         navUpload.classList.add('active');
         navFeatures.classList.remove('active');
-        navPricing.classList.remove('active');
         navAutomation.classList.remove('active');
         navHowTo.classList.remove('active');
         
@@ -926,11 +1201,9 @@
         automationSection.style.display = 'block';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'none';
-        pricingSection.style.display = 'none';
         networkInfo.style.display = 'none';
         navAutomation.classList.add('active');
         navFeatures.classList.remove('active');
-        navPricing.classList.remove('active');
         navUpload.classList.remove('active');
         navHowTo.classList.remove('active');
         window.initAutomation && window.initAutomation();
@@ -942,12 +1215,10 @@
         automationSection.style.display = 'none';
         howToSection.style.display = 'block';
         featuresSection.style.display = 'none';
-        pricingSection.style.display = 'none';
         networkInfo.style.display = 'none';
         howToSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         navHowTo.classList.add('active');
         navFeatures.classList.remove('active');
-        navPricing.classList.remove('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
       });
@@ -996,6 +1267,22 @@
     if (successStatus) successStatus.style.display = 'none';
     if (errorStatus) errorStatus.style.display = 'none';
     if (submitBtn) submitBtn.style.display = 'block';
+    
+    // Check if we should show a share reminder on startup (after slight delay)
+    setTimeout(() => {
+      ShareReminder.getStats().then(stats => {
+        // Show on startup if they've done 20+ validations and haven't seen prompt in 5+ days
+        if (stats.totalValidations >= 20 && !stats.hasShared) {
+          const daysSincePrompt = stats.lastSharePrompt 
+            ? (Date.now() - stats.lastSharePrompt) / (1000 * 60 * 60 * 24)
+            : 999;
+          
+          if (daysSincePrompt >= 5) {
+            ShareReminder.showShareReminder();
+          }
+        }
+      });
+    }, 5000); // 5 second delay after app loads
   }
   
   // Initialize when DOM is ready

@@ -498,9 +498,9 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                     look_for = f.get("lookFor") or f.get("look_for")
                     field_config = f  # Keep full config for validation
                     
-                    # For "between" strategy, check if there's a separate occurrence field
-                    # If strategy="between" and occurrence exists, use occurrence for matching strategy
-                    if strat == "between" and "occurrence" in f:
+                    # For "between" strategy, get the occurrence (first/all/last)
+                    # Default to "first" if not specified
+                    if strat == "between":
                         occurrence_strat = f.get("occurrence", "first")
                         logger.info(f"DEBUG: Between field '{name}' - using occurrence: {occurrence_strat}")
                     else:

@@ -151,3 +151,26 @@ export function initAutomation() {
 
 // Export for use in HTML
 window.initAutomation = initAutomation;
+
+// Browse folder function (called by inline onclick in HTML)
+async function browseFolder(inputId) {
+    console.log('browseFolder called with inputId:', inputId);
+    
+    // Show helpful message since browser can't return full path
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    alert('Browser Security Limitation:\n\n' +
+          'For security reasons, browsers cannot provide the full folder path.\n\n' +
+          'Please manually type or paste the full path:\n' +
+          '• Local: C:\\MyFolder\\Invoices\n' +
+          '• Network: \\\\SERVER\\Share\\Invoices\n\n' +
+          'Tip: Open File Explorer, navigate to the folder, and copy the path from the address bar.');
+    
+    // Focus the input so user can paste
+    input.focus();
+}
+
+// Make browseFolder available globally
+window.browseFolder = browseFolder;
+console.log('browseFolder function exposed to window:', typeof window.browseFolder);

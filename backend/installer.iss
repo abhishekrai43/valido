@@ -2,7 +2,7 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Valido"
 #define MyAppURL "https://github.com/abhishekrai43/valido"
-#define MyAppExeName "valido-beta.exe"
+#define MyAppExeName "valido-app.exe"
 
 [Setup]
 AppId={{12345678-1234-1234-1234-123456789ABC}

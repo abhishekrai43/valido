@@ -7,6 +7,7 @@ Handles file uploads, task submission, and result downloads.
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse, FileResponse
 from typing import List, Optional
+from sqlmodel import select
 import os
 import json
 import uuid
@@ -17,9 +18,10 @@ import ast
 from app.services.parser import extract_text_from_bytes
 from app.services.validator import validate_text
 from app.utils.logger import get_logger
-from app.utils.usage_tracker import check_usage_limit, record_usage
 from app.license import get_license_banner
 from app.db import get_session
+from app.models import User
+from app.utils.trial_manager import check_access, start_trial
 
 logger = get_logger("ValidationRoutes")
 
@@ -87,24 +89,35 @@ async def submit_files(
     """
     logger.info(f"Submit request with {len(files)} files, username: {username}")
     
-    # Check usage limits for free tier
+    # Check trial/license status
     with get_session() as db:
-        usage_status = check_usage_limit(db)
+        user = db.exec(select(User).where(User.username == "default")).first()
+        if not user:
+            # Create user and start trial automatically
+            user = User(username="default", trial_start_date=start_trial())
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info("Created default user and started trial")
+        elif not user.trial_start_date and not user.license_active:
+            # Start trial if not already started
+            user.trial_start_date = start_trial()
+            db.commit()
+            db.refresh(user)
+            logger.info("Started trial for existing user")
         
-        if usage_status['exceeded']:
-            logger.warning(f"Free tier limit exceeded: {usage_status['count']}/{usage_status['limit']}")
+        # Check access
+        access_status = check_access(user)
+        if not access_status['has_access']:
+            logger.warning(f"Access denied: {access_status['reason']}")
             raise HTTPException(
                 status_code=403,
                 detail={
-                    "error": "Free tier limit reached",
-                    "message": f"You've processed {usage_status['count']} PDFs this month. Free tier limit is {usage_status['limit']} PDFs/month.",
-                    "upgrade_url": "https://valido-app.github.io/#pricing"
+                    "error": "trial_expired",
+                    "message": access_status['message'],
+                    "purchase_url": access_status.get('purchase_url')
                 }
             )
-        
-        # Show warning if approaching limit
-        if usage_status['warning']:
-            logger.info(f"Usage warning: {usage_status['remaining']} PDFs remaining")
     
     # Validate file count
     if len(files) > 500:
@@ -365,25 +378,6 @@ def _parse_rules(rules: str) -> dict:
             status_code=400, 
             detail="Invalid rules JSON format"
         )
-
-
-@router.get("/usage")
-async def get_usage_info():
-    """Get current usage information for free tier."""
-    with get_session() as db:
-        usage_status = check_usage_limit(db)
-        
-        from app.utils.usage_tracker import get_usage_display
-        display_text = get_usage_display(db)
-        
-        return JSONResponse(content={
-            "count": usage_status['count'],
-            "limit": usage_status['limit'],
-            "remaining": usage_status['remaining'],
-            "exceeded": usage_status['exceeded'],
-            "warning": usage_status['warning'],
-            "display": display_text
-        })
 
 
 @router.get("/banner")

@@ -13,6 +13,7 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = io.StringIO()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,31 +30,24 @@ except Exception:
 
 logger = get_logger("ValidoMain")
 
-# Create FastAPI app
-app = FastAPI(
-    title="Valido PDF Validator",
-    description="Professional PDF validation and data extraction service",
-    version="1.0.0"
-)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
 # Results directory configuration
-RESULTS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "results"))
+# When running as exe, use install directory; otherwise use relative path
+if getattr(sys, 'frozen', False):
+    # Running as PyInstaller executable
+    exe_dir = os.path.dirname(sys.executable)
+    RESULTS_ROOT = os.path.join(exe_dir, "results")
+else:
+    # Running as script
+    RESULTS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "results"))
+
 os.makedirs(RESULTS_ROOT, exist_ok=True)
 
 
-# --- Startup Event ---
-@app.on_event("startup")
-async def _on_startup():
-    """Initialize database and display startup banner."""
+# --- Lifespan Event Handler ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize and cleanup resources using modern lifespan context manager."""
+    # Startup
     try:
         logger.info("Starting Valido PDF Validator...")
         logger.info(f"Results directory: {RESULTS_ROOT}")
@@ -77,17 +71,34 @@ async def _on_startup():
         
     except Exception as e:
         logger.error(f"Startup error: {e}", exc_info=True)
-
-
-@app.on_event("shutdown")
-async def _on_shutdown():
-    """Cleanup on application shutdown."""
+    
+    yield  # Application is running
+    
+    # Shutdown
     try:
         from app.scheduler import shutdown_scheduler
         shutdown_scheduler()
         logger.info("Job scheduler stopped")
     except Exception as e:
         logger.error(f"Shutdown error: {e}", exc_info=True)
+
+
+# Create FastAPI app with lifespan
+app = FastAPI(
+    title="Valido PDF Validator",
+    description="Professional PDF validation and data extraction service",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 # --- Debug: List all routes ---

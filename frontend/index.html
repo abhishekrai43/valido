@@ -40,14 +40,30 @@
           <div class="subtitle">Professional PDF validation and automation</div>
         </div>
         <div class="header-actions">
-          <!-- Usage Indicator -->
-          <div id="usageIndicator" class="usage-indicator">
+          <!-- Trial/License Status -->
+          <div id="trialStatus" class="trial-status">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M21 12V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <span id="usageText">Loading...</span>
+            <span id="trialText">Loading...</span>
           </div>
+          
+          <!-- License Activation Button -->
+          <button id="activateLicenseBtn" class="btn btn-license" type="button" title="Activate License Key" style="display: none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Activate License
+          </button>
+          
+          <!-- Feedback Button -->
+          <button id="feedbackBtn" class="btn btn-feedback" type="button" title="Report Issues or Request Features">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Feedback
+          </button>
           
           <!-- Share Button -->
           <button id="shareBtn" class="btn btn-share" type="button" title="Share Valido">
@@ -66,13 +82,6 @@
               <path d="M9 3L11 8L16 9L12 13L13 18L9 15L5 18L6 13L2 9L7 8L9 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
             </svg>
             Features
-          </button>
-          <button id="navPricing" class="btn btn-nav" type="button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M10 8V12M8 10H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Pricing
           </button>
           <button id="navUpload" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -852,28 +861,34 @@
                   <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Input Folder Path</label>
                   <div class="input-with-button">
                     <input type="text" id="watchFolderInput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\ToProcess\" />
-                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')" id="browseInputBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')" id="browseInputBtn" title="Click for instructions on how to copy folder paths">
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                       </svg>
-                      Browse
+                      Help
                     </button>
                   </div>
-                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Click Browse to choose a folder on your system, or paste a network path (\\SERVER\\Share) if the folder is on the network.</p>
+                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    📂 <strong>How to get the path:</strong> Open File Explorer, navigate to your folder, click the address bar, copy the full path (e.g., C:\Invoices\ToProcess or \\SERVER\Share\Folder), and paste it here.
+                  </p>
                 </div>
 
                 <div class="form-group">
                   <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Output Folder Path</label>
                   <div class="input-with-button">
                     <input type="text" id="watchFolderOutput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\Processed\" />
-                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderOutput')" id="browseOutputBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderOutput')" id="browseOutputBtn" title="Click for instructions on how to copy folder paths">
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                       </svg>
-                      Browse
+                      Help
                     </button>
                   </div>
-                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Where validated PDFs will be saved</p>
+                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    Where validated PDFs will be saved. Paste the full path (e.g., D:\Valido\results or \\SERVER\Results).
+                  </p>
                 </div>
 
                 <div class="form-group">
@@ -901,6 +916,9 @@
                     </svg>
                     Add Time
                   </button>
+                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    Select one or more times when the folder should be automatically checked for new PDFs.
+                  </p>
                 </div>
 
                 <div class="form-group">
@@ -925,11 +943,12 @@
                   <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Processed Files Folder</label>
                   <div class="input-with-button">
                     <input type="text" id="watchFolderProcessed" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\Processed\" />
-                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderProcessed')" id="browseProcessedBtn" title="Click Browse to choose a folder on your system; paste a network path (\\SERVER\\Share) if needed">
+                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderProcessed')" id="browseProcessedBtn" title="Click for instructions on how to copy folder paths">
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                       </svg>
-                      Browse
+                      Help
                     </button>
                   </div>
                 </div>
@@ -1115,7 +1134,6 @@
             <ul class="how-to-list">
               <li><strong>Simple Formulas:</strong> Gross Salary - PF - Income Tax</li>
               <li><strong>Percentages:</strong> Basic Salary * 15% calculates 15%</li>
-              <li><strong>Math Functions:</strong> sqrt, log, abs, round, floor, ceil, sin, cos, tan, exp, pow, min, max</li>
               <li><strong>Field Names:</strong> Use plain field names, no special syntax needed</li>
               <li><strong>Validation:</strong> Verify calculations match expected values</li>
             </ul>
@@ -1218,7 +1236,6 @@
               <li><strong>Test First:</strong> Try with 1-2 documents before batch processing hundreds</li>
               <li><strong>Text-Based PDFs Only:</strong> Scanned images won't work (must be text-based PDFs)</li>
               <li><strong>Clear Field Names:</strong> Use descriptive names when extracting data</li>
-              <li><strong>Batch Wisely:</strong> Process 50-100 docs at a time for best performance</li>
               <li><strong>Check Results:</strong> Always review the summary before relying on automated results</li>
             </ul>
           </div>
@@ -1238,7 +1255,7 @@
               <li><strong>Network Access:</strong> Users access it from any device (Mac, Windows, Linux) via web browser</li>
               <li><strong>Centralized Storage:</strong> Results stored on Windows PC, accessible to all network users</li>
               <li><strong>No Client Install:</strong> Team members just need a browser - no software to install</li>
-              <li><strong>Single License:</strong> One installation serves your entire team</li>
+              <li><strong>Single Installpff:</strong> One installation serves your entire team</li>
             </ul>
           </div>
         </div>

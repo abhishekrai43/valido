@@ -58,18 +58,7 @@ def process_pdfs_sync(
         except Exception:
             pass
 
-    # Check usage limit BEFORE processing
-    from app.db import get_session
-    from app.utils.usage_tracker import check_usage_limit
-    
-    usage_info = None
-    files_allowed = None
-    limit_reached_before_start = False
-    
-    with get_session() as session:
-        usage_info = check_usage_limit(session)
-        files_allowed = usage_info['remaining']
-        limit_reached_before_start = usage_info['exceeded']
+    # Usage tracking removed - now using trial + license system
     
     reports = []
     total_files = 0
@@ -104,46 +93,13 @@ def process_pdfs_sync(
     total = len(expanded_files)
     processed = 0
     
-    # Check if limit is already exceeded
-    if limit_reached_before_start:
-        _emit_progress("LIMIT_EXCEEDED", {
-            "message": f"Free tier limit reached ({usage_info['count']}/{usage_info['limit']} PDFs). Cannot process any files.",
-            "processed": 0,
-            "total": total,
-            "limit_info": usage_info
-        })
-        return {
-            'status': 'limit_exceeded',
-            'message': f"Free tier limit reached ({usage_info['count']}/{usage_info['limit']} PDFs). Upgrade to continue.",
-            'files_submitted': total,
-            'files_processed': 0,
-            'files_skipped': total,
-            'usage_info': usage_info
-        }
+    # Usage limits removed - trial/license checks happen at startup
     
-    # Calculate how many files we can actually process
-    files_to_process = min(total, files_allowed)
-    files_will_skip = max(0, total - files_allowed)
-    
-    # Inform user if we'll hit the limit mid-batch
-    if files_will_skip > 0:
-        _emit_progress("PARTIAL_PROCESSING", {
-            "message": f"Will process {files_to_process} of {total} files (free tier limit: {usage_info['limit']} PDFs)",
-            "files_to_process": files_to_process,
-            "files_will_skip": files_will_skip,
-            "remaining_before": files_allowed
-        })
-
-    _emit_progress("PROGRESS", {"processed": 0, "total": files_to_process, "current_file": "", "percent": 0})
+    _emit_progress("PROGRESS", {"processed": 0, "total": total, "current_file": "", "percent": 0})
 
     files_successfully_validated = 0
     
     for idx, f in enumerate(expanded_files):
-        # Stop if we've reached the limit
-        if files_successfully_validated >= files_to_process:
-            print(f"Stopping: Reached free tier limit ({files_successfully_validated}/{files_to_process} files processed)")
-            break
-            
         fname = f.get("filename")
         content = f.get("content") or b''
 
@@ -151,9 +107,9 @@ def process_pdfs_sync(
             "PROGRESS",
             {
                 "processed": processed,
-                "total": files_to_process,
+                "total": total,
                 "current_file": fname,
-                "percent": int((processed / files_to_process * 100)) if files_to_process > 0 else 0,
+                "percent": int((processed / total * 100)) if total > 0 else 0,
             },
         )
 
@@ -177,9 +133,9 @@ def process_pdfs_sync(
                 "PROGRESS",
                 {
                     "processed": processed,
-                    "total": files_to_process,
+                    "total": total,
                     "current_file": fname,
-                    "percent": int((processed / files_to_process * 100)) if files_to_process > 0 else 0,
+                    "percent": int((processed / total * 100)) if total > 0 else 0,
                 },
             )
             continue
@@ -197,9 +153,9 @@ def process_pdfs_sync(
             "PROGRESS",
             {
                 "processed": processed,
-                "total": files_to_process,
+                "total": total,
                 "current_file": fname,
-                "percent": int((processed / files_to_process * 100)) if files_to_process > 0 else 0,
+                "percent": int((processed / total * 100)) if total > 0 else 0,
             },
         )
 
@@ -517,6 +473,32 @@ def process_pdfs_sync(
 
         csv_rows.append(row)
 
+    # Expand rows with multiple values (newline-separated) into separate rows
+    expanded_rows = []
+    for row in csv_rows:
+        # Check if any field has multiple values (contains newlines)
+        multi_value_fields = {}
+        for key, value in row.items():
+            if isinstance(value, str) and '\n' in value:
+                multi_value_fields[key] = value.split('\n')
+        
+        # If no multi-value fields, keep the row as is
+        if not multi_value_fields:
+            expanded_rows.append(row)
+        else:
+            # Find the maximum number of occurrences
+            max_occurrences = max(len(values) for values in multi_value_fields.values())
+            
+            # Create a row for each occurrence
+            for i in range(max_occurrences):
+                new_row = row.copy()
+                for field, values in multi_value_fields.items():
+                    # Use the i-th value, or empty string if this field has fewer values
+                    new_row[field] = values[i] if i < len(values) else ''
+                expanded_rows.append(new_row)
+    
+    csv_rows = expanded_rows
+
     if csv_rows:
         fieldnames = [k for k in csv_rows[0].keys() if k != 'validation_report']
     else:
@@ -609,23 +591,8 @@ def process_pdfs_sync(
     # No longer creating ZIP file - users can download individual files
     zip_filename = None
 
-    if username:
-        try:
-            from app.db import get_session
-            from app.models import User
-            from sqlmodel import select
-            with get_session() as session:
-                u = session.exec(select(User).where(User.username == username)).first()
-                if not u:
-                    u = User(username=username, total_processed=processed)
-                    session.add(u)
-                else:
-                    u.total_processed = (u.total_processed or 0) + processed
-                    session.add(u)
-                session.commit()
-        except Exception:
-            pass
-
+    # User tracking removed - trial/license tracking happens at startup
+    
     # Update JobRun record if this is from an automation job
     job_run_id = job_metadata.get('job_run_id') if job_metadata else None
     
@@ -646,11 +613,8 @@ def process_pdfs_sync(
                     job_run.files_succeeded = files_succeeded
                     job_run.files_failed = files_failed
                     
-                    # Determine final status
-                    if files_will_skip > 0:
-                        job_run.status = "partial"
-                        job_run.error_message = f"Free tier limit reached. Processed {files_to_process} of {total} files. {files_will_skip} files skipped."
-                    elif files_failed == 0:
+                    # Determine final status based on actual results
+                    if files_failed == 0:
                         job_run.status = "success"
                     elif files_succeeded > 0:
                         job_run.status = "partial"
@@ -661,40 +625,12 @@ def process_pdfs_sync(
                     session.add(job_run)
                     session.commit()
                     print(f"Updated JobRun {job_run_id}: {job_run.status}, {files_succeeded} succeeded, {files_failed} failed")
-                    
-                    # Record usage for free tier tracking
-                    try:
-                        from app.utils.usage_tracker import record_usage
-                        record_usage(session, files_succeeded)
-                        print(f"Recorded usage: {files_succeeded} PDFs")
-                    except Exception as usage_error:
-                        print(f"Failed to record usage: {usage_error}")
         except Exception as e:
             print(f"Failed to update JobRun: {e}")
     
-    # Record usage for manual uploads (when there's no job_run_id)
-    else:
-        if files_succeeded > 0:
-            try:
-                from app.utils.usage_tracker import record_usage
-                from app.db import get_session
-                with get_session() as session:
-                    record_usage(session, files_succeeded)
-                    print(f"Recorded usage for manual upload: {files_succeeded} PDFs")
-            except Exception as usage_error:
-                print(f"Failed to record usage for manual upload: {usage_error}")
-    
-    # Get updated usage info after recording
-    with get_session() as session:
-        final_usage = check_usage_limit(session)
-
     # Determine response status
     response_status = 'completed'
-    response_message = None
-    
-    if files_will_skip > 0:
-        response_status = 'partial'
-        response_message = f"Free tier limit reached. Processed {files_to_process} of {total} files. {files_will_skip} files skipped. Upgrade to continue."
+    response_message = "All files processed successfully" if files_succeeded == total else None
     
     return {
         'status': response_status,
@@ -702,13 +638,12 @@ def process_pdfs_sync(
         'total': total,
         'processed': processed,
         'files_succeeded': files_succeeded,
-        'files_skipped': files_will_skip if files_will_skip > 0 else 0,
+        'files_skipped': 0,
         'files': reports,
         'result_files': {
             'csv': f'/api/v1/tasks/{task_id}/result.csv',
             'zip': f'/api/v1/tasks/{task_id}/results.zip'
-        },
-        'usage_info': final_usage
+        }
     }
 
 

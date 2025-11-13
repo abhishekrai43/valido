@@ -17,12 +17,21 @@ class Ruleset(SQLModel, table=True):
 
 
 class User(SQLModel, table=True):
-    """Simple user tracking for counting processed files."""
+    """User account with trial and license information."""
     __table_args__ = {'extend_existing': True}
     
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, nullable=False)
-    total_processed: int = Field(default=0)
+    
+    # Trial tracking
+    trial_start_date: Optional[datetime] = Field(default=None)  # When trial started
+    trial_expired: bool = Field(default=False)  # Whether trial has expired
+    
+    # License information
+    license_key: Optional[str] = Field(default=None)  # Activation key from payment platform
+    license_active: bool = Field(default=False)  # Whether license is currently active
+    license_type: Optional[str] = Field(default=None)  # "monthly" or "annual"
+    license_activated_at: Optional[datetime] = Field(default=None)  # When license was activated
 
 
 class WatchFolder(SQLModel, table=True):

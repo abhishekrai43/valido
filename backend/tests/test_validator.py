@@ -200,9 +200,10 @@ class TestFieldExtraction:
         text = "Item: Apple\nItem: Banana\nItem: Cherry"
         value = _extract_field(text, "Item", strategy="all")
         assert value is not None
-        assert " | " in value  # Multiple values separated by |
+        assert "\n" in value  # Multiple values separated by newlines
         assert "Apple" in value
         assert "Banana" in value
+        assert "Cherry" in value
 
 
 class TestValidateTextFunction:
