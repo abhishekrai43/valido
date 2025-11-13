@@ -44,6 +44,20 @@ export class JobListManager {
         if (listEl) {
             listEl.style.display = 'block';
             listEl.innerHTML = this.jobs.map(job => this.renderJobCard(job)).join('');
+            
+            // Auto-load job runs AFTER HTML is rendered
+            console.log('About to auto-load job runs for', this.jobs.length, 'jobs');
+            setTimeout(() => {
+                this.jobs.forEach(job => {
+                    console.log('Auto-loading job runs for job:', job.id, job.name);
+                    if (window.jobManager && window.jobManager.loadJobRuns) {
+                        console.log('Calling loadJobRuns for job:', job.id);
+                        window.jobManager.loadJobRuns(job.id);
+                    } else {
+                        console.error('jobManager or loadJobRuns not available!');
+                    }
+                });
+            }, 100);
         }
     }
 
@@ -145,13 +159,6 @@ export class JobListManager {
                 </div>
             </div>
         `;
-        
-        // Auto-load execution history after rendering
-        setTimeout(() => {
-            if (window.jobManager && window.jobManager.loadJobRuns) {
-                window.jobManager.loadJobRuns(job.id);
-            }
-        }, 100);
     }
 
     /**

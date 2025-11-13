@@ -1,6 +1,49 @@
 // Main application logic for Valido - user-friendly step-by-step validation
 (() => {
   function init() {
+    // Fetch and display beta banner
+    function updateBetaBanner() {
+      const betaBanner = document.getElementById('betaBanner');
+      
+      if (!betaBanner) return;
+      
+      fetch('/api/v1/banner')
+        .then(response => response.json())
+        .then(data => {
+          if (data.type === 'beta' || data.type === 'trial') {
+            // Show banner
+            betaBanner.style.display = 'block';
+            
+            // Update content
+            const message = betaBanner.querySelector('.beta-banner-message');
+            const details = betaBanner.querySelector('.beta-banner-details');
+            const link = betaBanner.querySelector('#betaBannerLink');
+            
+            if (message) message.textContent = data.message || '';
+            if (details) details.textContent = data.details || '';
+            
+            if (link && data.link) {
+              link.href = data.link;
+              link.textContent = data.linkText || 'Learn More';
+              link.style.display = 'inline-block';
+            } else if (link) {
+              link.style.display = 'none';
+            }
+          } else {
+            // Hide banner
+            betaBanner.style.display = 'none';
+          }
+        })
+        .catch(error => {
+          console.warn('Failed to fetch banner info:', error);
+          // Hide banner on error
+          betaBanner.style.display = 'none';
+        });
+    }
+    
+    // Update banner on page load
+    updateBetaBanner();
+    
     // Set network URL dynamically
     const networkUrlEl = document.getElementById('networkUrl');
     if (networkUrlEl) {

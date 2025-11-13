@@ -72,21 +72,29 @@ export class AutomationManager {
     }
 
     async loadJobRuns(jobId) {
+        console.log('=== loadJobRuns called for jobId:', jobId);
         const container = document.getElementById(`jobRuns_${jobId}`);
+        console.log('Container element:', container ? 'FOUND' : 'NOT FOUND');
         if (!container) return;
         
         container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>Loading...</small></div>';
         
         try {
+            console.log('Fetching job runs from API...');
             const response = await fetch(`/api/v1/watch-folders/${jobId}/runs`);
             const runs = await response.json();
+            console.log('Received runs:', runs.length, 'total');
             
             if (!runs || runs.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
                 return;
             }
             
-            container.innerHTML = runs.map(run => {
+            // Show only last 3 executions
+            const recentRuns = runs.slice(0, 3);
+            console.log('Showing', recentRuns.length, 'recent runs (limited to 3)');
+            
+            container.innerHTML = recentRuns.map(run => {
                 const statusColors = {
                     'running': { bg: '#fff3cd', color: '#856404', icon: '⏳' },
                     'success': { bg: '#d4edda', color: '#155724', icon: '✓' },

@@ -2,6 +2,8 @@
 
 let watchFolders = [];
 let editingWatchFolderId = null;
+let autoRefreshInterval = null;
+let loadedJobRunFolders = new Set(); // Track which folders have loaded job runs
 
 // Utility: Show toast notification
 function showToast(message, type = 'error') {
@@ -14,13 +16,20 @@ function showToast(message, type = 'error') {
 
 // Initialize automation page
 async function initAutomation() {
+    console.log('initAutomation called');
     await loadWatchFolders();
     await loadRulesetsForDropdown();
     setupEventListeners();
     clearWatchFolderForm(); // Clear form on initialization
     // Configure browse buttons: show local-folder browse when available; otherwise advise pasting UNC network paths
     setupBrowseButtons();
+    
+    // Start auto-refresh for job runs
+    startAutoRefresh();
 }
+
+// Expose to window for app.js to call
+window.initAutomation = initAutomation;
 
 // Load watch folders from server
 async function loadWatchFolders() {
@@ -143,39 +152,61 @@ function renderWatchFolders() {
                 <!-- Execution History Section -->
                 <div class="execution-history" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <h5 style="margin: 0; font-size: 1em; color: #666;">Recent Executions</h5>
+                        <h5 style="margin: 0; font-size: 1em; color: #666;">
+                            Recent Executions
+                            <span style="font-size: 0.75em; color: #999; font-weight: normal;">• Auto-refreshes</span>
+                        </h5>
                         <button onclick="loadJobRuns(${folder.id})" style="padding: 0.25rem 0.75rem; font-size: 0.875em; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #0066cc;">
-                            Refresh
+                            Refresh Now
                         </button>
                     </div>
                     <div id="jobRuns_${folder.id}" style="min-height: 50px;">
                         <div style="text-align: center; color: #999; padding: 1rem;">
-                            <small>Click Refresh to load execution history</small>
+                            <small>Loading...</small>
                         </div>
                     </div>
                 </div>
             </div>
         `).join('');
+        
+        // After rendering, auto-load job runs for all folders
+        console.log('Auto-loading job runs for', watchFolders.length, 'folders');
+        setTimeout(() => {
+            watchFolders.forEach(folder => {
+                console.log('Loading job runs for folder:', folder.id, folder.name);
+                loadJobRuns(folder.id);
+            });
+        }, 100);
     }
 }
 
 // Load job runs for a specific watch folder
 async function loadJobRuns(watchFolderId) {
+    console.log('loadJobRuns called for folder:', watchFolderId);
     const container = document.getElementById(`jobRuns_${watchFolderId}`);
+    console.log('Container found:', container ? 'yes' : 'no');
     if (!container) return;
+    
+    // Track that this folder has been loaded (for auto-refresh)
+    loadedJobRunFolders.add(watchFolderId);
     
     container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>Loading...</small></div>';
     
     try {
         const response = await fetch(`/api/v1/watch-folders/${watchFolderId}/runs`);
         const runs = await response.json();
+        console.log('Job runs loaded:', runs.length);
         
         if (!runs || runs.length === 0) {
             container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
             return;
         }
         
-        container.innerHTML = runs.map(run => {
+        // Show only last 3 executions
+        const recentRuns = runs.slice(0, 3);
+        console.log('Showing recent runs:', recentRuns.length);
+        
+        container.innerHTML = recentRuns.map(run => {
             const statusColors = {
                 'running': { bg: '#fff3cd', color: '#856404', icon: '⏳' },
                 'success': { bg: '#d4edda', color: '#155724', icon: '✓' },
@@ -599,5 +630,45 @@ document.addEventListener('DOMContentLoaded', () => {
             initAutomation();
         });
     }
+});
+
+// Auto-refresh functionality
+function startAutoRefresh() {
+    // Clear any existing interval
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    // Note: Initial load happens in renderWatchFolders()
+    
+    // Refresh every 30 seconds
+    autoRefreshInterval = setInterval(() => {
+        // Only refresh folders that have been loaded at least once
+        loadedJobRunFolders.forEach(folderId => {
+            loadJobRuns(folderId);
+        });
+    }, 30000); // 30 seconds
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Stop auto-refresh when leaving automation page
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = document.querySelectorAll('section');
+    const observer = new MutationObserver(() => {
+        const automationSection = document.getElementById('automationSection');
+        if (automationSection && automationSection.style.display === 'none') {
+            stopAutoRefresh();
+        }
+    });
+    
+    sections.forEach(section => {
+        observer.observe(section, { attributes: true, attributeFilter: ['style'] });
+    });
 });
 

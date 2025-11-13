@@ -80,9 +80,12 @@ class LicenseManager:
         logger.info("Trial license created")
 
 
-def get_license_banner() -> Optional[str]:
+def get_license_banner() -> Optional[Dict]:
     """Get license banner text for UI display."""
-    license_info = LicenseManager.get_license_info()
-
-    # Removed trial version messaging
-    return None
+    return {
+        "type": "beta",
+        "message": "Valido Beta - Free 300 PDFs/month",
+        "details": "Full version coming soon with unlimited processing",
+        "link": "https://valido-app.github.io",
+        "linkText": "Learn More"
+    }

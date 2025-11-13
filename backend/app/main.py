@@ -19,7 +19,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from app.utils.logger import get_logger
-from app.license import get_license_banner
 
 # Optional: load .env for local development
 try:
@@ -72,10 +71,8 @@ async def _on_startup():
         scheduler.reload_schedules()
         logger.info("Job scheduler initialized and schedules loaded")
         
-        # Display license banner (if any)
-        banner = get_license_banner()
-        if banner:
-            print("\n" + banner + "\n")
+        # Banner is now available via API endpoint /api/v1/banner
+        # No need to print to console for packaged executable
         logger.info("Startup complete")
         
     except Exception as e:

@@ -18,6 +18,7 @@ from app.services.parser import extract_text_from_bytes
 from app.services.validator import validate_text
 from app.utils.logger import get_logger
 from app.utils.usage_tracker import check_usage_limit, record_usage
+from app.license import get_license_banner
 from app.db import get_session
 
 logger = get_logger("ValidationRoutes")
@@ -383,3 +384,12 @@ async def get_usage_info():
             "warning": usage_status['warning'],
             "display": display_text
         })
+
+
+@router.get("/banner")
+async def get_banner_info():
+    """Get beta banner information for UI display."""
+    banner = get_license_banner()
+    if banner:
+        return JSONResponse(content=banner)
+    return JSONResponse(content={"type": "none"})
