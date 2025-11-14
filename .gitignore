@@ -104,6 +104,13 @@ package-lock.json
 dist/
 build/
 
+# Build artifacts
+valido-icon.ico
+valido-icon.png
+create_icon.py
+version_info.txt
+**/*.spec
+
 # Installer and build files (everywhere)
 **/*.exe
 **/*.msi
