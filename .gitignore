@@ -122,6 +122,7 @@ installer/
 # Logs
 logs/
 *.log
+backend/installer.iss
 
 # Results and test data
 results/
