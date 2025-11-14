@@ -71,7 +71,29 @@ The application includes a comprehensive **"How To Use"** section with:
 
 ---
 
-## 📞 Support
+## � Download
+
+Get Valido from [Releases](https://github.com/abhishekrai43/valido/releases)
+
+**Pricing:**
+- Monthly: $14.99/month - [Purchase](https://rai89.gumroad.com/l/bdspjn)
+- Annual: $150/year - [Purchase](https://rai89.gumroad.com/l/eyuiy)
+
+14-day free trial included with every download.
+
+---
+
+## 🔓 License
+
+This is **source available** software, NOT open source.
+
+The code is publicly visible for transparency and security auditing, but you may NOT use, copy, modify, or distribute this software without purchasing a license.
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## �📞 Support
 
 For issues, feature requests, or questions:
 
@@ -79,5 +101,4 @@ For issues, feature requests, or questions:
 
 ---
 
-**Author:** Abhishek Rai  
-**License:** MIT
+**Author:** Abhishek Rai
