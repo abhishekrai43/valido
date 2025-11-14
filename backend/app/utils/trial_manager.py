@@ -14,7 +14,7 @@ from app.utils.logger import get_logger
 logger = get_logger('trial_manager')
 
 # Configuration
-TEST_MODE = True  # Set to False for production
+TEST_MODE = False  # Set to False for production
 TRIAL_DAYS = 1 if TEST_MODE else 14  # 1 day for testing, 14 for production
 TEST_LICENSE_KEY = "TEST-VALIDO-2024"  # Works in test mode only
 
@@ -26,9 +26,11 @@ REGISTRY_LICENSE_KEY = "LicenseKey"
 REGISTRY_LICENSE_TYPE = "LicenseType"
 REGISTRY_LICENSE_VALIDATED = "LastValidated"
 
-# Gumroad configuration (will be set when you create products)
-GUMROAD_PRODUCT_ID = None  # Set this after creating Gumroad product
-GUMROAD_API_URL = "https://api.gumroad.com/v2/licenses/verify"
+# Gumroad configuration
+GUMROAD_ACCESS_TOKEN = "-exmGh2an_SU8wVqQhBW5f9-cat6iG4W2Q-ywWRPJ5E"
+GUMROAD_MONTHLY_PRODUCT_PERMALINK = "bdspjn"
+GUMROAD_ANNUAL_PRODUCT_PERMALINK = "eyuiy"
+GUMROAD_API_URL = "https://api.gumroad.com/v2/sales"
 VALIDATION_GRACE_DAYS = 7  # Allow 7 days offline before forcing revalidation
 
 
@@ -293,6 +295,144 @@ def validate_license_key(license_key: str, license_type: Optional[str] = None) -
     }
 
 
+def validate_license_email(purchase_email: str, license_type: str = 'monthly') -> Dict:
+    """
+    Validate a Gumroad purchase using customer's email (NEW METHOD).
+    Modular function - doesn't affect existing validate_license_key.
+    
+    Args:
+        purchase_email: The email address used to purchase on Gumroad
+        license_type: 'monthly' or 'annual'
+        
+    Returns:
+        Dict with validation result
+    """
+    import requests
+    
+    if not purchase_email or not purchase_email.strip():
+        return {'valid': False, 'error': 'Email address is required'}
+    
+    purchase_email = purchase_email.strip().lower()
+    
+    # Test mode - accept test email
+    if TEST_MODE and purchase_email == "test@valido.com":
+        logger.info("Test mode: Accepting test email")
+        set_registry_value(REGISTRY_LICENSE_KEY, purchase_email)
+        set_registry_value(REGISTRY_LICENSE_TYPE, license_type)
+        set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
+        return {
+            'valid': True,
+            'license_type': license_type,
+            'customer_email': purchase_email,
+            'test_mode': True,
+            'message': 'Test license activated'
+        }
+    
+    # Check cached validation (offline grace period)
+    cached_email = get_registry_value(REGISTRY_LICENSE_KEY)
+    last_validated_str = get_registry_value(REGISTRY_LICENSE_VALIDATED)
+    
+    if cached_email and cached_email.lower() == purchase_email and last_validated_str:
+        try:
+            last_validated = datetime.fromisoformat(last_validated_str)
+            days_since = (datetime.utcnow() - last_validated).days
+            
+            if days_since < VALIDATION_GRACE_DAYS:
+                logger.info(f"Using cached validation ({days_since} days old)")
+                return {
+                    'valid': True,
+                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
+                    'customer_email': purchase_email,
+                    'cached': True,
+                    'message': f'License valid (cached)'
+                }
+        except Exception as e:
+            logger.warning(f"Error checking cached validation: {e}")
+    
+    # Validate with Gumroad API
+    try:
+        product_permalink = GUMROAD_MONTHLY_PRODUCT_PERMALINK if license_type == 'monthly' else GUMROAD_ANNUAL_PRODUCT_PERMALINK
+        
+        logger.info(f"Validating with Gumroad: {purchase_email}, type: {license_type}")
+        
+        response = requests.get(
+            GUMROAD_API_URL,
+            params={
+                'access_token': GUMROAD_ACCESS_TOKEN,
+                'email': purchase_email
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not data.get('success'):
+                return {'valid': False, 'error': 'Could not verify with Gumroad'}
+            
+            sales = data.get('sales', [])
+            
+            if not sales:
+                return {'valid': False, 'error': 'No purchases found for this email'}
+            
+            # Find valid purchase
+            for sale in sales:
+                if sale.get('product_permalink') != product_permalink:
+                    continue
+                
+                if sale.get('refunded') or sale.get('chargedback'):
+                    continue
+                
+                if sale.get('subscription_id'):
+                    if sale.get('cancelled') or sale.get('ended'):
+                        continue
+                
+                # Valid!
+                set_registry_value(REGISTRY_LICENSE_KEY, purchase_email)
+                set_registry_value(REGISTRY_LICENSE_TYPE, license_type)
+                set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
+                
+                logger.info("License validated successfully")
+                
+                return {
+                    'valid': True,
+                    'license_type': license_type,
+                    'customer_email': sale.get('email'),
+                    'product_name': sale.get('product_name'),
+                    'message': 'License activated!'
+                }
+            
+            return {'valid': False, 'error': f'No active {license_type} license found'}
+        
+        else:
+            # Offline fallback
+            if cached_email and cached_email.lower() == purchase_email:
+                return {
+                    'valid': True,
+                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
+                    'customer_email': purchase_email,
+                    'cached': True,
+                    'message': 'License valid (offline)'
+                }
+            
+            return {'valid': False, 'error': 'Could not connect to server'}
+    
+    except Exception as e:
+        logger.error(f"Validation error: {e}")
+        
+        # Offline fallback
+        if cached_email and cached_email.lower() == purchase_email:
+            return {
+                'valid': True,
+                'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
+                'customer_email': purchase_email,
+                'cached': True,
+                'message': 'License valid (offline)'
+            }
+        
+        return {'valid': False, 'error': str(e)}
+
+
 def check_access(user) -> Dict:
     """
     Check if user has access (either trial active or valid license).
@@ -328,5 +468,5 @@ def check_access(user) -> Dict:
         'has_access': False,
         'reason': 'trial_expired',
         'message': 'Trial expired. Please purchase a license to continue.',
-        'purchase_url': 'https://gumroad.com/your-product-link'  # Update this
+        'purchase_url': 'https://rai89.gumroad.com/l/bdspjn'
     }

@@ -12,6 +12,7 @@ from app.utils.trial_manager import (
     calculate_trial_status, 
     start_trial, 
     validate_license_key,
+    validate_license_email,  # NEW: Email-based validation
     check_access
 )
 
@@ -120,9 +121,15 @@ class LicenseActivation(BaseModel):
     license_type: str  # 'monthly' or 'annual'
 
 
+class EmailLicenseActivation(BaseModel):
+    """NEW: Email-based license activation"""
+    purchase_email: str
+    license_type: str  # 'monthly' or 'annual'
+
+
 @router.post("/activate-license")
 def activate_license(payload: LicenseActivation):
-    """Activate a license key for the default user."""
+    """Activate a license key for the default user (OLD METHOD - still works)."""
     logger.info(f"Activating license: {payload.license_key[:10]}...")
     
     # Validate the license key
@@ -157,6 +164,48 @@ def activate_license(payload: LicenseActivation):
             'message': 'License activated successfully!',
             'license_type': user.license_type,
             'activated_at': user.license_activated_at.isoformat()
+        }
+
+
+@router.post("/activate-license-email")
+def activate_license_email(payload: EmailLicenseActivation):
+    """Activate license using purchase email (NEW METHOD - recommended)."""
+    logger.info(f"Activating license for email: {payload.purchase_email}")
+    
+    # Validate with Gumroad
+    validation = validate_license_email(payload.purchase_email, payload.license_type)
+    
+    if not validation['valid']:
+        logger.warning(f"License validation failed: {validation.get('error')}")
+        raise HTTPException(
+            status_code=400,
+            detail=validation.get('error', 'Could not validate license')
+        )
+    
+    # Activate license for user
+    with get_session() as session:
+        user = session.exec(select(User).where(User.username == "default")).first()
+        if not user:
+            user = User(username="default")
+            session.add(user)
+        
+        user.license_key = payload.purchase_email  # Store email as license key
+        user.license_active = True
+        user.license_type = payload.license_type
+        user.license_activated_at = datetime.utcnow()
+        user.trial_expired = False
+        
+        session.commit()
+        session.refresh(user)
+        
+        logger.info(f"License activated successfully: {payload.license_type}")
+        return {
+            'status': 'success',
+            'message': validation.get('message', 'License activated!'),
+            'license_type': user.license_type,
+            'customer_email': validation.get('customer_email'),
+            'activated_at': user.license_activated_at.isoformat(),
+            'cached': validation.get('cached', False)
         }
 
 

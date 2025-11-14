@@ -90,8 +90,8 @@
               </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-              <button class="btn btn-primary" style="flex: 1;" onclick="window.open('https://gumroad.com/your-product-link', '_blank');">
-                Purchase License
+              <button class="btn btn-primary" style="flex: 1;" onclick="window.open('https://rai89.gumroad.com/l/bdspjn', '_blank');">
+                Purchase License ($14.99/month)
               </button>
               <button class="btn btn-ghost" onclick="document.getElementById('activateLicenseBtn').click(); this.closest('.trial-expired-modal').remove();">
                 I Have a Key
@@ -119,7 +119,7 @@
           </div>
           <div class="modal-body">
             <p style="margin-bottom: 20px; color: #666;">
-              Enter your license key received after purchase:
+              Enter the email address you used to purchase on Gumroad:
             </p>
             
             <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
@@ -131,15 +131,16 @@
             
             <form id="licenseActivationForm">
               <div style="margin-bottom: 15px;">
-                <label for="licenseKey" style="display: block; margin-bottom: 5px; font-weight: 500;">License Key:</label>
+                <label for="licenseKey" style="display: block; margin-bottom: 5px; font-weight: 500;">Purchase Email:</label>
                 <input 
-                  type="text" 
+                  type="email" 
                   id="licenseKey" 
                   name="licenseKey" 
-                  placeholder="XXXX-XXXX-XXXX-XXXX"
-                  style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;"
+                  placeholder="your@email.com"
+                  style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
                   required
                 />
+                <small style="color: #666; font-size: 12px;">The email address used when purchasing on Gumroad</small>
               </div>
               <div style="margin-bottom: 20px;">
                 <label for="licenseType" style="display: block; margin-bottom: 5px; font-weight: 500;">License Type:</label>
@@ -162,7 +163,7 @@
             </form>
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
               <p style="font-size: 13px; color: #999;">
-                Don't have a license yet? <a href="https://gumroad.com/your-product-link" target="_blank" style="color: #3b82f6;">Purchase here</a>
+                Don't have a license yet? <a href="https://rai89.gumroad.com/l/bdspjn" target="_blank" style="color: #3b82f6;">Monthly ($14.99)</a> or <a href="https://rai89.gumroad.com/l/eyuiy" target="_blank" style="color: #3b82f6;">Annual ($150)</a>
               </p>
             </div>
           </div>
@@ -175,7 +176,7 @@
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const licenseKey = document.getElementById('licenseKey').value.trim();
+        const purchaseEmail = document.getElementById('licenseKey').value.trim();
         const licenseType = document.getElementById('licenseType').value;
         const errorEl = document.getElementById('activationError');
         const successEl = document.getElementById('activationSuccess');
@@ -185,31 +186,32 @@
         errorEl.style.display = 'none';
         successEl.style.display = 'none';
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Activating...';
+        submitBtn.textContent = 'Validating...';
         
         try {
-          const response = await fetch('/api/v1/users/activate-license', {
+          // Use NEW email-based endpoint
+          const response = await fetch('/api/v1/users/activate-license-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ license_key: licenseKey, license_type: licenseType })
+            body: JSON.stringify({ purchase_email: purchaseEmail, license_type: licenseType })
           });
           
           const data = await response.json();
           
           if (response.ok) {
-            successEl.textContent = 'License activated successfully! Reloading...';
+            successEl.textContent = data.message || 'License activated successfully! Reloading...';
             successEl.style.display = 'block';
             setTimeout(() => {
               window.location.reload();
             }, 1500);
           } else {
-            errorEl.textContent = data.detail || 'Invalid license key';
+            errorEl.textContent = data.detail || 'Could not validate purchase';
             errorEl.style.display = 'block';
             submitBtn.disabled = false;
             submitBtn.textContent = 'Activate';
           }
         } catch (error) {
-          errorEl.textContent = 'Failed to activate license. Please try again.';
+          errorEl.textContent = 'Connection error. Please check your internet and try again.';
           errorEl.style.display = 'block';
           submitBtn.disabled = false;
           submitBtn.textContent = 'Activate';

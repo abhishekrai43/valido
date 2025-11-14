@@ -119,7 +119,7 @@ def get_license_banner() -> Optional[Dict]:
                     "type": "trial",
                     "message": f"Trial: {trial_status['days_remaining']} days remaining",
                     "details": "Enjoying Valido? Purchase a license to continue",
-                    "link": "https://gumroad.com/your-product-link",  # Update with real link
+                    "link": "https://rai89.gumroad.com/l/bdspjn",
                     "linkText": "Buy Now"
                 }
             else:
@@ -128,7 +128,7 @@ def get_license_banner() -> Optional[Dict]:
                     "type": "expired",
                     "message": "Trial expired",
                     "details": "Purchase a license to continue using Valido",
-                    "link": "https://gumroad.com/your-product-link",  # Update with real link
+                    "link": "https://rai89.gumroad.com/l/bdspjn",
                     "linkText": "Purchase License"
                 }
     except Exception as e:

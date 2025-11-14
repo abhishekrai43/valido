@@ -18,6 +18,7 @@
 - Extract text and data from PDF documents
 - Build custom validation rules using an intuitive wizard
 - Extract text between specific words or patterns
+- Perform calculations on extracted data 
 - Handle single PDFs or bulk process multiple files
 
 ### 🤖 Automation Support
@@ -64,7 +65,9 @@ The application includes a comprehensive **"How To Use"** section with:
 
 - All processing happens locally on your network
 - PDFs and extracted data never leave your infrastructure
-- No external API calls or data transmission
+- No login, account, or user registration required
+- Works 100% offline (except for initial license activation)
+- No external API calls during PDF processing
 
 ---
 
