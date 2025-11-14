@@ -381,7 +381,8 @@
             </div>
             <div class="share-modal-body">
               <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
-                Found a bug? Have a feature request? We'd love to hear from you!
+                Found a bug? Have a feature request? We'd love to hear from you!<br>
+                <strong style="color: #764ba2;">💡 Tip:</strong> For bugs, please include: what you expected vs. what happened, steps to reproduce, and any error logs from <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">data/logs/</code> folder.
               </p>
               
               <form id="feedbackForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
@@ -403,7 +404,12 @@
                 
                 <div>
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Message *</label>
-                  <textarea name="message" required placeholder="Describe the issue or feature request..." rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                  <textarea name="message" required placeholder="Be specific! Instead of 'Does not work', tell us:
+• What were you trying to do?
+• What did you expect to happen?
+• What actually happened?
+• Any error messages?
+• Copy/paste relevant logs from data/logs/ folder if available" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
                 
                 <button type="submit" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
@@ -944,21 +950,6 @@
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
       
-      // Track successful validation and check if we should show share reminder
-      const validationCount = ShareReminder.incrementValidations();
-      
-      // Show share reminder after a short delay (let them see results first)
-      ShareReminder.shouldShowReminder().then(shouldShow => {
-        if (shouldShow) {
-          setTimeout(() => {
-            ShareReminder.showShareReminder();
-          }, 3000); // 3 second delay
-        }
-      });
-      
-      // Update usage indicator after successful validation
-      updateUsageIndicator();
-      
       // Change Step 3 indicator to green (completed)
       steps.forEach(step => {
         const num = parseInt(step.dataset.step);
@@ -1269,22 +1260,6 @@
     if (successStatus) successStatus.style.display = 'none';
     if (errorStatus) errorStatus.style.display = 'none';
     if (submitBtn) submitBtn.style.display = 'block';
-    
-    // Check if we should show a share reminder on startup (after slight delay)
-    setTimeout(() => {
-      ShareReminder.getStats().then(stats => {
-        // Show on startup if they've done 20+ validations and haven't seen prompt in 5+ days
-        if (stats.totalValidations >= 20 && !stats.hasShared) {
-          const daysSincePrompt = stats.lastSharePrompt 
-            ? (Date.now() - stats.lastSharePrompt) / (1000 * 60 * 60 * 24)
-            : 999;
-          
-          if (daysSincePrompt >= 5) {
-            ShareReminder.showShareReminder();
-          }
-        }
-      });
-    }, 5000); // 5 second delay after app loads
   }
   
   // Initialize when DOM is ready

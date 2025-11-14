@@ -173,6 +173,16 @@ function initFieldWizard() {
       }
       fields.push(newField);
 
+      // Reset form for next field
+      fieldNameInput.value = '';
+      fieldLookForInput.value = '';
+      fieldStrategySelect.value = 'first';
+      fieldInTableCheckbox.checked = false;
+      fieldColumnSection.style.display = 'none';
+      fieldColumnInput.value = '';
+      document.querySelectorAll('input[name="fieldType"]')[0].checked = true;
+      validationRulesSection.style.display = 'none';
+
       // Close modal and refresh
       fieldWizardModal.style.display = 'none';
       renderFields();
@@ -257,6 +267,12 @@ function initFieldWizard() {
       };
       
       fields.push(newField);
+      
+      // Reset between words form
+      betweenFieldName.value = '';
+      betweenStartWord.value = '';
+      betweenEndWord.value = '';
+      betweenOccurrence.value = 'first';
       
       // Close modal and refresh
       betweenWordsModal.style.display = 'none';

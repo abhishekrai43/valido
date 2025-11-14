@@ -159,10 +159,10 @@ except ImportError:
 # --- Static Files (Frontend) ---
 # Handle both development and PyInstaller exe modes
 if getattr(sys, 'frozen', False):
-    # Running as compiled exe - frontend is in _MEIPASS temp directory
-    base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    frontend_dir = os.path.join(base_path, "frontend")
-    logger.info(f"Running as exe. Base path: {base_path}")
+    # Running as compiled exe - frontend is next to the exe (installed by Inno Setup)
+    exe_dir = os.path.dirname(sys.executable)
+    frontend_dir = os.path.join(exe_dir, "frontend")
+    logger.info(f"Running as exe. Exe dir: {exe_dir}")
 else:
     # Running as script - frontend is relative to this file
     frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))

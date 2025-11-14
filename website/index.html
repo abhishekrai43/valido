@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Valido - PDF automation software with custom calculations. Extract data, create formulas on extracted fields, automate batch processing. Works on local network.">
+  <meta name="keywords" content="PDF automation software, PDF data extraction, custom PDF calculations, bulk PDF processing, automated PDF workflow, invoice data extraction, document automation, network PDF tool, local PDF processing, batch PDF validation, PDF formula calculator">
+  <meta name="author" content="Valido">
+  <meta property="og:title" content="Valido - PDF Automation with Custom Calculations">
+  <meta property="og:description" content="Extract data from PDFs and create custom calculations. Automate batch processing, schedule folder monitoring. Free network access for teams.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://valido-app.github.io/og-image.png">
+  <title>Valido - PDF Automation with Custom Calculations | Local Network Solution</title>
+  
+  <!-- SEO: Sitemap and Canonical URL -->
+  <link rel="canonical" href="https://valido-app.github.io/">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066ff;
+      --primary-dark: #0052cc;
+      --primary-light: #3385ff;
+      --success: #10b981;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-light: #f9fafb;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text-dark);
+      line-height: 1.6;
+      background: white;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4rem 2rem;
+      text-align: center;
+      min-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      max-width: 900px;
+    }
+
+    .hero .tagline {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      opacity: 0.95;
+      max-width: 700px;
+      font-weight: 300;
+      line-height: 1.5;
+    }
+
+    .hero .performance {
+      font-size: 1.125rem;
+      margin-bottom: 3rem;
+      opacity: 0.9;
+      max-width: 700px;
+      font-weight: 400;
+    }
+
+    /* Download Button */
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+      color: var(--primary);
+      padding: 1.5rem 3rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      text-decoration: none;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+      background: var(--bg-light);
+    }
+
+    .download-btn svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .trial-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.5rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .price-info {
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    /* Features Section */
+    .features {
+      padding: 5rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      color: var(--text-dark);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      padding: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 30px rgba(0, 102, 255, 0.1);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .feature-icon svg {
+      width: 32px;
+      height: 32px;
+      stroke: white;
+      fill: none;
+    }
+
+    .feature-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-dark);
+    }
+
+    .feature-card p {
+      color: var(--text-light);
+      line-height: 1.7;
+    }
+
+    /* Privacy Banner */
+    .privacy-banner {
+      background: var(--bg-light);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    .privacy-banner h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--text-dark);
+    }
+
+    .privacy-banner p {
+      font-size: 1.125rem;
+      color: var(--text-light);
+      max-width: 700px;
+      margin: 0 auto 2rem;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      border: 2px solid var(--success);
+    }
+
+    .privacy-badge svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .privacy-badge span {
+      color: var(--success);
+      font-weight: 700;
+      font-size: 1.125rem;
+    }
+
+    /* CTA Section */
+    .cta {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 5rem 2rem;
+      text-align: center;
+    }
+
+    .cta h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .cta p {
+      font-size: 1.25rem;
+      margin-bottom: 2rem;
+      opacity: 0.95;
+    }
+
+    .cta .download-btn {
+      background: white;
+      color: var(--primary);
+    }
+
+    /* Support Section */
+    .support {
+      padding: 4rem 2rem;
+      text-align: center;
+      background: var(--bg-light);
+    }
+
+    .support h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--text-dark);
+    }
+
+    .support p {
+      font-size: 1.125rem;
+      color: var(--text-light);
+      margin-bottom: 1.5rem;
+    }
+
+    .support-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: white;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1.125rem;
+      border: 2px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .support-email:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .support-note {
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 2rem;
+      text-align: center;
+      background: white;
+      border-top: 1px solid var(--border);
+      color: var(--text-light);
+      font-size: 0.875rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .hero .tagline,
+      .hero .performance {
+        font-size: 1rem;
+      }
+
+      .download-btn {
+        padding: 1.25rem 2rem;
+        font-size: 1.125rem;
+      }
+
+      .features h2,
+      .cta h2 {
+        font-size: 2rem;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>Validate and automate PDFs without uploading them anywhere</h1>
+    <p class="tagline">
+      Extract data • Create calculations • Automate workflows
+    </p>
+    <p class="performance">
+      <strong>50 PDFs in under 3 seconds.</strong> Works offline. Runs on your network.
+    </p>
+    
+    <a href="Valido-Setup.exe" class="download-btn" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+      </svg>
+      Download for Windows
+    </a>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features">
+    <h2>PDF Automation Software with Custom Calculations and Network Access</h2>
+    
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L4 6V12C4 17 7 21 12 23C17 21 20 17 20 12V6L12 2Z"/>
+            <circle cx="12" cy="12" r="3" fill="white"/>
+          </svg>
+        </div>
+        <h3>100% Private</h3>
+        <p>Your documents never leave your computer. Zero cloud upload, zero data retention. Perfect for sensitive files.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="12" height="4" rx="1"/>
+            <rect x="6" y="10" width="12" height="4" rx="1"/>
+            <rect x="6" y="16" width="12" height="4" rx="1"/>
+          </svg>
+        </div>
+        <h3>Batch Processing</h3>
+        <p>Process hundreds or thousands of PDFs at once. Upload files or ZIP archives up to 2000 pages.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <path d="M8 2V6M16 2V6M4 10H20"/>
+          </svg>
+        </div>
+        <h3>Folder Automation</h3>
+        <p>Watch folders and automatically validate new PDFs on a schedule - hourly, daily, or weekly.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+          </svg>
+        </div>
+        <h3>Custom Calculations</h3>
+        <p>Extract data fields then create formulas using them. Calculate totals, percentages, differences. Use previous calculations in new ones.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2Z"/>
+            <path d="M14 2V8H20"/>
+          </svg>
+        </div>
+        <h3>Professional Reports</h3>
+        <p>Export results as CSV, Excel, PDF, or JSON. Clean formatting, ready to share with your team.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"/>
+            <path d="M9 22V12H15V22"/>
+          </svg>
+        </div>
+        <h3>Network Ready</h3>
+        <p>Run on one Windows PC, access from any device (Mac, Windows, Linux) over your network. Perfect for mixed-platform teams.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy Banner -->
+  <section class="privacy-banner">
+    <h2>Your Data Stays Yours</h2>
+    <p>
+      Unlike cloud-based tools, Valido processes everything locally on your computer. 
+      No uploads, no external servers, no data breaches. Perfect for regulated industries like healthcare, legal, and finance.
+    </p>
+    <div class="privacy-badge">
+      <svg viewBox="0 0 20 20" fill="none">
+        <path d="M10 1L4 4V9C4 13 7 16.5 10 18.5C13 16.5 16 13 16 9V4L10 1Z" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+        <circle cx="10" cy="9" r="2" fill="#10b981"/>
+      </svg>
+      <span>Your data never leaves your system</span>
+    </div>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="benefits" style="background: #f9fafb; padding: 4rem 2rem; margin: 0;">
+    <div class="container" style="max-width: 900px; margin: 0 auto;">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 1rem; color: #111;">No Account. No Cloud. No Limits.</h2>
+      <p style="text-align: center; color: #666; font-size: 1.1rem; margin-bottom: 3rem;">
+        We believe software should work for you, not the other way around.
+      </p>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+        
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">Download & Go</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            No signup forms. No account creation. No email verification. Just download, install, and start working.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏠</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">Use Anywhere</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Install on your laptop, use it at the office, take it home, work at a client site. One license, any location.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">100% Local</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Your PDFs never touch the internet. No cloud uploads, no external servers, no privacy concerns. Works offline.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌐</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">Network Share</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Unlimited users can access from any device on your LAN. No per-user fees. Perfect for teams.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">💾</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">No Vendor Lock-In</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Your rulesets are stored locally. Export anytime. No proprietary formats. You own your data.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🚫</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #111;">No Hidden Costs</h3>
+          <p style="color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Simple, fair pricing per device. No per-page fees, no usage limits, no surprise charges.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <h2>Ready to Simplify PDF Validation?</h2>
+    <p style="margin-bottom: 1.5rem;">🎉 <strong>Beta Version Available Now</strong> - Free 300 PDFs/month</p>
+    <p style="font-size: 1rem; opacity: 0.9; margin-bottom: 2rem;">
+      Try Valido Beta with no account required. Full version with unlimited processing coming soon!
+    </p>
+    <a href="Valido-Setup.exe" class="download-btn" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+      </svg>
+      Download Beta Now
+    </a>
+    <p style="font-size: 0.9rem; opacity: 0.85; margin-top: 1.5rem;">
+      ✨ Early adopters will keep their rules and settings when upgrading to the full version
+    </p>
+  </section>
+  
+  <!-- Support Section -->
+  <section class="support">
+    <h2>Need Help?</h2>
+    <p>Questions about Valido? We're here to help.</p>
+    <a href="https://github.com/Valido-App/valido-app.github.io/issues" class="support-email">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+      </svg>
+      Report Issues on GitHub
+    </a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2025 Valido. All rights reserved.</p>
+  </footer>
+
+  <!-- Placeholder for Analytics (Add when ready) -->
+  <!-- 
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_TOKEN_HERE"}'></script>
+  -->
+
+</body>
+</html>

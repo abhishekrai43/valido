@@ -72,8 +72,8 @@
     });
   });
 
-  // Initialize fields from window or empty array
-  let fields = window.fields || [];
+  // Always start with empty fields array - loadRuleset() will populate if loading saved ruleset
+  let fields = [];
   // Keep window.fields in sync
   window.fields = fields;
 

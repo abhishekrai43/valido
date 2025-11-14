@@ -150,6 +150,10 @@ def extract_with_lookfor(
         
         # Pattern 5: "SearchTerm" on one line, value on next line
         rf"{escaped_term}\s*\n+\s*([^\n\r]+?)(?:\s{{2,}}|\n|$)",
+        
+        # Pattern 6: CATCH-ALL - "SearchTerm" followed by ANY non-empty content (more permissive)
+        # This catches edge cases like: 'Chapter "Something"', 'Chapter 2 Text', etc.
+        rf"{escaped_term}\s+(.+?)(?:\n|$)",
     ]
     
     # Collect all matches with their positions

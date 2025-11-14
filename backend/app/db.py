@@ -50,12 +50,49 @@ def create_db_and_tables() -> None:
     # Now create all tables
     SQLModel.metadata.create_all(engine)
     
+    # Handle migrations for existing databases
+    _migrate_database()
+    
     # Verify tables were created by checking the database file
     if SQLITE_URL.startswith("sqlite:///"):
         db_path = SQLITE_URL.replace("sqlite:///", "")
         if os.path.exists(db_path):
             size = os.path.getsize(db_path)
             print(f"✓ Database file created: {db_path} ({size} bytes)")
+
+
+def _migrate_database() -> None:
+    """Handle database schema migrations for existing databases."""
+    try:
+        from sqlalchemy import text
+        with Session(engine) as session:
+            # Check if User table needs migration (add trial columns if missing)
+            result = session.execute(text("PRAGMA table_info(user)"))
+            columns = {row[1] for row in result.fetchall()}
+            
+            if 'trial_start_date' not in columns:
+                print("📦 Migrating User table: adding trial_start_date column")
+                session.execute(text("ALTER TABLE user ADD COLUMN trial_start_date TIMESTAMP"))
+                session.commit()
+            
+            if 'trial_expired' not in columns:
+                print("📦 Migrating User table: adding trial_expired column")
+                session.execute(text("ALTER TABLE user ADD COLUMN trial_expired BOOLEAN DEFAULT 0"))
+                session.commit()
+            
+            if 'license_type' not in columns:
+                print("📦 Migrating User table: adding license_type column")
+                session.execute(text("ALTER TABLE user ADD COLUMN license_type VARCHAR"))
+                session.commit()
+            
+            if 'license_activated_at' not in columns:
+                print("📦 Migrating User table: adding license_activated_at column")
+                session.execute(text("ALTER TABLE user ADD COLUMN license_activated_at TIMESTAMP"))
+                session.commit()
+            
+            print("✓ Database migration completed successfully")
+    except Exception as e:
+        print(f"⚠️  Database migration check failed (this is okay for new databases): {e}")
 
 
 def get_session() -> Session:
