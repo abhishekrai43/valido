@@ -104,11 +104,12 @@ package-lock.json
 dist/
 build/
 
-# Installer files
-*.exe
-*.msi
-*.ps1
-*.wxs
+# Installer and build files (everywhere)
+**/*.exe
+**/*.msi
+**/*.ps1
+**/*.wxs
+**/*.bat
 installer/
 
 # Logs
@@ -123,10 +124,11 @@ results/
 *-old.*
 *.bak
 
-# Documentation and test files
-*.md
-*.pdf
-ChatGPT*.png
+# Documentation and test files (everywhere)
+**/*.md
+!README.md
+**/*.pdf
+**/ChatGPT*.png
 
 # Secret config
 .env.local
