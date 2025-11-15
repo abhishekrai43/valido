@@ -297,10 +297,22 @@ def validate_license_email(purchase_email: str, license_type: str = 'monthly') -
         if other_device_activation:
             # Another device is already using this license!
             logger.warning(f"License {purchase_email} already activated on another device")
+            
+            # Check if it's on the same network
+            same_network = other_device_activation.network_id == network_id
+            other_computer = other_device_activation.computer_name or "another computer"
+            
+            if same_network:
+                error_msg = f'⚠️ License already activated on "{other_computer}" (same network). Each license works on only ONE computer. To use on this computer, please deactivate the other installation first.'
+            else:
+                error_msg = f'⚠️ License already activated on "{other_computer}" at a different location. Each license works on only ONE computer. Please deactivate the other device or purchase an additional license.'
+            
             return {
                 'valid': False,
-                'error': 'License already activated on another computer. Please deactivate the other device first or contact support.',
-                'device_limit_reached': True
+                'error': error_msg,
+                'device_limit_reached': True,
+                'same_network': same_network,
+                'other_computer': other_computer
             }
     
     # New activation - validate with Gumroad
