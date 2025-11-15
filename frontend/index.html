@@ -489,10 +489,27 @@
             </div>
 
             <div class="wizard-step">
-              <label class="wizard-label">Text to Look For</label>
+              <label class="wizard-label">
+                Text to Look For
+                <span class="tooltip-icon" title="💡 Tip: If extraction doesn't work perfectly, try variations like 'Total', 'Total:', 'Total Amount', or just copy different text from your PDF. PDFs can vary in structure!">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-left: 4px; cursor: help;">
+                    <circle cx="8" cy="8" r="7" stroke="#0078d4" stroke-width="1.5" fill="none"/>
+                    <path d="M8 11V8M8 5H8.01" stroke="#0078d4" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </label>
               <input type="text" id="fieldLookForInput" class="wizard-input" 
                      placeholder="e.g. Employee Name:, Salary:, Invoice Date:" />
               <p class="wizard-hint">Must match <strong>exactly</strong> as it appears in the PDF</p>
+              <div class="helper-text" style="margin-top: 8px; padding: 10px; background-color: #fff4e6; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.9em;">
+                <strong>💡 Pro Tip:</strong> If extraction isn't working, try these variations:
+                <ul style="margin: 6px 0 0 20px; padding: 0;">
+                  <li>With or without punctuation: "Total" vs "Total:"</li>
+                  <li>Shorter text: "Amount" instead of "Total Amount Due"</li>
+                  <li>Try different nearby text from your PDF</li>
+                </ul>
+                <em style="color: #92400e;">PDFs vary in structure - experimenting is normal!</em>
+              </div>
             </div>
 
             <div class="wizard-step">
@@ -636,17 +653,42 @@
               </div>
 
               <div class="wizard-step">
-                <label class="wizard-label">Start Marker (Word or Phrase)</label>
+                <label class="wizard-label">
+                  Start Marker (Word or Phrase)
+                  <span class="tooltip-icon" title="💡 Tip: Try different variations if extraction doesn't work. Every PDF is structured differently!">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-left: 4px; cursor: help;">
+                      <circle cx="8" cy="8" r="7" stroke="#0078d4" stroke-width="1.5" fill="none"/>
+                      <path d="M8 11V8M8 5H8.01" stroke="#0078d4" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                </label>
                 <input type="text" id="betweenStartWord" class="wizard-input" 
                        placeholder="e.g. Invoice Number:, Total Amount:, Employee Name" />
                 <p class="wizard-hint">The text/phrase that appears BEFORE what you want to extract. Be specific to avoid multiple matches!</p>
               </div>
 
               <div class="wizard-step">
-                <label class="wizard-label">End Marker (Word or Phrase)</label>
+                <label class="wizard-label">
+                  End Marker (Word or Phrase)
+                  <span class="tooltip-icon" title="💡 Tip: If extraction fails, try different end markers or use [newline] to extract until the line break.">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-left: 4px; cursor: help;">
+                      <circle cx="8" cy="8" r="7" stroke="#0078d4" stroke-width="1.5" fill="none"/>
+                      <path d="M8 11V8M8 5H8.01" stroke="#0078d4" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                </label>
                 <input type="text" id="betweenEndWord" class="wizard-input" 
                        placeholder="e.g. Date of Issue, USD, Signature (or [newline] for line break)" />
                 <p class="wizard-hint">The text/phrase that appears AFTER what you want to extract. Be specific!</p>
+                <div class="helper-text" style="margin-top: 8px; padding: 10px; background-color: #fff4e6; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.9em;">
+                  <strong>💡 Not working?</strong> Try these quick fixes:
+                  <ul style="margin: 6px 0 0 20px; padding: 0;">
+                    <li>Use shorter text that's unique to that spot</li>
+                    <li>Copy the exact text from your PDF (don't type it)</li>
+                    <li>Try different words nearby in the document</li>
+                  </ul>
+                  <em style="color: #92400e;">Every PDF is different - trying variations is totally normal!</em>
+                </div>
               </div>
 
               <div class="wizard-step">
@@ -1205,58 +1247,22 @@
             </ul>
           </div>
 
-          <!-- Privacy & Security -->
-          <div class="how-to-card" style="border: 2px solid #10b981;">
-            <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 6V12C4 17 7 21 12 23C17 21 20 17 20 12V6L12 2Z" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>
-                <circle cx="12" cy="12" r="3" fill="#10b981"/>
-              </svg>
-            </div>
-            <h3>Privacy & Security</h3>
-            <ul class="how-to-list">
-              <li><strong>100% Local:</strong> Valido runs entirely on your computer</li>
-              <li><strong>No Cloud Upload:</strong> Your PDFs never leave your system</li>
-              <li><strong>No Internet Required:</strong> Works completely offline</li>
-              <li><strong>Your Data, Your Control:</strong> All processing happens locally</li>
-              <li><strong>No External Services:</strong> No data sent to third parties</li>
-              <li><strong>Instant Processing:</strong> Fast validation without network latency</li>
-            </ul>
-          </div>
-
           <!-- Tips & Best Practices -->
           <div class="how-to-card">
             <div class="how-to-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9 11L12 14L22 4" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h3>Tips & Best Practices</h3>
+            <h3>✅ Tips & Best Practices</h3>
             <ul class="how-to-list">
               <li><strong>Save Rulesets:</strong> Create and save rules you use frequently</li>
               <li><strong>Test First:</strong> Try with 1-2 documents before batch processing hundreds</li>
-              <li><strong>Text-Based PDFs Only:</strong> Scanned images won't work (must be text-based PDFs)</li>
+              <li><strong>Text-Based PDFs Only:</strong> Scanned images won't work (must be text-based PDFs with selectable text)</li>
               <li><strong>Clear Field Names:</strong> Use descriptive names when extracting data</li>
               <li><strong>Check Results:</strong> Always review the summary before relying on automated results</li>
-            </ul>
-          </div>
-
-          <!-- Platform Flexibility -->
-          <div class="how-to-card" style="border: 2px solid #0066cc;">
-            <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(0, 81, 217, 0.1));">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="3" width="20" height="14" rx="2" stroke="#0066cc" stroke-width="2"/>
-                <path d="M8 21H16" stroke="#0066cc" stroke-width="2" stroke-linecap="round"/>
-                <path d="M12 17V21" stroke="#0066cc" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3>Platform Flexibility</h3>
-            <p class="how-to-desc"><strong>Mixed Environment?</strong> Even if your team uses Mac systems, you can run Valido on a single Windows PC.</p>
-            <ul class="how-to-list">
-              <li><strong>Network Access:</strong> Users access it from any device (Mac, Windows, Linux) via web browser</li>
-              <li><strong>Centralized Storage:</strong> Results stored on Windows PC, accessible to all network users</li>
-              <li><strong>No Client Install:</strong> Team members just need a browser - no software to install</li>
-              <li><strong>Single Installpff:</strong> One installation serves your entire team</li>
+              <li><strong>Your Data Stays Local:</strong> All processing happens on your computer - nothing uploaded to the cloud</li>
             </ul>
           </div>
         </div>
@@ -1322,6 +1328,18 @@
                 <h4 style="margin: 0 0 8px 0; color: #004085;">✓ Example</h4>
                 <p style="margin: 0 0 8px 0; color: #004085; font-size: 13px;"><strong>Wrong:</strong> "Invoice Number: " (has space after colon)</p>
                 <p style="margin: 0; color: #004085; font-size: 13px;"><strong>Right:</strong> "Invoice Number:" (exact match from PDF)</p>
+              </div>
+
+              <div style="margin: 16px 0; padding: 12px; background: #fff4e6; border-left: 3px solid #f59e0b; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #92400e;">💡 Still Not Working? Try Variations!</h4>
+                <p style="margin: 0 0 8px 0; color: #92400e; font-size: 14px;">Every PDF is structured differently. If the exact text doesn't work, try these variations:</p>
+                <ul style="margin: 8px 0 0 20px; padding: 0; color: #92400e; font-size: 14px;">
+                  <li><strong>With/without punctuation:</strong> "Total" vs "Total:" vs "Total Amount"</li>
+                  <li><strong>Shorter text:</strong> Instead of "Total Amount Due:", try just "Total"</li>
+                  <li><strong>Different nearby text:</strong> Try text that appears just before or after the value</li>
+                  <li><strong>More unique words:</strong> If "Date" appears multiple times, try "Invoice Date" or "Issue Date"</li>
+                </ul>
+                <p style="margin: 8px 0 0 0; color: #92400e; font-size: 13px; font-style: italic;">Finding the right search term might take 2-3 tries - that's completely normal!</p>
               </div>
             </div>
 

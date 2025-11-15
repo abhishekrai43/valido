@@ -1084,8 +1084,28 @@
         fetch(reportUrl)
           .then(r => r.ok ? r.json() : Promise.reject('no report'))
           .then(j => {
-            const infoHtml = `<div class="report-summary">Successfully processed ${j.processed || j.total || '-'} of ${j.total || '-'} documents. Download the ZIP file to view results.</div>`;
-            resultsOutput.innerHTML = infoHtml;
+            // Try to get results path from task status first
+            fetch(`/api/v1/tasks/${taskId}`)
+              .then(r => r.json())
+              .then(statusData => {
+                const resultsPath = statusData?.info?.results_path || `results\\${taskId}`;
+                const infoHtml = `
+                  <div class="report-summary">
+                    <p style="margin-bottom: 12px;">✅ Successfully processed <strong>${j.processed || 0}</strong> of <strong>${j.total_files || 0}</strong> documents.</p>
+                    <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
+                  </div>`;
+                resultsOutput.innerHTML = infoHtml;
+              })
+              .catch(() => {
+                // Fallback if status fetch fails
+                const resultsPath = `results\\${taskId}`;
+                const infoHtml = `
+                  <div class="report-summary">
+                    <p style="margin-bottom: 12px;">✅ Successfully processed <strong>${j.processed || 0}</strong> of <strong>${j.total_files || 0}</strong> documents.</p>
+                    <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
+                  </div>`;
+                resultsOutput.innerHTML = infoHtml;
+              });
           })
           .catch(() => {
             resultsOutput.innerHTML = '<div class="helper">Processing complete. Download the results to view details.</div>';

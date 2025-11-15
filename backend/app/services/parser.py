@@ -49,11 +49,69 @@ def is_valid_pdf(pdf_bytes: bytes) -> bool:
 
 
 def extract_text_from_bytes(pdf_bytes: bytes) -> str:
-    """Extract text using PyMuPDF. If PDF is likely scanned, return sentinel message."""
+    """Extract text using hybrid approach: pdfplumber (table-aware) first, then PyMuPDF fallback.
+    
+    This handles table-structured PDFs better by preserving row/column layout.
+    Falls back to PyMuPDF for simple text-only PDFs.
+    """
     if not pdf_bytes:
         logger.warning("extract_text_from_bytes: empty input bytes")
         return ""
 
+    # Try pdfplumber first (better for table-structured PDFs)
+    try:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            total_pages = len(pdf.pages)
+            text_chunks = []
+            low_text_pages = 0
+            
+            for i in range(total_pages):
+                page = pdf.pages[i]
+                
+                # Check if page has tables
+                tables = page.extract_tables()
+                
+                if tables:
+                    # Table-structured content: convert tables to text format
+                    page_text = page.extract_text() or ""
+                    
+                    # Enhance with structured table data
+                    for table_idx, table in enumerate(tables):
+                        if table:
+                            table_text = f"\n[TABLE_{table_idx + 1}]\n"
+                            for row in table:
+                                if row:
+                                    # Join cells with tab separator for better parsing
+                                    table_text += "\t".join([str(cell or "").strip() for cell in row]) + "\n"
+                            page_text += table_text
+                    
+                    text_chunks.append(page_text.strip())
+                    if len(page_text.strip()) < 20:
+                        low_text_pages += 1
+                else:
+                    # No tables: use regular text extraction
+                    page_text = page.extract_text() or ""
+                    text_chunks.append(page_text.strip())
+                    if len(page_text.strip()) < 20:
+                        low_text_pages += 1
+            
+            combined = "\n".join([t for t in text_chunks if t]).strip()
+            
+            # Heuristic: if most pages are low-text, treat as scanned
+            low_ratio = (low_text_pages / total_pages) if total_pages > 0 else 1.0
+            if not combined or low_ratio > 0.6:
+                logger.info("PDF appears to be a scan/image-only (no extractable text)")
+                return "[SCANNED_PDF] This PDF appears to be a scan or image. Please use digitally-generated PDFs with selectable text."
+            
+            if len(combined) >= 20:
+                logger.info(f"pdfplumber extraction successful ({len(combined)} chars, {len(tables) if tables else 0} tables detected)")
+                return combined
+                
+    except Exception as e:
+        logger.info(f"pdfplumber extraction failed, falling back to PyMuPDF: {type(e).__name__}: {e}")
+
+    # Fallback to PyMuPDF (original extraction method)
     try:
         import fitz  # PyMuPDF
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:

@@ -226,6 +226,10 @@ async def get_task_status(task_id: str):
                 info["result"] = result
             info["error"] = task_info.get("error")
             
+            # Add results path if task is complete
+            if state == "SUCCESS" and RESULTS_ROOT:
+                info["results_path"] = os.path.abspath(os.path.join(RESULTS_ROOT, task_id))
+            
             return JSONResponse(
                 content={"task_id": task_id, "state": state, "info": info}
             )
