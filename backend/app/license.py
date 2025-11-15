@@ -23,7 +23,7 @@ def get_license_banner() -> Optional[Dict]:
                 # No user yet - show trial info
                 return {
                     "type": "trial",
-                    "message": "14-day trial will begin on first use",
+                    "message": "7-day trial will begin on first use",
                     "details": "Full features available during trial",
                     "link": None,
                     "linkText": None

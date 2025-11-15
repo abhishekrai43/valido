@@ -224,26 +224,26 @@
 
       // Validation
       if (!name) {
-        alert('Please enter a field name');
+        window.toast.error('Please enter a field name');
         return;
       }
       
       // For computed fields, require formula and skip lookFor
       if (type === 'computed') {
         if (!formula) {
-          alert('Please enter a formula for computed field');
+          window.toast.error('Please enter a formula for computed field');
           return;
         }
       } else {
         // For non-computed fields, require lookFor
         if (!lookFor) {
-          alert('Please enter text to look for');
+          window.toast.error('Please enter text to look for');
           return;
         }
       }
       
       if (inTable && !column) {
-        alert('Please specify which column to extract from');
+        window.toast.error('Please specify which column to extract from');
         return;
       }
 
@@ -251,7 +251,7 @@
       const normalizedName = name.trim().toLowerCase();
       const duplicate = fields.find(f => f.name.trim().toLowerCase() === normalizedName);
       if (duplicate) {
-        alert(`A field with the name "${duplicate.name}" already exists. Please use a different name.`);
+        window.toast.error(`A field with the name "${duplicate.name}" already exists. Please use a different name.`);
         return;
       }
 
@@ -322,6 +322,7 @@
   }
 
   function buildRulesPreview(){
+    console.log('buildRulesPreview called, window.fields:', window.fields);
     let rules = { fields: [], validations: {}, calculations: [] };
     
     if (chkSigned && chkSigned.checked) {
@@ -383,10 +384,16 @@
     if (!rules.fields || rules.fields.length===0) delete rules.fields;
     if (!rules.calculations || rules.calculations.length===0) delete rules.calculations;
     
+    console.log('buildRulesPreview final rules:', JSON.stringify(rules, null, 2));
+    
     // Build human-readable summary with HTML formatting
     let summaryHtml = '';
     
-    if (Object.keys(rules).length === 0) {
+    // Check if any rules are configured
+    const hasAnyRules = rules.validations || (rules.fields && rules.fields.length > 0) || 
+                        (rules.calculations && rules.calculations.length > 0);
+    
+    if (!hasAnyRules) {
       summaryHtml = '<div class="preview-empty">No rules selected yet. Choose some checks above to get started.</div>';
     } else {
       summaryHtml = '<div class="preview-content">';
@@ -539,6 +546,7 @@
 
   // return a canonical rules payload (object) for saving/submitting
   function getRulesPayload(){
+    console.log('getRulesPayload called, window.fields:', window.fields);
     let rules = { fields: [], validations: {} };
     
     if (chkSigned && chkSigned.checked) {
@@ -580,6 +588,11 @@
         validations: f.validations || []  // Include field-level validations
       };
       
+      // Add column if specified
+      if (f.column) {
+        field.column = f.column;
+      }
+      
       // Include startMarker and endMarker for 'between' strategy
       if (f.strategy === 'between') {
         field.startMarker = f.startMarker;
@@ -600,6 +613,7 @@
       }
     }
     
+    console.log('getRulesPayload returning:', JSON.stringify(rules, null, 2));
     return rules;
   }
 

@@ -114,3 +114,65 @@ class DeviceActivation(SQLModel, table=True):
     computer_name: Optional[str] = Field(default=None)
     network_info: Optional[str] = Field(default=None)  # Human-readable network description
 
+
+# ============================================================================
+# CLOUD MODELS (Supabase) - For centralized license management
+# ============================================================================
+
+class CloudLicense(SQLModel, table=True):
+    """Cloud-stored license information for device tracking and validation.
+    Stored in Supabase to prevent license abuse across multiple devices.
+    """
+    __tablename__ = "licenses"
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    license_key: str = Field(index=True, unique=True)  # Unique license key from Gumroad
+    purchase_email: str = Field(index=True)  # Email used for purchase
+    
+    # Device tracking (JSON array of hardware IDs)
+    device_ids: Optional[str] = Field(default=None)  # JSON array: ["device1", "device2"]
+    max_devices: int = Field(default=1)  # How many devices allowed (1, 3, or 5)
+    
+    # License details
+    license_type: str  # "monthly" or "annual"
+    is_active: bool = Field(default=True)
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = Field(default=None)
+
+
+class AppVersion(SQLModel, table=True):
+    """Tracks app versions for update notifications.
+    Stored in Supabase so all users can check for updates.
+    """
+    __tablename__ = "app_versions"
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    version: str = Field(index=True, unique=True)  # e.g. "1.0.1"
+    release_date: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Update details
+    download_url: Optional[str] = Field(default=None)  # Where to download
+    changelog: Optional[str] = Field(default=None)  # What's new
+    is_latest: bool = Field(default=False)  # Mark the current latest version
+    is_required: bool = Field(default=False)  # Force update if True
+
+
+class LicenseUsage(SQLModel, table=True):
+    """Tracks when licenses are validated (optional analytics).
+    Helps understand usage patterns and detect suspicious activity.
+    """
+    __tablename__ = "license_usage"
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    license_key: str = Field(index=True)
+    device_id: str = Field(index=True)
+    
+    # Usage tracking
+    last_validated: datetime = Field(default_factory=datetime.utcnow)
+    app_version: Optional[str] = Field(default=None)  # Which version user is on
+    validation_count: int = Field(default=1)  # How many times validated

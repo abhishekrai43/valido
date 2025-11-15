@@ -9,6 +9,9 @@ Handles different extraction strategies for pulling data from PDF text:
 
 import re
 from typing import List, Optional, Tuple
+from app.utils.logger import get_logger
+
+logger = get_logger("ValidoExtractor")
 
 
 def extract_between_markers(
@@ -212,51 +215,149 @@ def apply_extraction_strategy(
 
 def extract_column_from_value(
     value: str,
-    column: Optional[str] = None
+    column: Optional[str] = None,
+    full_text: Optional[str] = None
 ) -> str:
     """
     Extract specific column from multi-column table value.
     
     Args:
-        value: Value string potentially containing multiple columns
+        value: Value string potentially containing multiple columns  
         column: Column selector:
             - "first", "last", "all": Position-based selection
             - "1", "2", "3": 1-based index
-            - Column name: Match by header (not yet implemented)
+            - Column name: Searches for column in table headers to determine position
             - None: Return all columns
+        full_text: Full document text to search for table headers (optional but recommended)
     
     Returns:
         Selected column value(s)
     
     Examples:
-        value="₹ 1,800  ₹ 21,600", column="first" → "₹ 1,800"
-        value="₹ 1,800  ₹ 21,600", column="2" → "₹ 21,600"
-        value="₹ 1,800  ₹ 21,600", column="all" → "₹ 1,800 | ₹ 21,600"
+        value="Basic  ₹ 1,800  ₹ 21,600", column="first" → "Basic"
+        value="Basic  ₹ 1,800  ₹ 21,600", column="2" → "₹ 1,800"
+        value="Basic  ₹ 1,800  ₹ 21,600", column="Per Month", full_text="..." → "₹ 1,800" (searches headers)
     """
+    logger.info(f"DEBUG extract_column_from_value: value='{value}', column='{column}'")
+    
     if not column or not value:
+        logger.info(f"DEBUG extract_column_from_value: Returning original value (no column/value)")
         return value
     
     # Split by multiple spaces (table column separator)
+    # Try different splitting strategies in order of preference:
+    
+    # Strategy 1: Split by 2+ spaces (standard table format)
     columns = re.split(r'\s{2,}', value.strip())
+    logger.info(f"DEBUG extract_column_from_value: Strategy 1 (2+ spaces) - columns: {columns}")
+    
+    # Strategy 2: If only 1 column, try splitting by single space between distinct values
+    # (handles cases where values are separated by just one space)
+    if len(columns) <= 1:
+        # Split by single space but merge currency symbols with their values
+        parts = value.strip().split()
+        columns = []
+        i = 0
+        while i < len(parts):
+            # If this part is a currency symbol, merge it with the next part
+            if parts[i] in ['₹', '$', '€', '£', '¥', '₨'] and i + 1 < len(parts):
+                columns.append(parts[i] + ' ' + parts[i + 1])
+                i += 2
+            else:
+                columns.append(parts[i])
+                i += 1
+        logger.info(f"DEBUG extract_column_from_value: Strategy 2 (single space with currency merge) - columns: {columns}")
     
     if len(columns) <= 1:
         # Not a multi-column value, return as-is
+        logger.info(f"DEBUG extract_column_from_value: Only 1 column, returning as-is")
         return value
     
     # Handle column selection
-    if column == "first":
+    column_lower = column.lower().strip()
+    
+    logger.info(f"DEBUG extract_column_from_value: column_lower='{column_lower}'")
+    
+    if column_lower == "first":
+        logger.info(f"DEBUG extract_column_from_value: Returning first column: {columns[0]}")
         return columns[0]
-    elif column == "last":
+    elif column_lower == "last":
+        logger.info(f"DEBUG extract_column_from_value: Returning last column: {columns[-1]}")
         return columns[-1]
-    elif column == "all":
-        return " | ".join(columns)
+    elif column_lower == "all":
+        result = " | ".join(columns)
+        logger.info(f"DEBUG extract_column_from_value: Returning all columns: {result}")
+        return result
     elif column.isdigit():
         # 1-based index
         idx = int(column) - 1
+        logger.info(f"DEBUG extract_column_from_value: Numeric column '{column}', using index {idx}")
         if 0 <= idx < len(columns):
+            logger.info(f"DEBUG extract_column_from_value: Returning column at index {idx}: {columns[idx]}")
             return columns[idx]
+        logger.info(f"DEBUG extract_column_from_value: Index out of range, returning first column: {columns[0]}")
         return columns[0]  # Fallback to first
     else:
-        # Column name matching (not yet implemented)
-        # TODO: Implement header detection
-        return columns[0]
+        # Column name matching - try to find actual column position from table headers
+        logger.info(f"DEBUG extract_column_from_value: Column name specified, len(columns)={len(columns)}")
+        
+        # First, try to find the column in structured table headers if full_text is provided
+        column_index = None
+        if full_text and '[TABLE_' in full_text:
+            logger.info(f"DEBUG extract_column_from_value: Searching for column '{column}' in table headers")
+            # Find table sections
+            table_pattern = r'\[TABLE_\d+\](.*?)(?=\[TABLE_\d+\]|$)'
+            tables = re.findall(table_pattern, full_text, re.DOTALL)
+            
+            for table in tables:
+                lines = table.strip().split('\n')
+                if lines:
+                    # First line is usually the header
+                    header = lines[0]
+                    # Split by tab (pdfplumber uses tabs to separate columns)
+                    header_cols = header.split('\t')
+                    logger.info(f"DEBUG extract_column_from_value: Found table header: {header_cols}")
+                    
+                    # Search for the column name in headers (case-insensitive)
+                    for idx, header_col in enumerate(header_cols):
+                        if header_col.strip().lower() == column.lower().strip():
+                            column_index = idx
+                            logger.info(f"DEBUG extract_column_from_value: Found column '{column}' at index {idx}")
+                            break
+                    
+                    if column_index is not None:
+                        break
+        
+        # If we found the column index from table headers, use it
+        if column_index is not None and 0 <= column_index < len(columns):
+            logger.info(f"DEBUG extract_column_from_value: Using column index {column_index} from table header: {columns[column_index]}")
+            return columns[column_index]
+        
+        # Fallback to keyword-based heuristics if header search didn't work
+        column_keywords_lower = column_lower.replace(' ', '')
+        
+        if 'annum' in column_keywords_lower or 'annual' in column_keywords_lower or 'yearly' in column_keywords_lower or 'year' in column_keywords_lower:
+            # Likely the last/annual column
+            logger.info(f"Column name '{column}' contains annual/year keyword - using last column: {columns[-1]}")
+            return columns[-1]
+        elif 'month' in column_keywords_lower or 'monthly' in column_keywords_lower:
+            # Likely the Per Month column (usually 2nd column, index 1)
+            if len(columns) >= 2:
+                logger.info(f"Column name '{column}' contains month keyword - using 2nd column (index 1): {columns[1]}")
+                return columns[1]
+            else:
+                logger.info(f"Column name '{column}' contains month keyword but only 1 column - returning first: {columns[0]}")
+                return columns[0]
+        else:
+            # Generic column name - default to second column (first value column)
+            # if there are 3+ columns, since first column is typically the row label.
+            if len(columns) >= 3:
+                # Multi-column table with row labels
+                # Default to second column (first value column)
+                logger.info(f"Column name '{column}' specified - defaulting to second column (first value column): {columns[1]}")
+                return columns[1]
+            else:
+                # Only 2 columns, use first
+                logger.info(f"Column name '{column}' specified - using first column: {columns[0]}")
+            return columns[0]
+

@@ -11,7 +11,7 @@ from app.utils.logger import get_logger
 from app.utils.trial_manager import (
     calculate_trial_status, 
     start_trial, 
-    validate_license_email,
+    validate_license_key,
     check_access
 )
 
@@ -115,19 +115,18 @@ def start_user_trial():
         }
 
 
-class EmailLicenseActivation(BaseModel):
-    """Email-based license activation"""
-    purchase_email: str
-    license_type: str  # 'monthly' or 'annual'
+class LicenseActivation(BaseModel):
+    """License key activation"""
+    license_key: str
 
 
-@router.post("/activate-license-email")
-def activate_license_email(payload: EmailLicenseActivation):
-    """Activate license using purchase email (NEW METHOD - recommended)."""
-    logger.info(f"Activating license for email: {payload.purchase_email}")
+@router.post("/activate-license")
+def activate_license(payload: LicenseActivation):
+    """Activate license using license key (cloud-validated)."""
+    logger.info(f"Activating license key: {payload.license_key[:8]}...")
     
-    # Validate with Gumroad
-    validation = validate_license_email(payload.purchase_email, payload.license_type)
+    # Validate with cloud API
+    validation = validate_license_key(payload.license_key)
     
     if not validation['valid']:
         logger.warning(f"License validation failed: {validation.get('error')}")
@@ -143,22 +142,22 @@ def activate_license_email(payload: EmailLicenseActivation):
             user = User(username="default")
             session.add(user)
         
-        user.license_key = payload.purchase_email  # Store email as license key
+        user.license_key = payload.license_key
         user.license_active = True
-        user.license_type = payload.license_type
+        user.license_type = validation.get('license_type', 'monthly')
         user.license_activated_at = datetime.utcnow()
         user.trial_expired = False
         
         session.commit()
         session.refresh(user)
         
-        logger.info(f"License activated successfully: {payload.license_type}")
+        logger.info(f"License activated successfully: {user.license_type}")
         return {
             'status': 'success',
             'message': validation.get('message', 'License activated!'),
             'license_type': user.license_type,
-            'customer_email': validation.get('customer_email'),
             'activated_at': user.license_activated_at.isoformat(),
+            'offline': validation.get('offline', False),
             'cached': validation.get('cached', False)
         }
 

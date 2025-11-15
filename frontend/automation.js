@@ -323,7 +323,7 @@ async function browseFolder(inputId) {
         }
     } else {
         console.log('showDirectoryPicker NOT supported in this browser');
-        alert('Your browser does not support the directory picker. Please paste the full path manually (e.g., C:\\Folder or \\\\SERVER\\Share\\Folder)');
+        window.toast.error('Your browser does not support the directory picker. Please paste the full path manually (e.g., C:\\Folder or \\\\SERVER\\Share\\Folder)');
     }
 }
 
@@ -562,21 +562,19 @@ async function runWatchFolderNow(id) {
 
 // Delete watch folder
 async function deleteWatchFolder(id) {
-    if (!confirm('Are you sure you want to delete this watch folder configuration?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/v1/watch-folders/${id}`, {
-            method: 'DELETE'
-        });
+    window.toast.confirm('Are you sure you want to delete this watch folder configuration?', async () => {
+        try {
+            const response = await fetch(`/api/v1/watch-folders/${id}`, {
+                method: 'DELETE'
+            });
         
-        if (response.ok) {
-            await loadWatchFolders();
+            if (response.ok) {
+                await loadWatchFolders();
+            }
+        } catch (error) {
+            console.error('Failed to delete watch folder:', error);
         }
-    } catch (error) {
-        console.error('Failed to delete watch folder:', error);
-    }
+    });
 }
 
 // Copy server URL to clipboard

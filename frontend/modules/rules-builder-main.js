@@ -81,24 +81,24 @@ async function loadSavedRulesets() {
 }
 
 async function deleteRuleset(id, name) {
-  if (!confirm(`Delete ruleset "${name}"?`)) return;
-  
-  try {
-    const response = await fetch(`/api/v1/rulesets/${id}`, {
-      method: 'DELETE'
-    });
+  window.toast.confirm(`Delete ruleset "${name}"?`, async () => {
+    try {
+      const response = await fetch(`/api/v1/rulesets/${id}`, {
+        method: 'DELETE'
+      });
     
-    if (!response.ok) throw new Error('Failed to delete ruleset');
-    
-    // Show success
-    showStatus('Ruleset deleted successfully', 'success');
-    
-    // Reload list
-    loadSavedRulesets();
-  } catch (error) {
-    console.error('Error deleting ruleset:', error);
-    showStatus('Failed to delete ruleset', 'error');
-  }
+      if (!response.ok) throw new Error('Failed to delete ruleset');
+      
+      // Show success
+      showStatus('Ruleset deleted successfully', 'success');
+      
+      // Reload list
+      loadSavedRulesets();
+    } catch (error) {
+      console.error('Error deleting ruleset:', error);
+      showStatus('Failed to delete ruleset', 'error');
+    }
+  });
 }
 
 function setupSaveRuleset() {
@@ -132,23 +132,30 @@ function setupSaveRuleset() {
     saveRulesetModalSave.addEventListener('click', async () => {
       const name = rulesetNameInput.value.trim();
       if (!name) {
-        alert('Please enter a name for the ruleset');
+        window.toast.error('Please enter a name for the ruleset');
         return;
       }
       
       // Build rules object
       const rules = {
         validations: typeof getDocumentValidations === 'function' ? getDocumentValidations() : {},
-        fields: typeof getFields === 'function' ? getFields().map(f => ({
-          name: f.name,
-          lookFor: f.lookFor,
-          type: f.type,
-          strategy: f.strategy || 'first',
-          validations: f.validations || [],
-          ...(f.column && { column: f.column })
-        })) : [],
+        fields: typeof getFields === 'function' ? getFields().map(f => {
+          console.log('Processing field for save:', f);
+          const fieldObj = {
+            name: f.name,
+            lookFor: f.lookFor,
+            type: f.type,
+            strategy: f.strategy || 'first',
+            validations: f.validations || [],
+            ...(f.column && { column: f.column })
+          };
+          console.log('Mapped field object:', fieldObj);
+          return fieldObj;
+        }) : [],
         calculations: typeof getCalculations === 'function' ? getCalculations() : []
       };
+      
+      console.log('Final rules object being saved:', JSON.stringify(rules, null, 2));
       
       // Remove empty arrays/objects
       if (Object.keys(rules.validations).length === 0) delete rules.validations;
@@ -156,7 +163,7 @@ function setupSaveRuleset() {
       if (rules.calculations.length === 0) delete rules.calculations;
       
       if (Object.keys(rules).length === 0) {
-        alert('Please add some rules before saving');
+        window.toast.error('Please add some rules before saving');
         return;
       }
       

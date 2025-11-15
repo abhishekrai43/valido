@@ -382,7 +382,7 @@
             <div class="share-modal-body">
               <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
                 Found a bug? Have a feature request? We'd love to hear from you!<br>
-                <strong style="color: #764ba2;">💡 Tip:</strong> For bugs, please include: what you expected vs. what happened, steps to reproduce, and any error logs from <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">data/logs/</code> folder.
+                <strong style="color: #764ba2;">💡 Tip:</strong> For common issues and solutions, check the <strong>Troubleshooting</strong> section in the "How To Use" tab first.
               </p>
               
               <form id="feedbackForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
@@ -569,6 +569,11 @@
           continueBtn.classList.remove('btn-enabled');
         }
       }
+      
+      // Dispatch event for extraction preview
+      window.dispatchEvent(new CustomEvent('filesUploaded', {
+        detail: { files: selectedFiles }
+      }));
     }
     
     function renderFilesList() {
@@ -788,7 +793,12 @@
       }
       
       // Debug: log what rules are being sent
+      console.log('=== SUBMIT DEBUG ===');
+      console.log('rulesEl:', rulesEl);
+      console.log('rulesEl.dataset.json:', rulesEl?.dataset?.json);
+      console.log('Parsed rules:', JSON.parse(rules || '{}'));
       console.log('Submitting with rules:', rules);
+      console.log('===================');
       
       if (!files || files.length === 0) {
         isSubmitting = false;  // Reset flag
@@ -1175,7 +1185,6 @@
     const automationSection = document.getElementById('automationSection');
     const howToSection = document.getElementById('howToSection');
     const featuresSection = document.getElementById('featuresSection');
-    const networkInfo = document.getElementById('networkInfo');
 
     if (navUpload && navAutomation && navHowTo && navFeatures && uploadSection && automationSection && howToSection && featuresSection) {
       // Features tab (default view)
@@ -1184,7 +1193,6 @@
         automationSection.style.display = 'none';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'block';
-        networkInfo.style.display = 'none';
         navFeatures.classList.add('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
@@ -1198,7 +1206,6 @@
         automationSection.style.display = 'none';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'none';
-        networkInfo.style.display = 'block';
         navUpload.classList.add('active');
         navFeatures.classList.remove('active');
         navAutomation.classList.remove('active');
@@ -1214,7 +1221,6 @@
         automationSection.style.display = 'block';
         howToSection.style.display = 'none';
         featuresSection.style.display = 'none';
-        networkInfo.style.display = 'none';
         navAutomation.classList.add('active');
         navFeatures.classList.remove('active');
         navUpload.classList.remove('active');
@@ -1228,7 +1234,6 @@
         automationSection.style.display = 'none';
         howToSection.style.display = 'block';
         featuresSection.style.display = 'none';
-        networkInfo.style.display = 'none';
         howToSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         navHowTo.classList.add('active');
         navFeatures.classList.remove('active');
@@ -1267,7 +1272,6 @@
       automationSection.style.display = 'none';
       howToSection.style.display = 'none';
       pricingSection.style.display = 'none';
-      networkInfo.style.display = 'none';
       navFeatures.classList.add('active');
     }
 

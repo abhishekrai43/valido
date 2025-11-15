@@ -79,18 +79,18 @@ function initCalculations() {
 
       // Validation
       if (!name) {
-        alert('Please enter a calculation name');
+        window.toast.error('Please enter a calculation name');
         return;
       }
       if (!formula) {
-        alert('Please enter a formula');
+        window.toast.error('Please enter a formula');
         return;
       }
 
       // Check for duplicate names
       const exists = calculations.some(c => c.name === name);
       if (exists) {
-        alert('A calculation with this name already exists');
+        window.toast.error('A calculation with this name already exists');
         return;
       }
 
@@ -115,8 +115,9 @@ function updateAvailableFields() {
   
   if (!availableFieldsList || !calcFormulaInput) return;
 
-  // Get fields from the global fields array (assumed to be available from rules-builder.js)
-  const hasFields = typeof fields !== 'undefined' && fields && fields.length > 0;
+  // Get fields from the global window.fields array
+  const fields = window.fields || [];
+  const hasFields = fields && fields.length > 0;
   const hasCalculations = calculations && calculations.length > 0;
   
   if (!hasFields && !hasCalculations) {
@@ -246,7 +247,7 @@ function renderCalculations() {
 }
 
 function removeCalculation(index) {
-  if (confirm('Remove this calculation?')) {
+  window.toast.confirm('Remove this calculation?', () => {
     calculations.splice(index, 1);
     renderCalculations();
     if (typeof buildRulesPreview === 'function') {
@@ -254,7 +255,7 @@ function removeCalculation(index) {
     } else if (typeof window.buildRulesPreview === 'function') {
       window.buildRulesPreview();
     }
-  }
+  });
 }
 
 function getCalculations() {

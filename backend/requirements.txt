@@ -12,6 +12,11 @@ python-multipart>=0.0.5
 # Lightweight ORM for SQLite + FastAPI friendliness
 sqlmodel>=0.0.8
 
+# Database drivers
+psycopg2-binary>=2.9.0  # PostgreSQL driver for Supabase
+python-dotenv>=1.0.0     # Environment variable management
+requests>=2.31.0         # HTTP requests for cloud license API
+
 # System monitoring
 psutil>=5.9.0
 

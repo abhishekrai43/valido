@@ -3273,6 +3273,10 @@ textarea:focus {
   animation: fadeIn 0.2s ease-out;
 }
 
+.wizard-modal[style*="display: block"] {
+  display: flex !important;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

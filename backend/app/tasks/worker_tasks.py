@@ -372,7 +372,14 @@ def process_pdfs_sync(
         if isinstance(fields, list):
             for field in fields:
                 if isinstance(field, dict):
-                    extraction_fields.append({'name': field.get('name', ''), 'strategy': field.get('strategy', 'first')})
+                    field_dict = {
+                        'name': field.get('name', ''), 
+                        'strategy': field.get('strategy', 'first')
+                    }
+                    # Include column if specified
+                    if field.get('column'):
+                        field_dict['column'] = field.get('column')
+                    extraction_fields.append(field_dict)
                 elif isinstance(field, str):
                     extraction_fields.append({'name': field, 'strategy': 'first'})
 

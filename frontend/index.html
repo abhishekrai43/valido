@@ -111,6 +111,15 @@
         <div class="intro-section">
           <h1 class="page-title">PDF Validations. Simplified.</h1>
           <p class="page-subtitle">Upload PDFs, define validation rules, get professional reports. Your files never leave your computer.</p>
+          <div style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 8px; display: inline-block;">
+            <span style="font-weight: 600; color: #0c4a6e;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <path d="M8 21h8M12 17v4"/>
+              </svg>
+              For Windows 10/11
+            </span>
+          </div>
         </div>
 
         <!-- Features Grid -->
@@ -183,17 +192,6 @@
               <h3>Professional Reports</h3>
               <p>Export results as CSV, Excel, PDF, or JSON. Clean formatting, ready to share.</p>
             </div>
-
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#0066ff" stroke-width="2"/>
-                  <path d="M9 22V12H15V22" stroke="#0066ff" stroke-width="2"/>
-                </svg>
-              </div>
-              <h3>Network Ready</h3>
-              <p>Run on one Windows PC, access from any device (Mac, Windows, Linux) over your network. Perfect for mixed-platform teams.</p>
-            </div>
           </div>
         </div>
       </section>
@@ -227,15 +225,6 @@
           </div>
         </div>
       </section>
-
-      <!-- Network Access Info (only show on upload section) -->
-      <div id="networkInfo" class="network-info" style="display:none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
-        <p style="margin: 0; color: #0c4a6e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em;">
-          <strong>Want to access Valido from another computer on your network?</strong><br>
-          Open <code id="networkUrl" style="background: rgba(255,255,255,0.8); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace;">http://192.168.1.100:8000</code> in your browser
-        </p>
-      </div>
-
       <section id="uploadSection">
         <!-- Step indicator -->
         <div class="steps-indicator">
@@ -501,15 +490,6 @@
               <input type="text" id="fieldLookForInput" class="wizard-input" 
                      placeholder="e.g. Employee Name:, Salary:, Invoice Date:" />
               <p class="wizard-hint">Must match <strong>exactly</strong> as it appears in the PDF</p>
-              <div class="helper-text" style="margin-top: 8px; padding: 10px; background-color: #fff4e6; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.9em;">
-                <strong>💡 Pro Tip:</strong> If extraction isn't working, try these variations:
-                <ul style="margin: 6px 0 0 20px; padding: 0;">
-                  <li>With or without punctuation: "Total" vs "Total:"</li>
-                  <li>Shorter text: "Amount" instead of "Total Amount Due"</li>
-                  <li>Try different nearby text from your PDF</li>
-                </ul>
-                <em style="color: #92400e;">PDFs vary in structure - experimenting is normal!</em>
-              </div>
             </div>
 
             <div class="wizard-step">
@@ -558,16 +538,13 @@
             <!-- Column Selection (for multi-column tables) -->
             <div class="wizard-step">
               <label class="wizard-label">
+                <input type="checkbox" id="fieldInTableCheckbox" style="margin-right: 8px;">
                 Is this field in a multi-column table?
-                <input type="checkbox" id="fieldInTableCheckbox" style="margin-left: 8px;">
               </label>
               <div id="fieldColumnSection" style="display: none; margin-top: 10px;">
                 <label class="wizard-label">Which column?</label>
                 <input type="text" id="fieldColumnInput" class="wizard-input" 
-                       placeholder='e.g. "Per Month", "Monthly", "Annual", or "first", "last", "1", "2"' />
-                <p class="wizard-hint">
-                  Enter the column header name, or use: "first", "last", or number "1", "2", "3"
-                </p>
+                       placeholder='e.g. "Particulars", "Salary", "Amount", or "first", "last", "1", "2"' />
               </div>
             </div>
 
@@ -578,20 +555,34 @@
               <!-- Text validation rules -->
               <div id="textValidations" class="validation-group" style="display: none;">
                 <label class="validation-checkbox">
+                  <input type="checkbox" id="textRequired">
+                  <span style="font-weight: 600; color: #dc2626;">Required (must not be empty)</span>
+                </label>
+                <label class="validation-checkbox">
                   <input type="checkbox" id="textMinLength">
                   <span>Minimum length:</span>
                   <input type="number" id="textMinLengthValue" min="1" class="inline-number" placeholder="10">
+                  <span style="font-size: 12px; color: #6b7280;">characters</span>
                 </label>
                 <label class="validation-checkbox">
                   <input type="checkbox" id="textMaxLength">
                   <span>Maximum length:</span>
                   <input type="number" id="textMaxLengthValue" min="1" class="inline-number" placeholder="100">
+                  <span style="font-size: 12px; color: #6b7280;">characters</span>
                 </label>
                 <label class="validation-checkbox">
                   <input type="checkbox" id="textPattern">
-                  <span>Must match pattern:</span>
-                  <input type="text" id="textPatternValue" class="inline-text" placeholder="e.g. ^[A-Z]{3}-\d{4}$">
+                  <span>Must match regex:</span>
+                  <input type="text" id="textPatternValue" class="inline-text" placeholder="e.g. ^[A-Z]{3}-\d{4}$" style="font-family: monospace;">
                 </label>
+                <label class="validation-checkbox">
+                  <input type="checkbox" id="textMustBeOneOf">
+                  <span>Must be one of:</span>
+                  <input type="text" id="textMustBeOneOfValue" class="inline-text" placeholder="e.g. HR, IT, Finance, Sales">
+                </label>
+                <p class="wizard-hint" style="margin-top: 8px; font-size: 12px;">
+                  💡 For "Must be one of", separate values with commas
+                </p>
               </div>
 
               <!-- Number validation rules -->
@@ -1662,24 +1653,31 @@
     </div>
 
   <!-- Load modules first -->
-  <script src="/modules/toast.js"></script>
-  <script src="/modules/field-wizard.js"></script>
-  <script src="/modules/validations-builder.js"></script>
-  <script src="/calculations.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+  <script src="/modules/toast.js?v=20251115165000"></script>
+  <script src="/modules/field-wizard.js?v=20251115175500"></script>
+  <script src="/modules/validations-builder.js?v=20251115163500"></script>
+  <script src="/modules/pdf-viewer.js?v=20251115175000"></script>
+  <script src="/modules/extraction-preview.js?v=20251115173500"></script>
+  <script src="/calculations.js?v=20251115165200"></script>
   <script src="/modules/rules-preview.js"></script>
   <script src="/modules/ruleset-loader.js"></script>
   
   <!-- Load rules builder -->
-  <script src="/rules-builder.js"></script>
+  <script src="/rules-builder.js?v=20251115180500"></script>
   
   <!-- Load main orchestrator -->
-  <script src="/modules/rules-builder-main.js"></script>
+  <script src="/modules/rules-builder-main.js?v=20251115175500"></script>
   
   <!-- Load automation modules as ES6 modules -->
   <script type="module" src="/modules/automation/automation-manager.js"></script>
   
   <!-- Load other main files -->
-  <script src="/app.js"></script>
+  <script src="/app.js?v=20251115180500"></script>
   </body>
 </html>
 

@@ -148,6 +148,10 @@ app.include_router(watch_folder_router)
 from app.routes.agent_routes import router as agent_router
 app.include_router(agent_router)
 
+# Preview routes (PDF text extraction for live preview)
+from app.routes.preview_routes import router as preview_router
+app.include_router(preview_router, prefix="/api", tags=["preview"])
+
 # Rules routes (if exists)
 try:
     from app.routes.rules import router as rules_router
@@ -242,7 +246,7 @@ if __name__ == "__main__" or getattr(sys, 'frozen', False):
         logger.info(f"About to start uvicorn on port {port}")
         uvicorn.run(
             app,  # Pass the app object directly, not the string (for PyInstaller)
-            host="0.0.0.0",
+            host="127.0.0.1",  # Localhost only - install where your files are
             port=port,
             reload=False,
             log_level="info"

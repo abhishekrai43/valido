@@ -421,9 +421,13 @@ def _extract_field(
     # Apply strategy to select value(s)
     selected_value = apply_extraction_strategy(matches, strategy)
     
+    logger.info(f"DEBUG _extract_field: field='{field_name}', column='{column}', selected_value BEFORE column filter='{selected_value}'")
+    
     # If column is specified, extract from multi-column value
     if column and selected_value:
-        selected_value = extract_column_from_value(selected_value, column)
+        logger.info(f"DEBUG _extract_field: Calling extract_column_from_value with value='{selected_value}', column='{column}'")
+        selected_value = extract_column_from_value(selected_value, column, text)
+        logger.info(f"DEBUG _extract_field: selected_value AFTER column filter='{selected_value}'")
     
     return selected_value
 

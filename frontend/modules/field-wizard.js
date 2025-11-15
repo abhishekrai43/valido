@@ -5,7 +5,18 @@
 window.fields = window.fields || [];
 let fields = window.fields;
 
+// Flag to prevent duplicate initialization
+let isFieldWizardInitialized = false;
+
 function initFieldWizard() {
+  // Prevent duplicate initialization
+  if (isFieldWizardInitialized) {
+    console.log('Field wizard already initialized, skipping');
+    return;
+  }
+  isFieldWizardInitialized = true;
+  console.log('Initializing field wizard');
+  
   const addFieldWizardBtn = document.getElementById('addFieldWizardBtn');
   const fieldWizardModal = document.getElementById('fieldWizardModal');
   const fieldWizardClose = document.getElementById('fieldWizardClose');
@@ -23,8 +34,10 @@ function initFieldWizard() {
   // Toggle column section visibility
   if (fieldInTableCheckbox) {
     fieldInTableCheckbox.addEventListener('change', (e) => {
-      fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
-      if (!e.target.checked) {
+      if (fieldColumnSection) {
+        fieldColumnSection.style.display = e.target.checked ? 'block' : 'none';
+      }
+      if (!e.target.checked && fieldColumnInput) {
         fieldColumnInput.value = '';
       }
     });
@@ -54,8 +67,8 @@ function initFieldWizard() {
       // Reset wizard inputs
       fieldNameInput.value = '';
       fieldLookForInput.value = '';
-      fieldInTableCheckbox.checked = false;
-      fieldColumnInput.value = '';
+      if (fieldInTableCheckbox) fieldInTableCheckbox.checked = false;
+      if (fieldColumnInput) fieldColumnInput.value = '';
       document.querySelectorAll('input[name="fieldType"]').forEach(radio => {
         radio.checked = radio.value === 'text';
       });
@@ -63,7 +76,7 @@ function initFieldWizard() {
       
       // Reset visibility states
       fieldStrategySection.style.display = 'block';
-      fieldColumnSection.style.display = 'none';
+      if (fieldColumnSection) fieldColumnSection.style.display = 'none';
       validationRulesSection.style.display = 'none';
       
       // Reset validation checkboxes
@@ -95,27 +108,42 @@ function initFieldWizard() {
       const lookFor = fieldLookForInput.value.trim();
       const type = document.querySelector('input[name="fieldType"]:checked')?.value || 'text';
       const strategy = fieldStrategySelect.value;
-      const inTable = fieldInTableCheckbox?.checked || false;
-      const column = inTable ? fieldColumnInput.value.trim() : null;
+      
+      // Re-query elements to ensure we have latest state
+      const inTableCheckbox = document.getElementById('fieldInTableCheckbox');
+      const columnInput = document.getElementById('fieldColumnInput');
+      const inTable = inTableCheckbox?.checked || false;
+      const column = inTable && columnInput ? columnInput.value.trim() : null;
+
+      // DEBUG: Log what we're reading
+      console.log('Field Save Debug:', {
+        name,
+        lookFor,
+        inTable,
+        column,
+        checkboxElement: inTableCheckbox,
+        columnInputElement: columnInput,
+        columnValue: columnInput?.value
+      });
 
       // Validation
       if (!name) {
-        alert('Please enter a field name');
+        window.toast.error('Please enter a field name');
         return;
       }
       if (!lookFor) {
-        alert('Please enter text to look for');
+        window.toast.error('Please enter text to look for');
         return;
       }
       if (inTable && !column) {
-        alert('Please specify which column to extract from');
+        window.toast.error('Please specify which column to extract from');
         return;
       }
 
       // Check for duplicate field names
       const exists = fields.some(f => f.name === name);
       if (exists) {
-        alert('A field with this name already exists');
+        window.toast.error('A field with this name already exists');
         return;
       }
 
@@ -170,23 +198,35 @@ function initFieldWizard() {
       // Add column if specified
       if (column) {
         newField.column = column;
+        console.log('Adding column to field:', column);
+      } else {
+        console.log('No column specified, inTable:', inTable, 'column value:', column);
       }
+      
+      console.log('Final field object:', newField);
       fields.push(newField);
+      
+      console.log('All fields after adding:', JSON.stringify(fields, null, 2));
 
       // Reset form for next field
       fieldNameInput.value = '';
       fieldLookForInput.value = '';
       fieldStrategySelect.value = 'first';
-      fieldInTableCheckbox.checked = false;
-      fieldColumnSection.style.display = 'none';
-      fieldColumnInput.value = '';
+      if (fieldInTableCheckbox) fieldInTableCheckbox.checked = false;
+      if (fieldColumnSection) fieldColumnSection.style.display = 'none';
+      if (fieldColumnInput) fieldColumnInput.value = '';
       document.querySelectorAll('input[name="fieldType"]')[0].checked = true;
       validationRulesSection.style.display = 'none';
 
       // Close modal and refresh
       fieldWizardModal.style.display = 'none';
       renderFields();
-      if (typeof buildRulesPreview === 'function') buildRulesPreview();
+      if (typeof buildRulesPreview === 'function') {
+        buildRulesPreview();
+        console.log('buildRulesPreview() called after adding field');
+      } else {
+        console.error('buildRulesPreview function not found!');
+      }
     });
   }
   
@@ -240,18 +280,18 @@ function initFieldWizard() {
       
       // Validation
       if (!name) {
-        alert('Please enter a field name');
+        window.toast.error('Please enter a field name');
         return;
       }
       if (!startWord || !endWord) {
-        alert('Please enter both start and end words');
+        window.toast.error('Please enter both start and end words');
         return;
       }
       
       // Check for duplicate field names
       const exists = fields.some(f => f.name === name);
       if (exists) {
-        alert('A field with this name already exists');
+        window.toast.error('A field with this name already exists');
         return;
       }
       
@@ -364,11 +404,11 @@ function renderFields() {
       </svg>
     `;
     removeBtn.addEventListener('click', () => {
-      if (confirm(`Remove field "${f.name}"?`)) {
+      window.toast.confirm(`Remove field "${f.name}"?`, () => {
         fields.splice(idx, 1);
         renderFields();
         if (typeof buildRulesPreview === 'function') buildRulesPreview(); 
-      }
+      });
     });
     
     fieldCard.appendChild(typeBadge);
