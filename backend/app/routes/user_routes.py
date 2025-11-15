@@ -11,8 +11,7 @@ from app.utils.logger import get_logger
 from app.utils.trial_manager import (
     calculate_trial_status, 
     start_trial, 
-    validate_license_key,
-    validate_license_email,  # NEW: Email-based validation
+    validate_license_email,
     check_access
 )
 
@@ -116,55 +115,10 @@ def start_user_trial():
         }
 
 
-class LicenseActivation(BaseModel):
-    license_key: str
-    license_type: str  # 'monthly' or 'annual'
-
-
 class EmailLicenseActivation(BaseModel):
-    """NEW: Email-based license activation"""
+    """Email-based license activation"""
     purchase_email: str
     license_type: str  # 'monthly' or 'annual'
-
-
-@router.post("/activate-license")
-def activate_license(payload: LicenseActivation):
-    """Activate a license key for the default user (OLD METHOD - still works)."""
-    logger.info(f"Activating license: {payload.license_key[:10]}...")
-    
-    # Validate the license key
-    validation = validate_license_key(payload.license_key, payload.license_type)
-    
-    if not validation['valid']:
-        logger.warning(f"Invalid license key: {validation.get('error')}")
-        raise HTTPException(
-            status_code=400, 
-            detail=validation.get('error', 'Invalid license key')
-        )
-    
-    # Activate license for user
-    with get_session() as session:
-        user = session.exec(select(User).where(User.username == "default")).first()
-        if not user:
-            user = User(username="default")
-            session.add(user)
-        
-        user.license_key = payload.license_key
-        user.license_active = True
-        user.license_type = payload.license_type
-        user.license_activated_at = datetime.utcnow()
-        user.trial_expired = False  # Reset trial flag since they have license
-        
-        session.commit()
-        session.refresh(user)
-        
-        logger.info(f"License activated for user: {payload.license_type}")
-        return {
-            'status': 'success',
-            'message': 'License activated successfully!',
-            'license_type': user.license_type,
-            'activated_at': user.license_activated_at.isoformat()
-        }
 
 
 @router.post("/activate-license-email")

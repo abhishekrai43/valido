@@ -45,7 +45,7 @@ engine = create_engine(SQLITE_URL, echo=False, connect_args={"check_same_thread"
 def create_db_and_tables() -> None:
     """Create all database tables. Models must be imported before calling this."""
     # Import all models to register them with SQLModel metadata
-    from app.models import Ruleset, User, WatchFolder, JobRun, UsageRecord  # noqa: F401
+    from app.models import Ruleset, User, WatchFolder, JobRun, UsageRecord, DeviceActivation  # noqa: F401
     
     # Now create all tables
     SQLModel.metadata.create_all(engine)

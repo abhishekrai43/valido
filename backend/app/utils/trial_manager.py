@@ -16,13 +16,13 @@ logger = get_logger('trial_manager')
 # Configuration
 TEST_MODE = False  # Set to False for production
 TRIAL_DAYS = 1 if TEST_MODE else 14  # 1 day for testing, 14 for production
-TEST_LICENSE_KEY = "TEST-VALIDO-2024"  # Works in test mode only
 
 # Registry paths
 REGISTRY_PATH = r"Software\Valido\License"
 REGISTRY_TRIAL_START = "TrialStartDate"
 REGISTRY_HARDWARE_ID = "HardwareID"
-REGISTRY_LICENSE_KEY = "LicenseKey"
+REGISTRY_NETWORK_ID = "NetworkID"
+REGISTRY_PURCHASE_EMAIL = "PurchaseEmail"  # Store validated email
 REGISTRY_LICENSE_TYPE = "LicenseType"
 REGISTRY_LICENSE_VALIDATED = "LastValidated"
 
@@ -52,6 +52,66 @@ def get_hardware_id() -> str:
         return hw_id
     except Exception as e:
         logger.error(f"Failed to generate hardware ID: {e}")
+        return "unknown"
+
+
+def get_network_id() -> str:
+    """
+    Generate a network identifier to prevent trial abuse across multiple devices on same LAN.
+    Uses combination of gateway MAC, network prefix, and domain name to identify the network.
+    """
+    try:
+        import socket
+        import subprocess
+        
+        # Get local IP address
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        
+        # Get network prefix (first 3 octets)
+        network_prefix = '.'.join(local_ip.split('.')[:3])
+        
+        # Try to get default gateway MAC address (router identifier)
+        gateway_mac = "unknown"
+        try:
+            # Run arp -a to get gateway MAC
+            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                # Look for gateway in ARP table
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if 'Gateway' in line or network_prefix in line:
+                        parts = line.split()
+                        for part in parts:
+                            # MAC address pattern: xx-xx-xx-xx-xx-xx
+                            if len(part.replace('-', '')) == 12 and '-' in part:
+                                gateway_mac = part
+                                break
+                        if gateway_mac != "unknown":
+                            break
+        except:
+            pass
+        
+        # Get Windows domain/workgroup name
+        domain = "unknown"
+        try:
+            result = subprocess.run(['wmic', 'computersystem', 'get', 'domain'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                if len(lines) > 1:
+                    domain = lines[1].strip()
+        except:
+            pass
+        
+        # Combine all identifiers
+        network_info = f"{network_prefix}|{gateway_mac}|{domain}"
+        network_id = hashlib.sha256(network_info.encode()).hexdigest()[:32]
+        
+        logger.info(f"Network ID generated: {network_id} (prefix: {network_prefix}, gateway: {gateway_mac}, domain: {domain})")
+        return network_id
+    except Exception as e:
+        logger.error(f"Failed to generate network ID: {e}")
         return "unknown"
 
 
@@ -149,156 +209,12 @@ def start_trial() -> datetime:
     return start_time
 
 
-def validate_license_key(license_key: str, license_type: Optional[str] = None) -> Dict:
-    """
-    Validate a license key with Gumroad API (with offline grace period).
-    
-    Args:
-        license_key: The license key to validate
-        license_type: Expected license type ('monthly' or 'annual')
-        
-    Returns:
-        Dict with validation result
-    """
-    if not license_key:
-        return {
-            'valid': False,
-            'error': 'No license key provided'
-        }
-    
-    # Test mode - accept test key
-    if TEST_MODE and license_key == TEST_LICENSE_KEY:
-        logger.info(f"Test mode: Accepting test license key")
-        # Store in registry for persistence
-        set_registry_value(REGISTRY_LICENSE_KEY, license_key)
-        set_registry_value(REGISTRY_LICENSE_TYPE, 'monthly')
-        set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
-        return {
-            'valid': True,
-            'license_type': 'monthly',
-            'customer_email': 'test@example.com',
-            'customer_name': 'Test User',
-            'test_mode': True
-        }
-    
-    # Check if we have a cached validation (offline grace period)
-    last_validated_str = get_registry_value(REGISTRY_LICENSE_VALIDATED)
-    cached_key = get_registry_value(REGISTRY_LICENSE_KEY)
-    
-    if cached_key == license_key and last_validated_str:
-        try:
-            last_validated = datetime.fromisoformat(last_validated_str)
-            days_since_validation = (datetime.utcnow() - last_validated).days
-            
-            if days_since_validation < VALIDATION_GRACE_DAYS:
-                logger.info(f"Using cached validation ({days_since_validation} days old)")
-                return {
-                    'valid': True,
-                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                    'cached': True,
-                    'last_validated': last_validated.isoformat()
-                }
-        except:
-            pass
-    
-    # Production mode - validate with Gumroad
-    if not TEST_MODE:
-        try:
-            import requests
-            
-            if not GUMROAD_PRODUCT_ID:
-                logger.error("Gumroad product ID not configured")
-                return {
-                    'valid': False,
-                    'error': 'License validation not configured. Please contact support.'
-                }
-            
-            # Verify with Gumroad API
-            logger.info(f"Validating license with Gumroad API...")
-            response = requests.post(
-                GUMROAD_API_URL,
-                data={
-                    'product_id': GUMROAD_PRODUCT_ID,
-                    'license_key': license_key,
-                    'increment_uses_count': 'false'  # Don't count validation as a "use"
-                },
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('success'):
-                    purchase = data.get('purchase', {})
-                    
-                    # Check if subscription is still active
-                    if purchase.get('subscription_cancelled_at') or purchase.get('subscription_failed_at'):
-                        return {
-                            'valid': False,
-                            'error': 'Subscription cancelled or payment failed. Please renew your subscription.'
-                        }
-                    
-                    # Valid! Store in registry for offline use
-                    set_registry_value(REGISTRY_LICENSE_KEY, license_key)
-                    set_registry_value(REGISTRY_LICENSE_TYPE, license_type or 'monthly')
-                    set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
-                    
-                    logger.info(f"License validated successfully with Gumroad")
-                    return {
-                        'valid': True,
-                        'license_type': license_type or 'monthly',
-                        'customer_email': purchase.get('email'),
-                        'customer_name': purchase.get('full_name'),
-                        'product_name': purchase.get('product_name'),
-                        'sale_timestamp': purchase.get('sale_timestamp')
-                    }
-                else:
-                    return {
-                        'valid': False,
-                        'error': data.get('message', 'Invalid license key')
-                    }
-            else:
-                logger.error(f"Gumroad API error: {response.status_code}")
-                # If we can't reach Gumroad but have a cached valid key, allow grace period
-                if cached_key == license_key:
-                    logger.warning(f"Gumroad unreachable, using cached validation")
-                    return {
-                        'valid': True,
-                        'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                        'cached': True,
-                        'warning': 'Could not validate with server. Using cached validation.'
-                    }
-                return {
-                    'valid': False,
-                    'error': 'Could not validate license. Please check your internet connection.'
-                }
-                
-        except Exception as e:
-            logger.error(f"License validation exception: {e}")
-            # Offline fallback
-            if cached_key == license_key:
-                logger.warning(f"Validation failed, using cached result")
-                return {
-                    'valid': True,
-                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                    'cached': True,
-                    'warning': f'Validation error: {str(e)}. Using cached validation.'
-                }
-            return {
-                'valid': False,
-                'error': f'Validation error: {str(e)}'
-            }
-    
-    # If not test mode and not test key, reject
-    return {
-        'valid': False,
-        'error': 'Invalid license key'
-    }
 
 
 def validate_license_email(purchase_email: str, license_type: str = 'monthly') -> Dict:
     """
     Validate a Gumroad purchase using customer's email (NEW METHOD).
-    Modular function - doesn't affect existing validate_license_key.
+    NOW WITH DEVICE TRACKING - prevents license sharing across devices/networks.
     
     Args:
         purchase_email: The email address used to purchase on Gumroad
@@ -308,17 +224,27 @@ def validate_license_email(purchase_email: str, license_type: str = 'monthly') -
         Dict with validation result
     """
     import requests
+    from app.db import get_session
+    from app.models import DeviceActivation
+    from sqlmodel import select
     
     if not purchase_email or not purchase_email.strip():
         return {'valid': False, 'error': 'Email address is required'}
     
     purchase_email = purchase_email.strip().lower()
     
+    # Get device identifiers
+    hardware_id = get_hardware_id()
+    network_id = get_network_id()
+    computer_name = platform.node()
+    
     # Test mode - accept test email
     if TEST_MODE and purchase_email == "test@valido.com":
         logger.info("Test mode: Accepting test email")
-        set_registry_value(REGISTRY_LICENSE_KEY, purchase_email)
+        set_registry_value(REGISTRY_PURCHASE_EMAIL, purchase_email)
         set_registry_value(REGISTRY_LICENSE_TYPE, license_type)
+        set_registry_value(REGISTRY_HARDWARE_ID, hardware_id)
+        set_registry_value(REGISTRY_NETWORK_ID, network_id)
         set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
         return {
             'valid': True,
@@ -328,32 +254,60 @@ def validate_license_email(purchase_email: str, license_type: str = 'monthly') -
             'message': 'Test license activated'
         }
     
-    # Check cached validation (offline grace period)
-    cached_email = get_registry_value(REGISTRY_LICENSE_KEY)
-    last_validated_str = get_registry_value(REGISTRY_LICENSE_VALIDATED)
-    
-    if cached_email and cached_email.lower() == purchase_email and last_validated_str:
-        try:
-            last_validated = datetime.fromisoformat(last_validated_str)
-            days_since = (datetime.utcnow() - last_validated).days
+    # Check if this device is already activated
+    with get_session() as session:
+        existing_activation = session.exec(
+            select(DeviceActivation).where(
+                DeviceActivation.purchase_email == purchase_email,
+                DeviceActivation.hardware_id == hardware_id,
+                DeviceActivation.is_active == True
+            )
+        ).first()
+        
+        if existing_activation:
+            # This device is already activated - allow revalidation
+            logger.info(f"Device already activated for {purchase_email}")
+            existing_activation.last_validated = datetime.utcnow()
+            session.add(existing_activation)
+            session.commit()
             
-            if days_since < VALIDATION_GRACE_DAYS:
-                logger.info(f"Using cached validation ({days_since} days old)")
-                return {
-                    'valid': True,
-                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                    'customer_email': purchase_email,
-                    'cached': True,
-                    'message': f'License valid (cached)'
-                }
-        except Exception as e:
-            logger.warning(f"Error checking cached validation: {e}")
+            # Update registry
+            set_registry_value(REGISTRY_PURCHASE_EMAIL, purchase_email)
+            set_registry_value(REGISTRY_LICENSE_TYPE, license_type)
+            set_registry_value(REGISTRY_HARDWARE_ID, hardware_id)
+            set_registry_value(REGISTRY_NETWORK_ID, network_id)
+            set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
+            
+            return {
+                'valid': True,
+                'license_type': license_type,
+                'customer_email': purchase_email,
+                'cached': True,
+                'message': 'License revalidated successfully'
+            }
+        
+        # Check if another device/network is already activated with this email
+        other_device_activation = session.exec(
+            select(DeviceActivation).where(
+                DeviceActivation.purchase_email == purchase_email,
+                DeviceActivation.is_active == True
+            )
+        ).first()
+        
+        if other_device_activation:
+            # Another device is already using this license!
+            logger.warning(f"License {purchase_email} already activated on another device")
+            return {
+                'valid': False,
+                'error': 'License already activated on another computer. Please deactivate the other device first or contact support.',
+                'device_limit_reached': True
+            }
     
-    # Validate with Gumroad API
+    # New activation - validate with Gumroad
     try:
         product_permalink = GUMROAD_MONTHLY_PRODUCT_PERMALINK if license_type == 'monthly' else GUMROAD_ANNUAL_PRODUCT_PERMALINK
         
-        logger.info(f"Validating with Gumroad: {purchase_email}, type: {license_type}")
+        logger.info(f"Validating new activation with Gumroad: {purchase_email}, type: {license_type}")
         
         response = requests.get(
             GUMROAD_API_URL,
@@ -387,50 +341,45 @@ def validate_license_email(purchase_email: str, license_type: str = 'monthly') -
                     if sale.get('cancelled') or sale.get('ended'):
                         continue
                 
-                # Valid!
-                set_registry_value(REGISTRY_LICENSE_KEY, purchase_email)
+                # Valid purchase found! Register this device
+                with get_session() as session:
+                    new_activation = DeviceActivation(
+                        purchase_email=purchase_email,
+                        hardware_id=hardware_id,
+                        network_id=network_id,
+                        license_type=license_type,
+                        computer_name=computer_name,
+                        network_info=f"Network: {network_id[:8]}...",
+                        is_active=True
+                    )
+                    session.add(new_activation)
+                    session.commit()
+                
+                # Update registry
+                set_registry_value(REGISTRY_PURCHASE_EMAIL, purchase_email)
                 set_registry_value(REGISTRY_LICENSE_TYPE, license_type)
+                set_registry_value(REGISTRY_HARDWARE_ID, hardware_id)
+                set_registry_value(REGISTRY_NETWORK_ID, network_id)
                 set_registry_value(REGISTRY_LICENSE_VALIDATED, datetime.utcnow().isoformat())
                 
-                logger.info("License validated successfully")
+                logger.info(f"New device activated successfully for {purchase_email}")
                 
                 return {
                     'valid': True,
                     'license_type': license_type,
                     'customer_email': sale.get('email'),
                     'product_name': sale.get('product_name'),
-                    'message': 'License activated!'
+                    'message': 'License activated successfully!'
                 }
             
             return {'valid': False, 'error': f'No active {license_type} license found'}
         
         else:
-            # Offline fallback
-            if cached_email and cached_email.lower() == purchase_email:
-                return {
-                    'valid': True,
-                    'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                    'customer_email': purchase_email,
-                    'cached': True,
-                    'message': 'License valid (offline)'
-                }
-            
-            return {'valid': False, 'error': 'Could not connect to server'}
+            return {'valid': False, 'error': 'Could not connect to Gumroad server. Please check your internet connection.'}
     
     except Exception as e:
         logger.error(f"Validation error: {e}")
-        
-        # Offline fallback
-        if cached_email and cached_email.lower() == purchase_email:
-            return {
-                'valid': True,
-                'license_type': get_registry_value(REGISTRY_LICENSE_TYPE) or license_type,
-                'customer_email': purchase_email,
-                'cached': True,
-                'message': 'License valid (offline)'
-            }
-        
-        return {'valid': False, 'error': str(e)}
+        return {'valid': False, 'error': f'Validation failed: {str(e)}'}
 
 
 def check_access(user) -> Dict:

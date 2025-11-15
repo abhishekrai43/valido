@@ -93,3 +93,24 @@ class UsageRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     pdf_count: int = Field(default=0)  # Number of PDFs processed in this batch
     processed_at: datetime = Field(default_factory=datetime.now, index=True)  # When processed
+
+
+class DeviceActivation(SQLModel, table=True):
+    """Tracks device activations to prevent license abuse across multiple devices/networks."""
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    purchase_email: str = Field(index=True)  # Email used to purchase license
+    hardware_id: str = Field(index=True)  # Unique device identifier
+    network_id: str = Field(index=True)  # Network fingerprint to prevent LAN abuse
+    license_type: str  # "monthly" or "annual"
+    
+    # Activation details
+    activated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_validated: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = Field(default=True)
+    
+    # Device info (for user reference)
+    computer_name: Optional[str] = Field(default=None)
+    network_info: Optional[str] = Field(default=None)  # Human-readable network description
+
