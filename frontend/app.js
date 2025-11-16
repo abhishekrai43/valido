@@ -323,7 +323,7 @@
               </p>
               
               <div class="share-options">
-                <button class="share-option" onclick="window.open('mailto:?subject=Check out Valido - PDF Validation Tool&body=I found this amazing PDF validation tool that runs locally on your computer. No cloud upload, fully private!%0A%0ACheck it out: ${window.location.origin}', '_blank')">
+                <button class="share-option" onclick="window.open('mailto:?subject=Check out Valido - PDF Validation Tool&body=I found this amazing PDF validation tool that runs locally on your computer. No cloud upload, fully private!%0A%0ACheck it out: https://valido-app.github.io/', '_blank')">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
                     <path d="M3 7L12 13L21 7" stroke="currentColor" stroke-width="2"/>
@@ -331,7 +331,7 @@
                   <span>Share via Email</span>
                 </button>
                 
-                <button class="share-option" onclick="navigator.clipboard.writeText('${window.location.origin}').then(() => { alert('Link copied to clipboard!'); this.closest('.share-modal').remove(); })">
+                <button class="share-option" onclick="navigator.clipboard.writeText('https://valido-app.github.io/').then(() => { alert('Link copied to clipboard!'); this.closest('.share-modal').remove(); })">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M8 5H6C4.89543 5 4 5.89543 4 7V19C4 20.1046 4.89543 21 6 21H16C17.1046 21 18 20.1046 18 19V18" stroke="currentColor" stroke-width="2"/>
                     <rect x="8" y="3" width="12" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
@@ -339,14 +339,14 @@
                   <span>Copy Link</span>
                 </button>
                 
-                <button class="share-option" onclick="window.open('https://twitter.com/intent/tweet?text=Check out Valido - a privacy-first PDF validation tool that runs locally on your computer!&url=${encodeURIComponent(window.location.origin)}', '_blank', 'width=550,height=420')">
+                <button class="share-option" onclick="window.open('https://twitter.com/intent/tweet?text=Check out Valido - a privacy-first PDF validation tool that runs locally on your computer!&url=https://valido-app.github.io/', '_blank', 'width=550,height=420')">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   <span>Share on Twitter</span>
                 </button>
                 
-                <button class="share-option" onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}', '_blank', 'width=550,height=420')">
+                <button class="share-option" onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://valido-app.github.io/', '_blank', 'width=550,height=420')">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" stroke="currentColor" stroke-width="2"/>
                     <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="2"/>

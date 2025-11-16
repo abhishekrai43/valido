@@ -8,12 +8,18 @@ import psycopg2
 
 app = Flask(__name__)
 
-@app.route('/api/validate')
+@app.route('/api/validate', methods=['GET', 'POST'])
 def validate():
     """Validate license and register device"""
     try:
-        license_key = request.args.get('license_key')
-        device_id = request.args.get('device_id')
+        # Handle both GET and POST requests
+        if request.method == 'POST':
+            data = request.get_json()
+            license_key = data.get('license_key')
+            device_id = data.get('device_id')
+        else:
+            license_key = request.args.get('license_key')
+            device_id = request.args.get('device_id')
         
         if not license_key or not device_id:
             return jsonify({"error": "Missing license_key or device_id"}), 400
@@ -56,16 +62,21 @@ def validate():
                 "message": "License is not active"
             })
         
-        # Parse device IDs
-        device_ids = json.loads(device_ids_json) if device_ids_json else []
+        # Parse device IDs - PostgreSQL might return as string or list
+        if isinstance(device_ids_json, str):
+            device_ids = json.loads(device_ids_json) if device_ids_json else []
+        elif isinstance(device_ids_json, list):
+            device_ids = device_ids_json
+        else:
+            device_ids = []
         
         # Check if device is already registered
         if device_id in device_ids:
             cursor.execute("""
-                INSERT INTO license_usage (license_key, device_id, last_validated, validation_count)
-                VALUES (%s, %s, NOW(), 1)
+                INSERT INTO license_usage (license_key, device_id, last_validated)
+                VALUES (%s, %s, NOW())
                 ON CONFLICT (license_key, device_id) 
-                DO UPDATE SET last_validated = NOW(), validation_count = license_usage.validation_count + 1
+                DO UPDATE SET last_validated = NOW()
             """, (license_key, device_id))
             conn.commit()
             cursor.close()
@@ -90,13 +101,13 @@ def validate():
         device_ids.append(device_id)
         cursor.execute("""
             UPDATE licenses
-            SET device_ids = %s
+            SET device_ids = %s::text[]
             WHERE license_key = %s
-        """, (json.dumps(device_ids), license_key))
+        """, (device_ids, license_key))
         
         cursor.execute("""
-            INSERT INTO license_usage (license_key, device_id, last_validated, validation_count)
-            VALUES (%s, %s, NOW(), 1)
+            INSERT INTO license_usage (license_key, device_id, last_validated)
+            VALUES (%s, %s, NOW())
         """, (license_key, device_id))
         
         conn.commit()
