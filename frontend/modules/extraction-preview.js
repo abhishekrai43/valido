@@ -33,28 +33,23 @@
     
     // Check if already initialized
     if (fieldLookForInput.dataset.previewInitialized === 'true') {
-      console.log('Extraction Preview already initialized');
       return;
     }
     
-    console.log('✓ Extraction Preview initialized');
 
     // Paste event - Smart detection
     fieldLookForInput.addEventListener('paste', async (e) => {
       // Wait for paste to complete
       setTimeout(() => {
-        console.log('Paste detected, handling smart paste...');
         handleSmartPaste(fieldLookForInput.value, fieldNameInput);
       }, 10);
     });
 
     // Input event - Live preview
     fieldLookForInput.addEventListener('input', (e) => {
-      console.log('Input detected:', e.target.value);
       // Debounce: wait 500ms after user stops typing
       clearTimeout(previewTimeout);
       previewTimeout = setTimeout(() => {
-        console.log('Showing live preview for:', e.target.value);
         showLivePreview(e.target.value);
       }, 500);
     });
@@ -333,7 +328,6 @@
    * Handle uploaded files - extract text for preview
    */
   async function handleFilesUploaded(event) {
-    console.log('Files uploaded event received:', event.detail);
     const files = event.detail?.files;
     if (!files || files.length === 0) {
       console.warn('No files in upload event');
@@ -347,7 +341,6 @@
       return;
     }
 
-    console.log('Extracting text from:', firstPdf.name);
 
     try {
       // Extract text from first page for preview
@@ -362,7 +355,6 @@
       if (response.ok) {
         const data = await response.json();
         currentPdfText = data.text;
-        console.log('✓ PDF text loaded for preview:', currentPdfText?.length, 'characters');
       } else {
         console.error('Failed to extract PDF text:', response.status, response.statusText);
       }

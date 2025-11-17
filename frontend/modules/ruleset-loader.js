@@ -17,17 +17,31 @@ function loadRuleset(ruleset) {
       }
       const field = {
         name: f.name || '',
-        lookFor: f.lookFor || '',
         type: f.type || 'text',
         strategy: f.strategy || 'first',
-        validations: f.validations || [],
-        ...(f.column && { column: f.column })
+        validations: f.validations || []
       };
       
+      // Handle table extraction fields
+      if (f.strategy === 'table_extraction') {
+        field.extractionType = f.extractionType;
+        if (f.page !== undefined) field.page = f.page;
+        if (f.tableIndex !== undefined) field.tableIndex = f.tableIndex;
+      }
       // Preserve startMarker and endMarker for 'between' strategy
-      if (f.strategy === 'between') {
+      else if (f.strategy === 'between') {
         field.startMarker = f.startMarker || '';
         field.endMarker = f.endMarker || '';
+        if (f.occurrence) field.occurrence = f.occurrence;
+      }
+      // Regular fields with lookFor
+      else {
+        field.lookFor = f.lookFor || '';
+      }
+      
+      // Add column if present
+      if (f.column) {
+        field.column = f.column;
       }
       
       return field;

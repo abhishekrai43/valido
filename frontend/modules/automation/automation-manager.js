@@ -20,7 +20,6 @@ export class AutomationManager {
      * Initialize automation page
      */
     async init() {
-        console.log('Initializing automation manager...');
         
         await Promise.all([
             this.jobList.loadJobs(),
@@ -72,18 +71,14 @@ export class AutomationManager {
     }
 
     async loadJobRuns(jobId) {
-        console.log('=== loadJobRuns called for jobId:', jobId);
         const container = document.getElementById(`jobRuns_${jobId}`);
-        console.log('Container element:', container ? 'FOUND' : 'NOT FOUND');
         if (!container) return;
         
         container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>Loading...</small></div>';
         
         try {
-            console.log('Fetching job runs from API...');
             const response = await fetch(`/api/v1/watch-folders/${jobId}/runs`);
             const runs = await response.json();
-            console.log('Received runs:', runs.length, 'total');
             
             if (!runs || runs.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
@@ -92,7 +87,6 @@ export class AutomationManager {
             
             // Show only last 3 executions
             const recentRuns = runs.slice(0, 3);
-            console.log('Showing', recentRuns.length, 'recent runs (limited to 3)');
             
             container.innerHTML = recentRuns.map(run => {
                 const statusColors = {
@@ -154,7 +148,6 @@ window.initAutomation = initAutomation;
 
 // Browse folder function (called by inline onclick in HTML)
 async function browseFolder(inputId) {
-    console.log('browseFolder called with inputId:', inputId);
     
     // Show helpful message since browser can't return full path
     const input = document.getElementById(inputId);
@@ -173,4 +166,3 @@ async function browseFolder(inputId) {
 
 // Make browseFolder available globally
 window.browseFolder = browseFolder;
-console.log('browseFolder function exposed to window:', typeof window.browseFolder);

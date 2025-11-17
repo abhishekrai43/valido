@@ -432,7 +432,7 @@ def _extract_field(
     return selected_value
 
 
-def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
+def validate_text(text: str, rules: Optional[dict] = None, pdf_bytes: Optional[bytes] = None) -> Dict:
     try:
         if not isinstance(text, str):
             logger.error("validate_text: input text is not a string")
@@ -445,6 +445,7 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
             "not_contains": [],
             "extractions": {},
             "extraction_log": [],  # Detailed log for debugging
+            "field_extractions": [],  # Field extraction details
             "pdf_text_preview": text[:1000] if text else ""  # First 1000 chars of PDF
         }
 
@@ -529,6 +530,85 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
                 if field_type == "computed":
                     continue  # Will be handled in calculations section below
                 
+                # Handle table extraction fields
+                if strat == "table_extraction":
+                    extraction_type = f.get("extractionType", "single")
+                    page_num = f.get("page", 1)
+                    table_index = f.get("tableIndex", 1)
+                    
+                    # Table extraction requires PDF bytes
+                    if not pdf_bytes:
+                        logger.warning(f"Table extraction field '{name}' requires PDF bytes")
+                        report["extractions"][name.replace("_", " ").title()] = None
+                        log_entry = {
+                            "field_name": name,
+                            "look_for_text": f"Table extraction ({extraction_type})",
+                            "strategy": "table_extraction",
+                            "extracted_value": None,
+                            "found": False,
+                            "validation": {"valid": False, "errors": ["PDF bytes not provided"]}
+                        }
+                        report["field_extractions"].append(log_entry)
+                        continue
+                    
+                    try:
+                        import tempfile
+                        # Save PDF bytes to temp file for table extraction
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                            tmp.write(pdf_bytes)
+                            temp_pdf_path = tmp.name
+                        
+                        try:
+                            if extraction_type == "all-pages":
+                                # Extract all tables from all pages
+                                from app.services.parser import get_table_summary, extract_all_tables
+                                summary = get_table_summary(temp_pdf_path)
+                                all_tables = []
+                                for pg in sorted(summary.keys()):
+                                    tables = extract_all_tables(temp_pdf_path, pg)
+                                    all_tables.extend(tables)
+                                value = all_tables if all_tables else None
+                            elif extraction_type == "all":
+                                # Extract all tables from specific page
+                                from app.services.parser import extract_all_tables
+                                value = extract_all_tables(temp_pdf_path, page_num)
+                            else:
+                                # Extract single table
+                                from app.services.parser import extract_table_by_index
+                                value = extract_table_by_index(temp_pdf_path, page_num, table_index)
+                        finally:
+                            # Clean up temp file
+                            import os
+                            if os.path.exists(temp_pdf_path):
+                                os.unlink(temp_pdf_path)
+                        
+                        display = name.replace("_", " ").title()
+                        report["extractions"][display] = value
+                        
+                        log_entry = {
+                            "field_name": name,
+                            "look_for_text": f"Table extraction ({extraction_type})",
+                            "strategy": "table_extraction",
+                            "extracted_value": value,
+                            "found": value is not None,
+                            "validation": {"valid": True, "errors": []}
+                        }
+                        report["field_extractions"].append(log_entry)
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error extracting table for field '{name}': {e}")
+                        report["extractions"][name.replace("_", " ").title()] = None
+                        log_entry = {
+                            "field_name": name,
+                            "look_for_text": f"Table extraction ({extraction_type})",
+                            "strategy": "table_extraction",
+                            "extracted_value": None,
+                            "found": False,
+                            "validation": {"valid": False, "errors": [str(e)]}
+                        }
+                        report["field_extractions"].append(log_entry)
+                        continue
+                
                 # Normal extraction field
                 # Extract column if specified
                 col = f.get("column") if isinstance(f, dict) else None
@@ -591,7 +671,7 @@ def validate_text(text: str, rules: Optional[dict] = None) -> Dict:
         # Process calculations (if any) after all fields are extracted
         # Calculations are processed in order, and each calculation's result
         # is added to the extractions dict so subsequent calculations can reference it
-        calculations = rules.get("calculations", [])
+        calculations = rules.get("calculations", []) if rules else []
         if calculations and isinstance(calculations, list):
             for calc in calculations:
                 if not isinstance(calc, dict):

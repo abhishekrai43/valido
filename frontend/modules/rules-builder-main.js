@@ -25,12 +25,10 @@ async function loadSavedRulesets() {
   }
   
   try {
-    console.log('Fetching rulesets from API...');
     const response = await fetch('/api/v1/rulesets/');
     if (!response.ok) throw new Error('Failed to load rulesets');
     
     const rulesets = await response.json(); // API returns array directly
-    console.log('Loaded rulesets:', rulesets);
     
     if (rulesets.length === 0) {
       savedRulesetsListDiv.innerHTML = '<div class="no-rulesets">No saved rulesets yet</div>';
@@ -55,7 +53,6 @@ async function loadSavedRulesets() {
       loadBtn.textContent = 'Load';
       loadBtn.style.cssText = 'padding: 0.5rem 1rem; background: #0078d4; color: white; border: none; font-weight: 600;';
       loadBtn.onclick = () => {
-        console.log('Load button clicked for ruleset:', ruleset.name);
         loadRuleset(ruleset);
       };
       
@@ -140,7 +137,6 @@ function setupSaveRuleset() {
       const rules = {
         validations: typeof getDocumentValidations === 'function' ? getDocumentValidations() : {},
         fields: typeof getFields === 'function' ? getFields().map(f => {
-          console.log('Processing field for save:', f);
           const fieldObj = {
             name: f.name,
             lookFor: f.lookFor,
@@ -149,13 +145,11 @@ function setupSaveRuleset() {
             validations: f.validations || [],
             ...(f.column && { column: f.column })
           };
-          console.log('Mapped field object:', fieldObj);
           return fieldObj;
         }) : [],
         calculations: typeof getCalculations === 'function' ? getCalculations() : []
       };
       
-      console.log('Final rules object being saved:', JSON.stringify(rules, null, 2));
       
       // Remove empty arrays/objects
       if (Object.keys(rules.validations).length === 0) delete rules.validations;

@@ -23,7 +23,6 @@
   let textLayerDiv = null;
 
   function init() {
-    console.log('📄 PDF Viewer initializing...');
     
     // Listen for file uploads
     window.addEventListener('filesUploaded', handleFilesUploaded);
@@ -39,7 +38,6 @@
       });
     }
     
-    console.log('✓ PDF Viewer initialized');
   }
 
   /**
@@ -52,12 +50,10 @@
     // Get first PDF
     const firstPdf = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
     if (!firstPdf) {
-      console.log('No PDF file found');
       return;
     }
 
     currentPdfFile = firstPdf;
-    console.log('📄 PDF file ready for viewing:', firstPdf.name);
   }
 
   /**
@@ -66,7 +62,6 @@
   async function showPdfInWizard() {
     if (!currentPdfFile) return;
 
-    console.log('Opening PDF viewer...');
 
     // Create or get PDF viewer modal (separate from wizard)
     let viewerModal = document.getElementById('pdfViewerModal');
@@ -361,13 +356,11 @@
    */
   async function loadPdf(file) {
     try {
-      console.log('Loading PDF with PDF.js...');
       
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       
       pdfDoc = await loadingTask.promise;
-      console.log('✓ PDF loaded, pages:', pdfDoc.numPages);
       
       // Update page info
       document.getElementById('pageInfo').textContent = `Page 1 of ${pdfDoc.numPages}`;
@@ -479,7 +472,6 @@
     const selectedText = selection.toString().trim();
     
     if (selectedText.length > 0) {
-      console.log('Text selected:', selectedText);
       showSelectedText(selectedText);
     }
   }
@@ -509,7 +501,6 @@
     const text = selection.toString().trim();
 
     if (text && text.length > 0) {
-      console.log('Text selected:', text);
       selectedText = text;
       showFieldConfig(text);
     }
@@ -732,7 +723,6 @@
       return;
     }
 
-    console.log('Selected from PDF:', { text: selectedText, isTable, columnName });
 
     // Close PDF viewer
     const modal = document.getElementById('pdfViewerModal');

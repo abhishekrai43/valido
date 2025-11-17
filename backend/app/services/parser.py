@@ -4,14 +4,16 @@ Behavior:
 - is_valid_pdf: header check + attempt to open with PyMuPDF (if installed).
 - extract_text_from_bytes: extracts text via PyMuPDF; detects image-only PDFs and
   returns a clear sentinel. Falls back to pdfminer.six if PyMuPDF extraction fails.
+- extract_tables: modular table extraction using TableExtractor service
 
 Small, actionable comments only.
 """
 
-from typing import Tuple
+from typing import Tuple, List, Dict, Any, Optional
 import io
 import os
 from app.utils.logger import get_logger
+from app.services.table_extractor import TableExtractor
 
 logger = get_logger("ValidoParser")
 
@@ -165,3 +167,57 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
 
     logger.warning("No text extracted from PDF; returning placeholder")
     return "[binary-pdf-content-no-text-extracted]"
+
+
+def extract_table_by_index(pdf_path: str, page_num: int, table_index: int) -> Optional[Dict[str, Any]]:
+    """
+    Extract a specific table by index from a PDF page.
+    
+    Args:
+        pdf_path: Path to PDF file
+        page_num: Page number (1-based)
+        table_index: Table index (1-based, or -1 for last table)
+    
+    Returns:
+        Dictionary with table data and metadata, or None if not found
+    """
+    try:
+        return TableExtractor.extract_single_table(pdf_path, page_num, table_index)
+    except Exception as e:
+        logger.error(f"Failed to extract table {table_index} from page {page_num}: {str(e)}")
+        return None
+
+
+def extract_all_tables(pdf_path: str, page_num: int) -> List[Dict[str, Any]]:
+    """
+    Extract all tables from a PDF page.
+    
+    Args:
+        pdf_path: Path to PDF file
+        page_num: Page number (1-based)
+    
+    Returns:
+        List of table dictionaries
+    """
+    try:
+        return TableExtractor.extract_all_tables(pdf_path, page_num)
+    except Exception as e:
+        logger.error(f"Failed to extract all tables from page {page_num}: {str(e)}")
+        return []
+
+
+def get_table_summary(pdf_path: str) -> Dict[int, int]:
+    """
+    Get summary of all tables in a PDF.
+    
+    Args:
+        pdf_path: Path to PDF file
+    
+    Returns:
+        Dictionary mapping page numbers to table counts
+    """
+    try:
+        return TableExtractor.get_pdf_table_summary(pdf_path)
+    except Exception as e:
+        logger.error(f"Failed to get table summary: {str(e)}")
+        return {}

@@ -11,11 +11,9 @@ let isFieldWizardInitialized = false;
 function initFieldWizard() {
   // Prevent duplicate initialization
   if (isFieldWizardInitialized) {
-    console.log('Field wizard already initialized, skipping');
     return;
   }
   isFieldWizardInitialized = true;
-  console.log('Initializing field wizard');
   
   const addFieldWizardBtn = document.getElementById('addFieldWizardBtn');
   const fieldWizardModal = document.getElementById('fieldWizardModal');
@@ -115,17 +113,6 @@ function initFieldWizard() {
       const inTable = inTableCheckbox?.checked || false;
       const column = inTable && columnInput ? columnInput.value.trim() : null;
 
-      // DEBUG: Log what we're reading
-      console.log('Field Save Debug:', {
-        name,
-        lookFor,
-        inTable,
-        column,
-        checkboxElement: inTableCheckbox,
-        columnInputElement: columnInput,
-        columnValue: columnInput?.value
-      });
-
       // Validation
       if (!name) {
         window.toast.error('Please enter a field name');
@@ -198,15 +185,11 @@ function initFieldWizard() {
       // Add column if specified
       if (column) {
         newField.column = column;
-        console.log('Adding column to field:', column);
       } else {
-        console.log('No column specified, inTable:', inTable, 'column value:', column);
       }
       
-      console.log('Final field object:', newField);
       fields.push(newField);
       
-      console.log('All fields after adding:', JSON.stringify(fields, null, 2));
 
       // Reset form for next field
       fieldNameInput.value = '';
@@ -223,7 +206,6 @@ function initFieldWizard() {
       renderFields();
       if (typeof buildRulesPreview === 'function') {
         buildRulesPreview();
-        console.log('buildRulesPreview() called after adding field');
       } else {
         console.error('buildRulesPreview function not found!');
       }
@@ -320,6 +302,62 @@ function initFieldWizard() {
       if (typeof buildRulesPreview === 'function') buildRulesPreview();
     });
   }
+  
+  // ===== Table Extraction Integration =====
+  // Listen for table-selected events from table wizard
+  document.addEventListener('table-selected', (event) => {
+    const { page, tableIndex, extractionType } = event.detail;
+    
+    // Create a descriptive field name
+    let fieldName;
+    if (extractionType === 'all-pages') {
+      fieldName = `All_Tables_All_Pages`;
+    } else if (extractionType === 'all') {
+      fieldName = `Table_Data_Page_${page}`;
+    } else {
+      fieldName = `Table_${tableIndex}_Page_${page}`;
+    }
+    
+    // Check if field already exists
+    const exists = fields.some(f => f.name === fieldName);
+    if (exists) {
+      window.toast && window.toast.error(`Field "${fieldName}" already exists. Remove it first or use a different name.`);
+      return;
+    }
+    
+    // Add table extraction field
+    const newField = {
+      name: fieldName,
+      type: 'table',
+      strategy: 'table_extraction',
+      extractionType: extractionType,
+      validations: []
+    };
+    
+    // Add page and tableIndex only if not all-pages
+    if (extractionType !== 'all-pages') {
+      newField.page = page;
+    }
+    
+    if (extractionType === 'single') {
+      newField.tableIndex = tableIndex;
+    }
+    
+    fields.push(newField);
+    
+    // Close table wizard modal if it exists
+    const tableWizardModal = document.getElementById('tableWizardModal');
+    if (tableWizardModal) {
+      tableWizardModal.style.display = 'none';
+    }
+    
+    // Refresh field list
+    renderFields();
+    if (typeof buildRulesPreview === 'function') buildRulesPreview();
+    
+    // Show success message
+    window.toast && window.toast.success(`Table extraction field "${fieldName}" added successfully!`);
+  });
 }
 
 function renderFields() {
@@ -358,6 +396,8 @@ function renderFields() {
       typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><text x="2" y="18" font-size="16" font-weight="bold">123</text></svg>';
     } else if (f.type === 'date') {
       typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/><path d="M5 22h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2zm0-2V9h14v11H5z"/></svg>';
+    } else if (f.type === 'table') {
+      typeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9" stroke="white" stroke-width="2"/><line x1="3" y1="15" x2="21" y2="15" stroke="white" stroke-width="2"/><line x1="9" y1="9" x2="9" y2="21" stroke="white" stroke-width="2"/></svg>';
     }
     typeBadge.innerHTML = typeIcon;
     
@@ -371,7 +411,15 @@ function renderFields() {
     
     const fieldLookFor = document.createElement('div');
     fieldLookFor.className = 'field-lookfor';
-    if (f.strategy === 'between') {
+    if (f.strategy === 'table_extraction') {
+      if (f.extractionType === 'all-pages') {
+        fieldLookFor.textContent = `Extract all tables from all pages`;
+      } else if (f.extractionType === 'all') {
+        fieldLookFor.textContent = `Extract all tables from page ${f.page}`;
+      } else {
+        fieldLookFor.textContent = `Extract table ${f.tableIndex} from page ${f.page}`;
+      }
+    } else if (f.strategy === 'between') {
       fieldLookFor.textContent = `Between: "${f.startMarker}" and "${f.endMarker}"`;
     } else {
       fieldLookFor.textContent = f.lookFor;
@@ -380,19 +428,23 @@ function renderFields() {
     fieldInfo.appendChild(fieldName);
     fieldInfo.appendChild(fieldLookFor);
     
-    // Strategy selector
+    // Strategy selector (hide for table extraction fields)
     const strategySelect = document.createElement('select');
     strategySelect.className = 'field-strategy';
-    strategySelect.innerHTML = `
-      <option value="first" ${f.strategy === 'first' ? 'selected' : ''}>First</option>
-      <option value="last" ${f.strategy === 'last' ? 'selected' : ''}>Last</option>
-      <option value="all" ${f.strategy === 'all' ? 'selected' : ''}>All</option>
-      <option value="between" ${f.strategy === 'between' ? 'selected' : ''}>Between</option>
-    `;
-    strategySelect.addEventListener('change', (e) => {
-      fields[idx].strategy = e.target.value;
-      if (typeof buildRulesPreview === 'function') buildRulesPreview();
-    });
+    if (f.strategy === 'table_extraction') {
+      strategySelect.style.display = 'none';
+    } else {
+      strategySelect.innerHTML = `
+        <option value="first" ${f.strategy === 'first' ? 'selected' : ''}>First</option>
+        <option value="last" ${f.strategy === 'last' ? 'selected' : ''}>Last</option>
+        <option value="all" ${f.strategy === 'all' ? 'selected' : ''}>All</option>
+        <option value="between" ${f.strategy === 'between' ? 'selected' : ''}>Between</option>
+      `;
+      strategySelect.addEventListener('change', (e) => {
+        fields[idx].strategy = e.target.value;
+        if (typeof buildRulesPreview === 'function') buildRulesPreview();
+      });
+    }
     
     // Remove button
     const removeBtn = document.createElement('button');

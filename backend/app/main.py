@@ -148,6 +148,14 @@ app.include_router(watch_folder_router)
 from app.routes.agent_routes import router as agent_router
 app.include_router(agent_router)
 
+# Table extraction routes
+try:
+    from app.routes.table_routes import router as table_router
+    app.include_router(table_router, prefix="/api/v1/tables", tags=["tables"])
+    logger.info("✓ Table extraction routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register table routes: {e}", exc_info=True)
+
 # Preview routes (PDF text extraction for live preview)
 from app.routes.preview_routes import router as preview_router
 app.include_router(preview_router, prefix="/api", tags=["preview"])

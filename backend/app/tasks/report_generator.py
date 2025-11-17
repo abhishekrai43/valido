@@ -159,18 +159,81 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         # Write headers
         if csv_rows:
             fieldnames = list(csv_rows[0].keys())
-            ws_details.append(fieldnames)
             
-            # Style header row
-            for cell in ws_details[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)  # type: ignore
+            # Check if this is table extraction (has fields with table data)
+            has_table_fields = any(
+                isinstance(row.get(field), str) and '--- Table' in str(row.get(field, ''))
+                for row in csv_rows
+                for field in fieldnames
+            )
             
-            # Write data rows
-            for row_data in csv_rows:
-                row_values = [row_data.get(field, '') for field in fieldnames]
-                ws_details.append(row_values)
+            # For table extraction, create separate sheets for each table
+            if has_table_fields:
+                # Create a simple summary sheet
+                ws_details.append(['Filename', 'Status', 'Tables Extracted'])
+                for cell in ws_details[1]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                
+                for row_idx, row_data in enumerate(csv_rows):
+                    filename = row_data.get('Filename', '')
+                    status = row_data.get('Status', '')
+                    ws_details.append([filename, status, 'See separate sheets'])
+                    
+                    # Create separate sheets for table data
+                    for field in fieldnames:
+                        if field in ['Filename', 'Status']:
+                            continue
+                        
+                        value = row_data.get(field, '')
+                        if isinstance(value, str) and '--- Table' in value:
+                            # Parse table data and create sheet
+                            tables = value.split('\n\n')
+                            for table_text in tables:
+                                if not table_text.strip():
+                                    continue
+                                
+                                lines = table_text.strip().split('\n')
+                                table_name = lines[0].strip() if lines else 'Table'
+                                
+                                # Create sheet (max 31 chars for sheet name)
+                                sheet_name = f"{filename[:15]}_{table_name[:10]}"[:31]
+                                ws_table = wb.create_sheet(sheet_name)
+                                
+                                # Parse and write table
+                                for line_idx, line in enumerate(lines[1:]):  # Skip table header line
+                                    if '---' in line or not line.strip():
+                                        continue
+                                    
+                                    cells = [c.strip() for c in line.split('|')]
+                                    ws_table.append(cells)
+                                    
+                                    # Style header row
+                                    if line_idx == 0:
+                                        for cell in ws_table[1]:
+                                            cell.fill = header_fill
+                                            cell.font = header_font
+                                            cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Adjust column widths for summary
+                ws_details.column_dimensions['A'].width = 40
+                ws_details.column_dimensions['B'].width = 15
+                ws_details.column_dimensions['C'].width = 25
+            else:
+                # Regular validation report
+                ws_details.append(fieldnames)
+                
+                # Style header row
+                for cell in ws_details[1]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)  # type: ignore
+                
+                # Write data rows
+                for row_data in csv_rows:
+                    row_values = [row_data.get(field, '') for field in fieldnames]
+                    ws_details.append(row_values)
             
             # Format data cells
             thin_border = Border(
@@ -454,7 +517,7 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
                     if row.get('Date Found'):
                         details.append(f"  → {row.get('Date Found')}")
                 
-                # Add extracted fields (exclude internal fields)
+                # Add extracted fields (exclude internal fields and table data)
                 excluded_keys = [
                     'Filename', 'Status', 'Signed', 'Digital Signed', 'Dated', 
                     'Signature Details', 'Date Found', 'Error Details', 'Signature Type', 
@@ -463,7 +526,14 @@ def generate_pdf_summary(csv_rows: List[Dict], output_path: str, timestamp: str,
                 for key, value in row.items():
                     if key not in excluded_keys:
                         if value and value != 'N/A' and value != '':
-                            details.append(f"<b>{key}:</b> {value}")
+                            # Skip table data (contains '--- Table' markers or starts with separator line)
+                            value_str = str(value)
+                            if '--- Table' in value_str or (len(value_str) > 50 and value_str.count('|') > 5):
+                                # This is table data, show summary instead
+                                details.append(f"<b>{key}:</b> [Table data extracted - see Excel file]")
+                            else:
+                                # Regular extracted field
+                                details.append(f"<b>{key}:</b> {value}")
                 
                 if row.get('Error Details'):
                     err_details = row.get('Error Details', '')

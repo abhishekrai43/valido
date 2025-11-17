@@ -18,7 +18,6 @@ export class JobRunner {
             const job = this.jobListManager.jobs.find(j => j.id === jobId);
             if (!job) throw new Error('Job not found');
 
-            console.log(`Running job ${jobId}: ${job.name}`);
 
             // Trigger job execution on backend
             const response = await fetch(`/api/v1/watch-folders/${jobId}/run`, {
@@ -30,7 +29,6 @@ export class JobRunner {
             const result = await response.json();
             const taskId = result.task_id;
 
-            console.log(`Job started, task ID: ${taskId}`);
 
             // Start polling for progress
             this.startPolling(jobId, taskId);
@@ -65,7 +63,6 @@ export class JobRunner {
 
                 const taskStatus = await response.json();
                 
-                console.log('Task status:', taskStatus); // Debug log
 
                 // Update progress
                 if (taskStatus.status === 'PROGRESS' && taskStatus.result) {
@@ -85,7 +82,6 @@ export class JobRunner {
 
                 // Task completed
                 if (taskStatus.status === 'SUCCESS' || taskStatus.status === 'FAILURE' || taskStatus.status === 'REVOKED') {
-                    console.log(`Task ${taskId} completed with status: ${taskStatus.status}`);
                     this.stopPolling(jobId);
                     
                     // Show completion message

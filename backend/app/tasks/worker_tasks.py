@@ -30,6 +30,39 @@ from app.tasks.result_packager import create_results_zip
 logger = get_logger('worker_tasks')
 
 
+def _format_table_for_excel(table_dict: Dict[str, Any]) -> str:
+    """
+    Format table dictionary into readable text for Excel/CSV cells.
+    
+    Args:
+        table_dict: Dictionary with 'headers' and 'data' keys
+        
+    Returns:
+        Formatted string representation of table
+    """
+    if not table_dict or not isinstance(table_dict, dict):
+        return ""
+    
+    headers = table_dict.get('headers', [])
+    data = table_dict.get('data', [])
+    
+    if not headers and not data:
+        return ""
+    
+    lines = []
+    
+    # Add headers
+    if headers:
+        lines.append(" | ".join(str(h) for h in headers))
+        lines.append("-" * len(lines[0]))  # Separator line
+    
+    # Add data rows
+    for row in data:
+        lines.append(" | ".join(str(cell) for cell in row))
+    
+    return "\n".join(lines)
+
+
 def process_in_chunks_worker(items: List[Any], chunk_size: int = 50):
     total = len(items or [])
     processed = 0
@@ -142,7 +175,7 @@ def process_pdfs_sync(
 
         try:
             text = extract_text_from_bytes(content or b'')
-            report = validate_text(text, rules)
+            report = validate_text(text, rules, pdf_bytes=content)
             reports.append({"filename": fname, "report": report})
             files_successfully_validated += 1  # Only count successful validations
         except Exception as exc:
@@ -472,22 +505,63 @@ def process_pdfs_sync(
         # Add all extracted fields (both regular fields and calculations)
         # The extractions dict already has everything including calculated fields
         for display_name, value in extractions.items():
-            logger.info(f"DEBUG: Adding column '{display_name}' with value '{value}'")
-            row[display_name] = value
+            logger.info(f"DEBUG: Adding column '{display_name}' with value type: {type(value)}")
+            
+            # Format table data if it's a dictionary with table structure
+            if isinstance(value, dict) and 'headers' in value and 'data' in value:
+                # Single table - format as text
+                logger.info(f"DEBUG: Formatting single table with {len(value.get('data', []))} rows")
+                formatted = _format_table_for_excel(value)
+                logger.info(f"DEBUG: Formatted table result: {formatted[:200] if formatted else 'EMPTY'}")
+                row[display_name] = formatted
+            elif isinstance(value, list) and value and isinstance(value[0], dict) and 'headers' in value[0]:
+                # Multiple tables - format each and combine
+                logger.info(f"DEBUG: Formatting {len(value)} tables")
+                formatted_tables = []
+                for idx, table in enumerate(value):
+                    formatted = _format_table_for_excel(table)
+                    logger.info(f"DEBUG: Table {idx + 1} formatted: {len(formatted)} chars")
+                    formatted_tables.append(f"--- Table {idx + 1} ---\n" + formatted)
+                combined = "\n\n".join(formatted_tables)
+                logger.info(f"DEBUG: Combined tables result: {len(combined)} chars total")
+                row[display_name] = combined
+                logger.info(f"DEBUG: Assigned to row['{display_name}']")
+            else:
+                # Regular field
+                logger.info(f"DEBUG: Regular field value: {str(value)[:100]}")
+                row[display_name] = value
 
         if err:
             row['Error Details'] = err
 
         csv_rows.append(row)
 
+    # Get list of table extraction field names to exclude from row expansion
+    table_field_names = set()
+    if extraction_fields:
+        for field in extraction_fields:
+            if isinstance(field, dict) and field.get('strategy') == 'table_extraction':
+                field_name = field.get('name', '')
+                # Match the display name transformation used in validator
+                display_name = field_name.replace("_", " ").title()
+                table_field_names.add(display_name)
+                logger.info(f"DEBUG: Excluding table field '{display_name}' from row expansion")
+
+    logger.info(f"DEBUG: Table fields to exclude: {table_field_names}")
+
     # Expand rows with multiple values (newline-separated) into separate rows
+    # BUT exclude table extraction fields from expansion
     expanded_rows = []
     for row in csv_rows:
         # Check if any field has multiple values (contains newlines)
+        # Exclude table extraction fields
         multi_value_fields = {}
         for key, value in row.items():
-            if isinstance(value, str) and '\n' in value:
+            if key not in table_field_names and isinstance(value, str) and '\n' in value:
+                logger.info(f"DEBUG: Field '{key}' has newlines, will expand")
                 multi_value_fields[key] = value.split('\n')
+            elif key in table_field_names:
+                logger.info(f"DEBUG: Field '{key}' is table field, SKIPPING expansion")
         
         # If no multi-value fields, keep the row as is
         if not multi_value_fields:
@@ -530,22 +604,39 @@ def process_pdfs_sync(
                     safe_row[key] = str(value)
             writer.writerow(safe_row)
 
-    # Generate Excel report
-    excel_filename = generate_excel_report(csv_rows, results_dir, timestamp)
+    # Clean csv_rows for Excel/PDF generation - remove validation_report
+    clean_rows = []
+    for row in csv_rows:
+        clean_row = {k: v for k, v in row.items() if k != 'validation_report'}
+        clean_rows.append(clean_row)
+
+    # Check if this is a table extraction job (has table extraction fields)
+    has_table_extraction = any(
+        isinstance(f, dict) and f.get('strategy') == 'table_extraction' 
+        for f in extraction_fields
+    ) if extraction_fields else False
+
+    # Generate Excel report (always)
+    excel_filename = generate_excel_report(clean_rows, results_dir, timestamp)
     
-    # Generate PDF summary with job metadata
-    pdf_filename = generate_pdf_summary(csv_rows, results_dir, timestamp, rules, job_metadata)
-    
-    # Generate JSON report for API
-    report_json_path = os.path.join(results_dir, 'report.json')
-    json_data = {
-        'generated_at': datetime.utcnow().isoformat(),
-        'total_files': total,
-        'processed': processed,
-        'results': csv_rows
-    }
-    with open(report_json_path, 'w', encoding='utf-8') as jf:
-        json.dump(json_data, jf, indent=2, ensure_ascii=False)
+    # For table extraction, skip PDF and JSON (only Excel + extraction_log)
+    if not has_table_extraction:
+        # Generate PDF summary with job metadata
+        pdf_filename = generate_pdf_summary(clean_rows, results_dir, timestamp, rules, job_metadata)
+        
+        # Generate JSON report for API
+        report_json_path = os.path.join(results_dir, 'report.json')
+        json_data = {
+            'generated_at': datetime.utcnow().isoformat(),
+            'total_files': total,
+            'processed': processed,
+            'results': clean_rows  # Use clean_rows without validation_report
+        }
+        with open(report_json_path, 'w', encoding='utf-8') as jf:
+            json.dump(json_data, jf, indent=2, ensure_ascii=False)
+    else:
+        pdf_filename = None
+        logger.info("Table extraction job - skipping PDF and JSON generation")
     
     # Generate detailed extraction log for debugging
     log_path = os.path.join(results_dir, 'extraction_log.txt')

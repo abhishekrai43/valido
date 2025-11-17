@@ -545,6 +545,8 @@
           submitBtn.style.display = 'block';
           submitBtn.disabled = false;  // CRITICAL: Enable submit button
         }
+        // Hide "Validate More Documents" button until processing is complete
+        if (startNewBtn) startNewBtn.style.display = 'none';
         // Clear any previous results
         if (resultsOutput) resultsOutput.innerHTML = '';
         // Reset submission flag
@@ -667,6 +669,58 @@
       });
     }
     
+    // Table Wizard Modal handlers
+    const openTableWizardBtn = document.getElementById('openTableWizardBtn');
+    const tableWizardModal = document.getElementById('tableWizardModal');
+    const tableWizardClose = document.getElementById('tableWizardClose');
+    const tableWizardCancel = document.getElementById('tableWizardCancel');
+    
+    if (openTableWizardBtn && tableWizardModal) {
+      openTableWizardBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) {
+          window.toast && window.toast.error('Please upload a PDF file first');
+          return;
+        }
+        
+        // For now, use the first file (could be enhanced to support multiple files)
+        const file = selectedFiles[0];
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          window.toast && window.toast.error('Table extraction only works with PDF files');
+          return;
+        }
+        
+        // Show modal
+        tableWizardModal.style.display = 'flex';
+        
+        // Initialize table wizard with the file
+        if (window.tableWizard) {
+          await window.tableWizard.init(file);
+        } else {
+          console.error('Table wizard not loaded');
+        }
+      });
+      
+      // Close modal handlers
+      if (tableWizardClose) {
+        tableWizardClose.addEventListener('click', () => {
+          tableWizardModal.style.display = 'none';
+        });
+      }
+      
+      if (tableWizardCancel) {
+        tableWizardCancel.addEventListener('click', () => {
+          tableWizardModal.style.display = 'none';
+        });
+      }
+      
+      // Close on overlay click
+      tableWizardModal.addEventListener('click', (e) => {
+        if (e.target === tableWizardModal) {
+          tableWizardModal.style.display = 'none';
+        }
+      });
+    }
+    
     // Step navigation buttons
     continueToRules && continueToRules.addEventListener('click', () => {
       if (selectedFiles.length > 0) {
@@ -693,7 +747,6 @@
     
     // Listen for rules updates
     document.addEventListener('rulesUpdated', () => {
-      console.log('Rules updated event received, calling updateSummary');
       updateSummary();
     });
     
@@ -706,12 +759,9 @@
       let rulesText = 'No rules selected yet. Choose some checks above to get started.';
       try {
         const rulesEl = document.getElementById('rules');
-        console.log('updateSummary - rulesEl:', rulesEl);
-        console.log('updateSummary - rulesEl.dataset.json:', rulesEl?.dataset?.json);
         
         if (rulesEl && rulesEl.dataset && rulesEl.dataset.json) {
           const rules = JSON.parse(rulesEl.dataset.json);
-          console.log('updateSummary - parsed rules:', rules);
           const parts = [];
           
           // Check validations
@@ -774,7 +824,6 @@
       
       // Prevent duplicate submissions
       if (isSubmitting) {
-        console.log('Submission already in progress, ignoring duplicate');
         return;
       }
       
@@ -793,12 +842,6 @@
       }
       
       // Debug: log what rules are being sent
-      console.log('=== SUBMIT DEBUG ===');
-      console.log('rulesEl:', rulesEl);
-      console.log('rulesEl.dataset.json:', rulesEl?.dataset?.json);
-      console.log('Parsed rules:', JSON.parse(rules || '{}'));
-      console.log('Submitting with rules:', rules);
-      console.log('===================');
       
       if (!files || files.length === 0) {
         isSubmitting = false;  // Reset flag
@@ -815,9 +858,9 @@
         return;
       }
       
-      // Hide submit button, show processing status
+      // IMMEDIATELY hide button and show processing to prevent double-click
       submitBtn.style.display = 'none';
-      submitBtn.disabled = true;  // Disable button as extra safety
+      startNewBtn.style.display = 'none';
       processingStatus.style.display = 'flex';
       successStatus.style.display = 'none';
       errorStatus.style.display = 'none';
@@ -872,7 +915,6 @@
         const result = await pollTask(taskId);
         
         // Debug: log the task result to see what we received
-        console.log('Task completed with result:', result);
 
         if (result.state === 'SUCCESS') {
           showSuccess(taskId, result);
@@ -1043,11 +1085,9 @@
         
         fetch('/api/v1/results-path')
           .then(response => {
-            console.log('Results path response status:', response.status);
             return response.json();
           })
           .then(pathData => {
-            console.log('Results path data:', pathData);
             const resultsPath = pathData.results_directory;
             
             // Show path only for local users
@@ -1064,7 +1104,7 @@
               <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 14V16C2 17.1046 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
                 Download Results
               </a>
@@ -1073,7 +1113,6 @@
           })
           .catch(error => {
             console.warn('Failed to fetch results path:', error);
-            console.log('Falling back to download link without results path');
             downloadLink.innerHTML = `
               <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

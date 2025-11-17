@@ -16,7 +16,6 @@ function showToast(message, type = 'error') {
 
 // Initialize automation page
 async function initAutomation() {
-    console.log('initAutomation called');
     await loadWatchFolders();
     await loadRulesetsForDropdown();
     setupEventListeners();
@@ -170,10 +169,8 @@ function renderWatchFolders() {
         `).join('');
         
         // After rendering, auto-load job runs for all folders
-        console.log('Auto-loading job runs for', watchFolders.length, 'folders');
         setTimeout(() => {
             watchFolders.forEach(folder => {
-                console.log('Loading job runs for folder:', folder.id, folder.name);
                 loadJobRuns(folder.id);
             });
         }, 100);
@@ -182,9 +179,7 @@ function renderWatchFolders() {
 
 // Load job runs for a specific watch folder
 async function loadJobRuns(watchFolderId) {
-    console.log('loadJobRuns called for folder:', watchFolderId);
     const container = document.getElementById(`jobRuns_${watchFolderId}`);
-    console.log('Container found:', container ? 'yes' : 'no');
     if (!container) return;
     
     // Track that this folder has been loaded (for auto-refresh)
@@ -195,7 +190,6 @@ async function loadJobRuns(watchFolderId) {
     try {
         const response = await fetch(`/api/v1/watch-folders/${watchFolderId}/runs`);
         const runs = await response.json();
-        console.log('Job runs loaded:', runs.length);
         
         if (!runs || runs.length === 0) {
             container.innerHTML = '<div style="text-align: center; color: #999; padding: 1rem;"><small>No executions yet</small></div>';
@@ -204,7 +198,6 @@ async function loadJobRuns(watchFolderId) {
         
         // Show only last 3 executions
         const recentRuns = runs.slice(0, 3);
-        console.log('Showing recent runs:', recentRuns.length);
         
         container.innerHTML = recentRuns.map(run => {
             const statusColors = {
@@ -310,26 +303,20 @@ function setupBrowseButtons() {
 
 // Browse folder function (called by inline onclick in HTML)
 async function browseFolder(inputId) {
-    console.log('browseFolder called with inputId:', inputId);
     if ('showDirectoryPicker' in window) {
-        console.log('showDirectoryPicker is supported');
         try {
             const dirHandle = await window.showDirectoryPicker();
             const path = dirHandle.name; // Browser returns folder name only
-            console.log('Selected path:', path);
             document.getElementById(inputId).value = path;
         } catch (error) {
-            console.log('User cancelled directory picker or error:', error);
         }
     } else {
-        console.log('showDirectoryPicker NOT supported in this browser');
         window.toast.error('Your browser does not support the directory picker. Please paste the full path manually (e.g., C:\\Folder or \\\\SERVER\\Share\\Folder)');
     }
 }
 
 // Make browseFolder available globally
 window.browseFolder = browseFolder;
-console.log('browseFolder function exposed to window:', typeof window.browseFolder);
 
 // Toggle processed path field visibility
 function toggleProcessedPathField() {
@@ -616,7 +603,6 @@ async function browseFolder(inputId) {
             }
         } catch (err) {
             // User cancelled or error
-            console.log('Folder selection cancelled or failed:', err);
         }
     } else {
         // Fallback: Create a hidden file input with directory selection

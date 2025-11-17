@@ -73,9 +73,12 @@
   });
 
   // Always start with empty fields array - loadRuleset() will populate if loading saved ruleset
-  let fields = [];
-  // Keep window.fields in sync
-  window.fields = fields;
+  // Use existing window.fields if it exists (from field-wizard.js), otherwise create new
+  let fields = window.fields || [];
+  // Keep window.fields in sync - use the same reference
+  if (!window.fields) {
+    window.fields = fields;
+  }
 
   function renderFields(){
     if (!fieldsList) return;
@@ -322,7 +325,8 @@
   }
 
   function buildRulesPreview(){
-    console.log('buildRulesPreview called, window.fields:', window.fields);
+    // Always use window.fields to ensure we get the latest from field-wizard.js
+    const fields = window.fields || [];
     let rules = { fields: [], validations: {}, calculations: [] };
     
     if (chkSigned && chkSigned.checked) {
@@ -357,18 +361,31 @@
     rules.fields = fields.map(f => {
       const field = {
         name: f.name,
-        lookFor: f.lookFor,
         type: f.type,
         strategy: f.strategy || 'first',
-        validations: f.validations || [],
-        ...(f.column && { column: f.column })
+        validations: f.validations || []
       };
       
+      // Handle table extraction fields
+      if (f.strategy === 'table_extraction') {
+        field.extractionType = f.extractionType;
+        if (f.page !== undefined) field.page = f.page;
+        if (f.tableIndex !== undefined) field.tableIndex = f.tableIndex;
+      }
       // Include startMarker, endMarker, and occurrence for 'between' strategy
-      if (f.strategy === 'between') {
+      else if (f.strategy === 'between') {
         field.startMarker = f.startMarker;
         field.endMarker = f.endMarker;
         field.occurrence = f.occurrence || 'first';
+      }
+      // Regular fields with lookFor
+      else {
+        field.lookFor = f.lookFor;
+      }
+      
+      // Add column if present
+      if (f.column) {
+        field.column = f.column;
       }
       
       return field;
@@ -384,7 +401,6 @@
     if (!rules.fields || rules.fields.length===0) delete rules.fields;
     if (!rules.calculations || rules.calculations.length===0) delete rules.calculations;
     
-    console.log('buildRulesPreview final rules:', JSON.stringify(rules, null, 2));
     
     // Build human-readable summary with HTML formatting
     let summaryHtml = '';
@@ -435,7 +451,9 @@
         summaryHtml += '<div class="preview-field-list">';
         rules.fields.forEach(field => {
           const strategyLabel = field.strategy === 'first' ? 'first' : 
-                               field.strategy === 'last' ? 'last' : 'all';
+                               field.strategy === 'last' ? 'last' :
+                               field.strategy === 'table_extraction' ? 'table extraction' :
+                               field.strategy === 'between' ? 'between markers' : 'all';
           const typeLabel = field.type.charAt(0).toUpperCase() + field.type.slice(1);
           
           // Build validation rules description
@@ -457,15 +475,18 @@
             }
           }
           
-          // Determine the occurrence label for between strategy
-          let occurrenceLabel = strategyLabel;
-          if (field.strategy === 'between' && field.occurrence) {
-            occurrenceLabel = field.occurrence === 'first' ? 'first match' : 'all matches';
-          }
-          
           // Build the field description based on strategy
           let fieldDescription = '';
-          if (field.strategy === 'between') {
+          if (field.strategy === 'table_extraction') {
+            if (field.extractionType === 'all-pages') {
+              fieldDescription = `<div class="preview-field-lookfor">Extract all tables from all pages</div>`;
+            } else if (field.extractionType === 'all') {
+              fieldDescription = `<div class="preview-field-lookfor">Extract all tables from page ${field.page}</div>`;
+            } else {
+              fieldDescription = `<div class="preview-field-lookfor">Extract table ${field.tableIndex} from page ${field.page}</div>`;
+            }
+          } else if (field.strategy === 'between') {
+            const occurrenceLabel = field.occurrence === 'first' ? 'first match' : 'all matches';
             fieldDescription = `<div class="preview-field-lookfor">Between: "${escapeHtml(field.startMarker || '')}" and "${escapeHtml(field.endMarker || '')}" (${occurrenceLabel})</div>`;
           } else {
             fieldDescription = `<div class="preview-field-lookfor">Look for: "${escapeHtml(field.lookFor)}"</div>`;
@@ -473,7 +494,7 @@
           
           summaryHtml += `<div class="preview-field-item">
             <strong>${escapeHtml(field.name)}</strong> 
-            <span class="preview-field-meta">(${typeLabel}, ${field.strategy === 'between' ? 'between' : strategyLabel})</span>${validationsDesc}
+            <span class="preview-field-meta">(${typeLabel}, ${strategyLabel})</span>${validationsDesc}
             ${fieldDescription}
           </div>`;
         });
@@ -546,7 +567,6 @@
 
   // return a canonical rules payload (object) for saving/submitting
   function getRulesPayload(){
-    console.log('getRulesPayload called, window.fields:', window.fields);
     let rules = { fields: [], validations: {} };
     
     if (chkSigned && chkSigned.checked) {
@@ -582,21 +602,31 @@
       }
       const field = {
         name: f.name, 
-        lookFor: f.lookFor || f.name,  // Use lookFor if available, otherwise fall back to name
-        type: f.type || 'text',         // Include field type
+        type: f.type || 'text',
         strategy: f.strategy || 'first',
-        validations: f.validations || []  // Include field-level validations
+        validations: f.validations || []
       };
+      
+      // Handle table extraction fields
+      if (f.strategy === 'table_extraction') {
+        field.extractionType = f.extractionType;
+        if (f.page !== undefined) field.page = f.page;
+        if (f.tableIndex !== undefined) field.tableIndex = f.tableIndex;
+      }
+      // Include startMarker and endMarker for 'between' strategy
+      else if (f.strategy === 'between') {
+        field.startMarker = f.startMarker;
+        field.endMarker = f.endMarker;
+        if (f.occurrence) field.occurrence = f.occurrence;
+      }
+      // Regular fields with lookFor
+      else {
+        field.lookFor = f.lookFor || f.name;
+      }
       
       // Add column if specified
       if (f.column) {
         field.column = f.column;
-      }
-      
-      // Include startMarker and endMarker for 'between' strategy
-      if (f.strategy === 'between') {
-        field.startMarker = f.startMarker;
-        field.endMarker = f.endMarker;
       }
       
       return field;
@@ -613,7 +643,6 @@
       }
     }
     
-    console.log('getRulesPayload returning:', JSON.stringify(rules, null, 2));
     return rules;
   }
 
@@ -681,7 +710,6 @@
         }
         
         const payload = getRulesPayload();
-        console.log('Saving ruleset with payload:', payload);
         
         try {
           const res = await fetch('/api/v1/rulesets/', {
@@ -690,10 +718,14 @@
             body: JSON.stringify({ name, rules: payload })
           });
           
-          if (!res.ok) throw new Error('Failed to save ruleset');
+          if (!res.ok) {
+            if (res.status === 409) {
+              throw new Error('A ruleset with this name already exists. Please choose a different name.');
+            }
+            throw new Error('Failed to save ruleset');
+          }
           
           const saved = await res.json();
-          console.log('Ruleset saved:', saved);
           
           closeModal();
           
@@ -724,12 +756,12 @@
         } catch (err) {
           console.error('Error saving ruleset:', err);
           
-          // Show error message
+          // Show error message with the actual error text
           const errorMsg = document.createElement('div');
-          errorMsg.textContent = '✗ Failed to save ruleset';
+          errorMsg.textContent = `✗ ${err.message}`;
           errorMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#dc2626;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;';
           document.body.appendChild(errorMsg);
-          setTimeout(() => errorMsg.remove(), 3000);
+          setTimeout(() => errorMsg.remove(), 5000);
         }
       };
     });
@@ -821,9 +853,7 @@
   }
 
   function loadRuleset(ruleset) {
-    console.log('loadRuleset called with:', ruleset);
     const rules = ruleset.rules || {};
-    console.log('Rules to load:', rules);
     
     // Load validations
     if (chkSigned) chkSigned.checked = !!rules.validations?.signed;
@@ -875,9 +905,6 @@
     // Push all loaded fields into the existing array
     fields.push(...loadedFields);
     
-    console.log('Fields loaded:', fields);
-    console.log('window.fields:', window.fields);
-    console.log('Same reference?', fields === window.fields);
     
     // Load calculations if present
     if (rules.calculations) {
@@ -896,9 +923,7 @@
     }
     
     renderFields();
-    console.log('About to call buildRulesPreview');
     buildRulesPreview();
-    console.log('buildRulesPreview completed');
     
     // CRITICAL: Ensure the Continue button is properly enabled after loading
     setTimeout(() => {
@@ -1058,7 +1083,6 @@
       rulesetSelect.selectedIndex = 0;  // Reset to placeholder
     }
     
-    console.log('Builder reset - all fields, calculations, and validations cleared');
   }
   
   // Load saved rulesets on init

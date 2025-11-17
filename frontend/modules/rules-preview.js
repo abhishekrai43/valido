@@ -29,11 +29,24 @@ function buildRulesPreview() {
         validations: f.validations || []
       };
       
-      // Add lookFor or markers based on strategy
-      if (f.strategy === 'between') {
+      // Handle table extraction fields
+      if (f.strategy === 'table_extraction') {
+        fieldObj.extractionType = f.extractionType;
+        if (f.extractionType !== 'all-pages') {
+          fieldObj.page = f.page;
+        }
+        if (f.extractionType === 'single') {
+          fieldObj.tableIndex = f.tableIndex;
+        }
+      }
+      // Handle between strategy
+      else if (f.strategy === 'between') {
         fieldObj.startMarker = f.startMarker;
         fieldObj.endMarker = f.endMarker;
-      } else {
+        if (f.occurrence) fieldObj.occurrence = f.occurrence;
+      }
+      // Handle regular extraction
+      else {
         fieldObj.lookFor = f.lookFor;
       }
       
@@ -110,7 +123,8 @@ function buildRulesPreview() {
     rules.fields.forEach(field => {
       const strategyLabel = field.strategy === 'first' ? 'first' : 
                            field.strategy === 'last' ? 'last' :
-                           field.strategy === 'between' ? 'between markers' : 'all';
+                           field.strategy === 'between' ? 'between markers' : 
+                           field.strategy === 'table_extraction' ? 'table extraction' : 'all';
       const typeLabel = field.type.charAt(0).toUpperCase() + field.type.slice(1);
       
       // Build validation rules description
@@ -134,7 +148,15 @@ function buildRulesPreview() {
       
       // Build lookup/marker description
       let lookupDesc = '';
-      if (field.strategy === 'between') {
+      if (field.strategy === 'table_extraction') {
+        if (field.extractionType === 'all-pages') {
+          lookupDesc = `Extract all tables from all pages`;
+        } else if (field.extractionType === 'all') {
+          lookupDesc = `Extract all tables from page ${field.page}`;
+        } else {
+          lookupDesc = `Extract table ${field.tableIndex} from page ${field.page}`;
+        }
+      } else if (field.strategy === 'between') {
         lookupDesc = `Between: "${escapeHtml(field.startMarker)}" and "${escapeHtml(field.endMarker)}"`;
       } else {
         lookupDesc = `Look for: "${escapeHtml(field.lookFor)}"`;
