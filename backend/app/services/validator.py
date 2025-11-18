@@ -583,14 +583,81 @@ def validate_text(text: str, rules: Optional[dict] = None, pdf_bytes: Optional[b
                                 os.unlink(temp_pdf_path)
                         
                         display = name.replace("_", " ").title()
-                        report["extractions"][display] = value
-                        
+
+                        # If a specific column was requested in the field config, try to extract it
+                        col = f.get("column") if isinstance(f, dict) else None
+                        extracted_value = value
+
+                        if col and value:
+                            try:
+                                # Normalize tables into a list of table dicts
+                                tables = []
+                                if isinstance(value, dict):
+                                    tables = [value]
+                                elif isinstance(value, list):
+                                    tables = [t for t in value if isinstance(t, dict)]
+
+                                collected = []
+                                header_found = False
+
+                                for tbl in tables:
+                                    headers = [h.strip() if h else "" for h in tbl.get("headers", [])]
+                                    rows = tbl.get("data", []) or []
+
+                                    # Try exact header match (case-insensitive, trimmed)
+                                    idx = None
+                                    for i, h in enumerate(headers):
+                                        if h and h.strip().lower() == col.strip().lower():
+                                            idx = i
+                                            break
+
+                                    # Try relaxed match (remove spaces) if exact match failed
+                                    if idx is None:
+                                        col_norm = col.strip().lower().replace(" ", "")
+                                        for i, h in enumerate(headers):
+                                            if h and h.strip().lower().replace(" ", "") == col_norm:
+                                                idx = i
+                                                break
+
+                                    if idx is not None:
+                                        header_found = True
+                                        for row in rows:
+                                            if idx < len(row):
+                                                val = row[idx] if row[idx] is not None else ""
+                                                if isinstance(val, str):
+                                                    collected.append(val.strip())
+                                                else:
+                                                    collected.append(str(val))
+                                    else:
+                                        # Fallback: try heuristic extraction per row using existing helper
+                                        for row in rows:
+                                            # join with double-space to mimic column separators
+                                            row_str = "  ".join([str(c or "") for c in row])
+                                            col_val = extract_column_from_value(row_str, col, None)
+                                            if col_val and col_val.strip():
+                                                collected.append(col_val.strip())
+
+                                if collected:
+                                    # Join with newline for Excel-friendly display
+                                    extracted_value = "\n".join([c for c in collected if c])
+                                else:
+                                    # No values found for requested column
+                                    extracted_value = None
+
+                                logger.info(f"DEBUG table_extraction: field='{name}', column='{col}', header_found={header_found}, values_found={len(collected)}")
+
+                            except Exception as e:
+                                logger.error(f"Error extracting column '{col}' for field '{name}': {e}")
+                                extracted_value = None
+
+                        report["extractions"][display] = extracted_value
+
                         log_entry = {
                             "field_name": name,
                             "look_for_text": f"Table extraction ({extraction_type})",
                             "strategy": "table_extraction",
-                            "extracted_value": value,
-                            "found": value is not None,
+                            "extracted_value": extracted_value,
+                            "found": extracted_value is not None,
                             "validation": {"valid": True, "errors": []}
                         }
                         report["field_extractions"].append(log_entry)

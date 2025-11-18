@@ -22,12 +22,19 @@ from app.license import get_license_banner
 from app.db import get_session
 from app.models import User
 from app.utils.trial_manager import check_access, start_trial
+import time
+import hashlib
 
 logger = get_logger("ValidationRoutes")
 
 router = APIRouter(prefix="/api/v1", tags=["validation"])
 
 # Will be set during router registration
+RESULTS_BASE_DIR = None
+
+# Duplicate submission detection (simple in-memory cache)
+_recent_submissions = {}  # {hash: timestamp}
+_DUPLICATE_WINDOW_SECONDS = 5  # Block duplicates within 5 seconds (increased from 3)
 RESULTS_ROOT = None
 
 def set_results_root(path: str):
@@ -42,6 +49,7 @@ def ensure_results_dir(task_id: str) -> str:
         raise ValueError("RESULTS_ROOT not configured")
     p = os.path.join(RESULTS_ROOT, task_id)
     os.makedirs(p, exist_ok=True)
+    logger.info(f"✓ Created results directory: {p}")
     return p
 
 
@@ -87,7 +95,35 @@ async def submit_files(
     Submit batch of files for processing with optional rules.
     Returns task_id for tracking progress.
     """
-    logger.info(f"Submit request with {len(files)} files, username: {username}")
+    logger.info(f"📥 Submit request received: {len(files)} files, username: {username}")
+    
+    # Check for duplicate submissions within a short time window
+    current_time = time.time()
+    
+    # Create a hash of the submission (filenames + rules + file count)
+    filenames_str = ','.join(sorted([f.filename or '' for f in files]))
+    submission_key = f"{len(files)}|{filenames_str}|{rules or ''}"
+    submission_hash = hashlib.md5(submission_key.encode()).hexdigest()
+    
+    # Clean up old entries (older than window)
+    _recent_submissions_copy = dict(_recent_submissions)
+    for key, timestamp in _recent_submissions_copy.items():
+        if current_time - timestamp > _DUPLICATE_WINDOW_SECONDS:
+            del _recent_submissions[key]
+    
+    # Check if this is a duplicate
+    if submission_hash in _recent_submissions:
+        time_since_last = current_time - _recent_submissions[submission_hash]
+        if time_since_last < _DUPLICATE_WINDOW_SECONDS:
+            logger.warning(f"🚫 Duplicate submission blocked (submitted {time_since_last:.1f}s ago, hash: {submission_hash[:8]})")
+            raise HTTPException(
+                status_code=429,
+                detail=f"Duplicate submission detected. Please wait {_DUPLICATE_WINDOW_SECONDS - int(time_since_last)} seconds before submitting again."
+            )
+    
+    # Record this submission IMMEDIATELY to prevent race conditions
+    _recent_submissions[submission_hash] = current_time
+    logger.info(f"✅ Submission accepted (hash: {submission_hash[:8]})")
     
     # Check trial/license status
     with get_session() as db:
@@ -162,8 +198,9 @@ async def submit_files(
 
     # Create task and submit to worker
     task_id = str(uuid.uuid4())
+    logger.info(f"🆕 Generated task_id: {task_id}")
     results_dir = ensure_results_dir(task_id)
-    logger.info(f"Task {task_id} created, results dir: {results_dir}")
+    logger.info(f"📁 Task {task_id} - results dir created: {results_dir}")
 
     # Submit to local worker
     try:
@@ -176,11 +213,11 @@ async def submit_files(
         from local_worker import submit_task
         submit_task(
             "process_pdfs",
+            task_id,  # Pass task_id as positional argument, not in kwargs
             files=payload,
             rules=parsed_rules,
             username=username,
-            results_dir=results_dir,
-            task_id=task_id
+            results_dir=results_dir
         )
         logger.info(f"Task {task_id} submitted to local worker")
     except Exception as e:

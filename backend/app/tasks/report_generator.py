@@ -86,7 +86,7 @@ def draw_valido_footer(canvas, doc):
     canvas.restoreState()
 
 
-def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str) -> Optional[str]:
+def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str, is_table_extraction: bool = False) -> Optional[str]:
     """
     Generate Excel report with professional formatting.
     
@@ -94,11 +94,15 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         csv_rows: List of dictionaries containing validation results
         output_path: Directory path where Excel file will be saved
         timestamp: Timestamp string for filename
+        is_table_extraction: Whether this is a table extraction job (creates separate sheets for tables)
         
     Returns:
         Excel filename if successful, None otherwise
     """
+    print(f"DEBUG Excel: EXCEL_AVAILABLE={EXCEL_AVAILABLE}, csv_rows={len(csv_rows) if csv_rows else 0}, is_table_extraction={is_table_extraction}")
+    
     if not EXCEL_AVAILABLE or not csv_rows:
+        print(f"DEBUG Excel: Early return - EXCEL_AVAILABLE={EXCEL_AVAILABLE}, has csv_rows={bool(csv_rows)}")
         return None
     
     try:
@@ -160,15 +164,8 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         if csv_rows:
             fieldnames = list(csv_rows[0].keys())
             
-            # Check if this is table extraction (has fields with table data)
-            has_table_fields = any(
-                isinstance(row.get(field), str) and '--- Table' in str(row.get(field, ''))
-                for row in csv_rows
-                for field in fieldnames
-            )
-            
-            # For table extraction, create separate sheets for each table
-            if has_table_fields:
+            # For table extraction jobs, create separate sheets for each table
+            if is_table_extraction:
                 # Create a simple summary sheet
                 ws_details.append(['Filename', 'Status', 'Tables Extracted'])
                 for cell in ws_details[1]:
@@ -281,7 +278,9 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         return excel_filename
         
     except Exception as e:
+        import traceback
         print(f"Error generating Excel report: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         return None
 
 

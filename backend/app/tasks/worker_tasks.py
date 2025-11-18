@@ -7,7 +7,6 @@ Uses modular report_generator and result_packager for clean separation.
 # pyright: reportOptionalCall=false, reportOptionalMemberAccess=false, reportOptionalOperand=false, reportArgumentType=false, reportOperatorIssue=false
 
 import os
-import csv
 import json
 import time
 import io
@@ -197,12 +196,14 @@ def process_pdfs_sync(
         # Only create new if not provided
         task_id = datetime.utcnow().strftime('%s')
         results_dir = os.path.abspath(os.path.join(os.getcwd(), 'results', task_id))
+        os.makedirs(results_dir, exist_ok=True)
+        logger.info(f"✓ Worker created new results directory: {results_dir}")
     else:
         # Use provided results_dir and extract task_id from it
         results_dir = os.path.abspath(results_dir)
         task_id = os.path.basename(results_dir.rstrip("/\\"))
-
-    os.makedirs(results_dir, exist_ok=True)
+        # Don't create directory here - it's already created by the caller
+        logger.info(f"✓ Worker using existing results directory: {results_dir}")
 
     def detect_signed(t: str) -> Tuple[str, str]:
         if not t:
@@ -586,24 +587,7 @@ def process_pdfs_sync(
         fieldnames = ['Filename', 'Status']
 
     timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-    csv_filename = f'valido_results_{timestamp}.csv'
-    csv_path = os.path.join(results_dir, csv_filename)
-    with open(csv_path, 'w', newline='', encoding='utf-8-sig') as cf:
-        writer = csv.DictWriter(cf, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in csv_rows:
-            safe_row = {}
-            for key, value in row.items():
-                if key == 'validation_report':  # Skip validation_report in CSV
-                    continue
-                if value is None:
-                    safe_row[key] = ''
-                elif isinstance(value, bytes):
-                    safe_row[key] = value.decode('utf-8', errors='replace')
-                else:
-                    safe_row[key] = str(value)
-            writer.writerow(safe_row)
-
+    
     # Clean csv_rows for Excel/PDF generation - remove validation_report
     clean_rows = []
     for row in csv_rows:
@@ -616,8 +600,13 @@ def process_pdfs_sync(
         for f in extraction_fields
     ) if extraction_fields else False
 
-    # Generate Excel report (always)
-    excel_filename = generate_excel_report(clean_rows, results_dir, timestamp)
+    logger.info(f"DEBUG: has_table_extraction={has_table_extraction}, clean_rows count={len(clean_rows)}")
+    if clean_rows:
+        logger.info(f"DEBUG: First row keys: {list(clean_rows[0].keys())}")
+    
+    # Generate Excel report (pass the is_table_extraction flag)
+    excel_filename = generate_excel_report(clean_rows, results_dir, timestamp, is_table_extraction=has_table_extraction)
+    logger.info(f"DEBUG: Excel generated: {excel_filename}")
     
     # For table extraction, skip PDF and JSON (only Excel + extraction_log)
     if not has_table_extraction:
@@ -739,7 +728,6 @@ def process_pdfs_sync(
         'files_skipped': 0,
         'files': reports,
         'result_files': {
-            'csv': f'/api/v1/tasks/{task_id}/result.csv',
             'zip': f'/api/v1/tasks/{task_id}/results.zip'
         }
     }

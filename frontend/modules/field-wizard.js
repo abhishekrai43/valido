@@ -291,10 +291,12 @@ function initFieldWizard() {
       fields.push(newField);
       
       // Reset between words form
-      betweenFieldName.value = '';
-      betweenStartWord.value = '';
-      betweenEndWord.value = '';
-      betweenOccurrence.value = 'first';
+      document.getElementById('betweenFieldName').value = '';
+      document.getElementById('betweenStartWord').value = '';
+      document.getElementById('betweenEndWord').value = '';
+      document.querySelectorAll('input[name="betweenOccurrence"]').forEach(radio => {
+        radio.checked = radio.value === 'first';
+      });
       
       // Close modal and refresh
       betweenWordsModal.style.display = 'none';

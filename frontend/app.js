@@ -543,14 +543,17 @@
         // Show submit button and ensure it's enabled
         if (submitBtn) {
           submitBtn.style.display = 'block';
-          submitBtn.disabled = false;  // CRITICAL: Enable submit button
+          submitBtn.disabled = false;
+          submitBtn.style.pointerEvents = 'auto';
         }
         // Hide "Validate More Documents" button until processing is complete
         if (startNewBtn) startNewBtn.style.display = 'none';
         // Clear any previous results
         if (resultsOutput) resultsOutput.innerHTML = '';
-        // Reset submission flag
-        isSubmitting = false;
+        if (window._validoSubmissionState) {
+          window._validoSubmissionState.isSubmitting = false;  // Reset submission flag
+          window._validoSubmissionState.completed = false;     // New run starting
+        }
       }
       
       // Scroll to top
@@ -817,22 +820,71 @@
   updateSubmitButtonLabel();
     
     // Form submission with user-friendly status
-    let isSubmitting = false;  // Prevent duplicate submissions
-    
-    form && form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
+    // Use window-level flag to prevent duplicates AND to ensure we only attach
+    // the submit listener once, even if this init block runs multiple times.
+    if (!window._validoSubmissionState) {
+      window._validoSubmissionState = {
+        isSubmitting: false,
+        lastSubmitTime: 0,
+        completed: false,
+        _listenerAttached: false,
+      };
+    }
+
+    // Prevent Enter key from accidentally submitting the form on Step 3.
+    if (form) {
+      form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+        }
+      });
+    }
+
+    if (form && !window._validoSubmissionState._listenerAttached) {
+      window._validoSubmissionState._listenerAttached = true;
+
+      const listenerId = Math.random().toString(36).substr(2, 9);
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        
+        const now = Date.now();
+        console.log(`🔍 [${listenerId}] Submit event fired at ${new Date().toISOString()}. isSubmitting: ${window._validoSubmissionState.isSubmitting}, lastSubmit: ${now - window._validoSubmissionState.lastSubmitTime}ms ago`);
+        console.trace('Submit event call stack:');
+
+        // Hard lock: don't allow another submission once a run has completed
+        // until the user explicitly starts a new run.
+        if (window._validoSubmissionState.completed) {
+          console.warn(`⚠️ [${listenerId}] Submission blocked - previous run already completed. Click "Validate More Documents" to start a new run.`);
+          return;
+        }
       
       // Prevent duplicate submissions
-      if (isSubmitting) {
+      if (window._validoSubmissionState.isSubmitting) {
+        console.warn(`⚠️ [${listenerId}] Duplicate submission blocked - already submitting`);
         return;
       }
       
-      isSubmitting = true;
+      // Also block if submitted within last 3 seconds
+      if (now - window._validoSubmissionState.lastSubmitTime < 3000) {
+        console.warn(`⚠️ [${listenerId}] Duplicate submission blocked - too soon (${now - window._validoSubmissionState.lastSubmitTime}ms)`);
+        return;
+      }
+      
+        console.log(`✅ [${listenerId}] Submission allowed, setting isSubmitting = true`);
+        window._validoSubmissionState.isSubmitting = true;
+        window._validoSubmissionState.lastSubmitTime = now;
+      
+      // Disable button immediately to prevent double-click
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.pointerEvents = 'none';
+      }
       
       const files = filesInput.files;
       const rulesEl = document.getElementById('rules');
       
-      let rules = '';
+        let rules = '';
       try {
         rules = (rulesEl && rulesEl.dataset && rulesEl.dataset.json) 
           ? rulesEl.dataset.json 
@@ -841,58 +893,78 @@
         rules = (rulesEl?.value || '').trim();
       }
       
-      // Debug: log what rules are being sent
+  // Debug: log what rules are being sent
       
-      if (!files || files.length === 0) {
-        isSubmitting = false;  // Reset flag
+        if (!files || files.length === 0) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.style.pointerEvents = 'auto';
+        }
+        window._validoSubmissionState.isSubmitting = false;
         showError('Please select at least one file to validate.');
         navigateToStep(1);
         return;
       }
 
       // Limit to 500 files per batch
-      if (files.length > 500) {
-        isSubmitting = false;  // Reset flag
+        if (files.length > 500) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.style.pointerEvents = 'auto';
+        }
+        window._validoSubmissionState.isSubmitting = false;
         showError('Maximum 500 files allowed per batch. Please split your files into smaller batches.');
         navigateToStep(1);
         return;
       }
       
-      // IMMEDIATELY hide button and show processing to prevent double-click
-      submitBtn.style.display = 'none';
-      startNewBtn.style.display = 'none';
-      processingStatus.style.display = 'flex';
-      successStatus.style.display = 'none';
-      errorStatus.style.display = 'none';
       
-      const fd = new FormData();
+        const fd = new FormData();
       for (let i = 0; i < files.length; i++) {
         fd.append('files', files[i]);
       }
       if (rules) fd.append('rules', rules);
       
-      try {
-        statusTitle.textContent = 'Uploading your documents...';
-        statusMessage.textContent = 'Please wait while we process your files';
-        progressFill.style.width = '10%';
-        
-        const res = await fetch('/api/v1/submit', { method: 'POST', body: fd });
+      // Show processing UI BEFORE fetch
+        submitBtn.style.display = 'none';
+      startNewBtn.style.display = 'none';
+      processingStatus.style.display = 'flex';
+      successStatus.style.display = 'none';
+      errorStatus.style.display = 'none';
+      statusTitle.textContent = 'Uploading your documents...';
+      statusMessage.textContent = 'Please wait while we process your files';
+      progressFill.style.width = '10%';
+      
+        try {
+          const res = await fetch('/api/v1/submit', { method: 'POST', body: fd });
         
         if (!res.ok) {
+          if (res.status === 429) {
+            // Duplicate submission blocked by server
+            const errorData = await res.json().catch(() => ({ detail: 'Duplicate submission detected' }));
+            console.warn('⚠️ Server blocked duplicate submission:', errorData);
+            // Hide processing UI and show submit button again
+            processingStatus.style.display = 'none';
+            submitBtn.style.display = 'inline-flex';
+            submitBtn.disabled = false;
+            submitBtn.style.pointerEvents = 'auto';
+            window._validoSubmissionState.isSubmitting = false;
+            return;
+          }
           const text = await res.text();
           throw new Error(`Upload failed: ${text}`);
         }
         
-        const j = await res.json();
-        const taskId = j.task_id;
+          const j = await res.json();
+          const taskId = j.task_id;
         
         // Record to history
-        recordHistory(taskId);
+          recordHistory(taskId);
         
         // Poll for completion
         // If the user uploaded only non-ZIP files we can show an immediate "Processing 1 of N" count.
         // If there are ZIPs, show a clear expanding message and rely on the immediate poll to update the true total.
-        try {
+          try {
           const fileList = Array.from(files || []);
           const hasZip = fileList.some(f => f.name && f.name.toLowerCase().endsWith('.zip'));
           if (!hasZip && fileList.length > 0) {
@@ -905,29 +977,37 @@
             statusMessage.textContent = 'Expanding ZIP(s) and preparing files for validation';
             progressFill.style.width = '35%';
           }
-        } catch (e) {
+          } catch (e) {
           // Fallback to generic message on any error
           statusTitle.textContent = 'Processing documents...';
           statusMessage.textContent = 'Preparing files for validation';
           progressFill.style.width = '35%';
         }
 
-        const result = await pollTask(taskId);
+          const result = await pollTask(taskId);
         
         // Debug: log the task result to see what we received
 
-        if (result.state === 'SUCCESS') {
+          if (result.state === 'SUCCESS') {
           showSuccess(taskId, result);
         } else if (result.state === 'FAILURE') {
           showError(result.info?.error || 'Validation failed. Please try again.');
         } else {
           showError('Validation timed out. Please try again or contact support.');
         }
-        
-      } catch (err) {
-        showError(err.message || 'An unexpected error occurred. Please try again.');
-      }
-    });
+          
+        } catch (err) {
+          showError(err.message || 'An unexpected error occurred. Please try again.');
+        } finally {
+          // Re-enable button after processing completes (success or failure)
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.pointerEvents = 'auto';
+          }
+          window._validoSubmissionState.isSubmitting = false;  // Reset flag
+        }
+      });
+    }
     
     async function pollTask(taskId) {
       const maxAttempts = 200;
@@ -1129,35 +1209,32 @@
 
       // Show simple completion message (no table rendering)
       if (resultsOutput) {
-        const reportUrl = `/api/v1/tasks/${taskId}/report.json`;
-        fetch(reportUrl)
-          .then(r => r.ok ? r.json() : Promise.reject('no report'))
-          .then(j => {
-            // Try to get results path from task status first
-            fetch(`/api/v1/tasks/${taskId}`)
-              .then(r => r.json())
-              .then(statusData => {
-                const resultsPath = statusData?.info?.results_path || `results\\${taskId}`;
-                const infoHtml = `
-                  <div class="report-summary">
-                    <p style="margin-bottom: 12px;">✅ Successfully processed <strong>${j.processed || 0}</strong> of <strong>${j.total_files || 0}</strong> documents.</p>
-                    <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
-                  </div>`;
-                resultsOutput.innerHTML = infoHtml;
-              })
-              .catch(() => {
-                // Fallback if status fetch fails
-                const resultsPath = `results\\${taskId}`;
-                const infoHtml = `
-                  <div class="report-summary">
-                    <p style="margin-bottom: 12px;">✅ Successfully processed <strong>${j.processed || 0}</strong> of <strong>${j.total_files || 0}</strong> documents.</p>
-                    <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
-                  </div>`;
-                resultsOutput.innerHTML = infoHtml;
-              });
+        // We no longer fetch /report.json because the backend does not create it.
+        // Instead, we rely on the task status, which already includes results_path
+        // and progress info populated by the worker.
+        fetch(`/api/v1/tasks/${taskId}`)
+          .then(r => r.ok ? r.json() : Promise.reject('no status'))
+          .then(statusData => {
+            const info = statusData?.info || {};
+            const processed = info.processed ?? info.total ?? 0;
+            const total = info.total ?? info.total_files ?? processed;
+            const resultsPath = info.results_path || `results\\${taskId}`;
+
+            const infoHtml = `
+              <div class="report-summary">
+                <p style="margin-bottom: 12px;">✅ Successfully processed <strong>${processed}</strong> of <strong>${total}</strong> documents.</p>
+                <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
+              </div>`;
+            resultsOutput.innerHTML = infoHtml;
           })
           .catch(() => {
-            resultsOutput.innerHTML = '<div class="helper">Processing complete. Download the results to view details.</div>';
+            const resultsPath = `results\\${taskId}`;
+            const infoHtml = `
+              <div class="report-summary">
+                <p style="margin-bottom: 12px;">✅ Processing complete.</p>
+                <p style="font-size: 13px; color: #666; margin: 0;">📁 Results saved to: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${resultsPath}</code></p>
+              </div>`;
+            resultsOutput.innerHTML = infoHtml;
           });
       }
     }
@@ -1205,10 +1282,11 @@
       successStatus.style.display = 'none';
       errorStatus.style.display = 'none';
       submitBtn.style.display = 'inline-flex';
-      submitBtn.disabled = false;  // CRITICAL: Re-enable submit button
+      submitBtn.disabled = false;
+      submitBtn.style.pointerEvents = 'auto';
       startNewBtn.style.display = 'none';
       downloadLink.innerHTML = '';
-      isSubmitting = false;  // Reset submission flag
+      window._validoSubmissionState.isSubmitting = false;  // Reset submission flag
       
       // Reset rules
       if (window.resetBuilder) window.resetBuilder();
