@@ -8,6 +8,129 @@ import psycopg2
 
 app = Flask(__name__)
 
+@app.route('/api/webhook/gumroad', methods=['POST'])
+def gumroad_webhook():
+    """Receive purchase notifications from Gumroad"""
+    try:
+        # Get form data from Gumroad webhook
+        data = request.form.to_dict()
+        
+        # Extract purchase info
+        email = data.get('email')
+        product_name = data.get('product_name', '')
+        sale_id = data.get('sale_id')
+        license_key = data.get('license_key')  # Gumroad generates this
+        
+        if not email or not license_key:
+            return jsonify({"error": "Missing email or license_key"}), 400
+        
+        # Determine license type from product name
+        license_type = 'annual' if 'annual' in product_name.lower() else 'monthly'
+        
+        # Connect to Supabase
+        conn = psycopg2.connect(
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            host=os.environ.get('DB_HOST'),
+            port=os.environ.get('DB_PORT'),
+            dbname=os.environ.get('DB_NAME')
+        )
+        
+        cursor = conn.cursor()
+        
+        # Insert new license (or update if exists)
+        cursor.execute("""
+            INSERT INTO licenses (
+                purchase_email, 
+                license_key, 
+                license_type, 
+                is_active, 
+                max_devices, 
+                device_ids,
+                created_at,
+                gumroad_sale_id
+            ) VALUES (%s, %s, %s, %s, %s, ARRAY[]::text[], NOW(), %s)
+            ON CONFLICT (license_key) 
+            DO UPDATE SET 
+                purchase_email = EXCLUDED.purchase_email,
+                is_active = EXCLUDED.is_active,
+                gumroad_sale_id = EXCLUDED.gumroad_sale_id
+        """, (email, license_key, license_type, True, 3, sale_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": "License created successfully"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/activate', methods=['POST'])
+def activate():
+    """Activate license with email and license type"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        license_type = data.get('license_type', 'monthly')
+        
+        if not email:
+            return jsonify({"error": "Missing email"}), 400
+        
+        # Connect to Supabase
+        conn = psycopg2.connect(
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            host=os.environ.get('DB_HOST'),
+            port=os.environ.get('DB_PORT'),
+            dbname=os.environ.get('DB_NAME')
+        )
+        
+        cursor = conn.cursor()
+        
+        # Check if there's an active license for this email
+        cursor.execute("""
+            SELECT license_key, license_type, expires_at, is_active
+            FROM licenses
+            WHERE purchase_email = %s AND license_type = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (email, license_type))
+        
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not result:
+            return jsonify({
+                "success": False,
+                "message": "No license found for this email and license type"
+            }), 404
+        
+        license_key, lic_type, expires_at, is_active = result
+        
+        if not is_active:
+            return jsonify({
+                "success": False,
+                "message": "License is not active"
+            }), 403
+        
+        return jsonify({
+            "success": True,
+            "license_key": license_key,
+            "license_type": lic_type,
+            "expires_at": str(expires_at) if expires_at else None,
+            "message": "License activated successfully"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/validate', methods=['GET', 'POST'])
 def validate():
     """Validate license and register device"""

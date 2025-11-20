@@ -120,6 +120,83 @@ class LicenseActivation(BaseModel):
     license_key: str
 
 
+class EmailLicenseActivation(BaseModel):
+    """Email-based license activation"""
+    purchase_email: str
+    license_type: str = "monthly"
+
+
+@router.post("/activate-license-email")
+def activate_license_email(payload: EmailLicenseActivation):
+    """Activate license using email (looks up license from Vercel API)."""
+    import requests
+    
+    logger.info(f"Activating license via email: {payload.purchase_email}")
+    
+    try:
+        # Call Vercel API to get license key
+        response = requests.post(
+            "https://license-47cn7dnzb-abhishekrai43s-projects.vercel.app/api/activate",
+            json={
+                "email": payload.purchase_email,
+                "license_type": payload.license_type
+            },
+            timeout=10
+        )
+        
+        if response.status_code != 200:
+            error_msg = response.json().get('message', 'License not found')
+            logger.warning(f"License lookup failed: {error_msg}")
+            raise HTTPException(status_code=response.status_code, detail=error_msg)
+        
+        data = response.json()
+        license_key = data.get('license_key')
+        
+        if not license_key:
+            raise HTTPException(status_code=500, detail="No license key returned")
+        
+        # Now validate and activate the license key
+        validation = validate_license_key(license_key)
+        
+        if not validation['valid']:
+            logger.warning(f"License validation failed: {validation.get('error')}")
+            raise HTTPException(
+                status_code=400,
+                detail=validation.get('error', 'Could not validate license')
+            )
+        
+        # Activate license for user
+        with get_session() as session:
+            user = session.exec(select(User).where(User.username == "default")).first()
+            if not user:
+                user = User(username="default")
+                session.add(user)
+            
+            user.license_key = license_key
+            user.license_active = True
+            user.license_type = validation.get('license_type', 'monthly')
+            user.license_activated_at = datetime.utcnow()
+            user.trial_expired = False
+            
+            session.commit()
+            session.refresh(user)
+            
+            logger.info(f"License activated successfully via email: {user.license_type}")
+            return {
+                'status': 'success',
+                'message': 'License activated successfully!',
+                'license_type': user.license_type,
+                'activated_at': user.license_activated_at.isoformat()
+            }
+    
+    except requests.RequestException as e:
+        logger.error(f"Failed to contact license API: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Could not contact license server. Please check your internet connection."
+        )
+
+
 @router.post("/activate-license")
 def activate_license(payload: LicenseActivation):
     """Activate license using license key (cloud-validated)."""
