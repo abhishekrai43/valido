@@ -10,7 +10,7 @@ import os
 from typing import Optional, Dict, Any
 
 # Your secure license API endpoint
-LICENSE_API_URL = "https://license-fjj9rrwx5-abhishekrai43s-projects.vercel.app"
+LICENSE_API_URL = "https://license-47cn7dnzb-abhishekrai43s-projects.vercel.app"
 
 
 class CloudLicenseManager:
