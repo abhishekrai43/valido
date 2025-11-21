@@ -26,6 +26,10 @@
       
       const { trial, access, license_active, license_type } = status;
       
+      console.log('Trial status received:', status);
+      console.log('Trial expired?', trial?.expired);
+      console.log('Days remaining:', trial?.days_remaining);
+      
       // Update UI based on status
       if (license_active) {
         // Licensed user
@@ -154,7 +158,7 @@
                 Purchase License
               </button>
               <button class="btn btn-secondary" onclick="document.getElementById('activateLicenseBtn').click();">
-                I Have a Key
+                Activate License
               </button>
             </div>
           </div>
