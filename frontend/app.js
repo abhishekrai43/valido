@@ -428,6 +428,14 @@
       });
     }
     
+    // Check for updates button
+    const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
+    if (checkUpdatesBtn) {
+      checkUpdatesBtn.addEventListener('click', () => {
+        UpdateChecker.checkForUpdates();
+      });
+    }
+    
     // Feedback button functionality
     const feedbackBtn = document.getElementById('feedbackBtn');
     if (feedbackBtn) {
