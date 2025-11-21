@@ -1,6 +1,6 @@
 // Update Checker Module
 const UpdateChecker = {
-  GITHUB_API: 'https://api.github.com/repos/abhishekrai43/valido/releases/latest',
+  GITHUB_API: 'https://api.github.com/repos/Valido-App/valido-app.github.io/releases/latest',
   CURRENT_VERSION: '1.0.8',
   
   async checkForUpdates() {
