@@ -34,6 +34,7 @@
         trialStatusEl.classList.add('licensed');
         trialStatusEl.title = 'Thank you for your support!';
         if (activateBtnEl) activateBtnEl.style.display = 'none';
+        this.enableApp();
       } else if (trial.expired) {
         // Trial expired
         trialTextEl.textContent = 'Trial Expired';
@@ -41,6 +42,9 @@
         trialStatusEl.classList.add('expired');
         trialStatusEl.title = 'Purchase a license to continue';
         if (activateBtnEl) activateBtnEl.style.display = 'inline-flex';
+        
+        // ENFORCE: Disable app functionality
+        this.disableApp();
         
         // Show purchase prompt
         this.showTrialExpiredModal();
@@ -57,7 +61,64 @@
           trialStatusEl.title = `${days} days remaining in trial`;
         }
         if (activateBtnEl) activateBtnEl.style.display = 'inline-flex';
+        this.enableApp();
       }
+    },
+    
+    disableApp() {
+      // Disable all buttons and inputs except activation
+      document.querySelectorAll('button, input[type="file"], input[type="submit"]').forEach(el => {
+        if (!el.closest('.trial-expired-modal') && 
+            el.id !== 'activateLicenseBtn' && 
+            !el.classList.contains('modal-close')) {
+          el.disabled = true;
+          el.style.opacity = '0.5';
+          el.style.cursor = 'not-allowed';
+        }
+      });
+      
+      // Disable navigation tabs
+      document.querySelectorAll('.btn-nav').forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      });
+      
+      // Add overlay to content
+      const container = document.querySelector('.container');
+      if (container && !document.getElementById('trial-expired-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'trial-expired-overlay';
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(3px);
+          z-index: 999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          color: #666;
+          pointer-events: none;
+        `;
+        container.appendChild(overlay);
+      }
+    },
+    
+    enableApp() {
+      // Re-enable all buttons and inputs
+      document.querySelectorAll('button, input[type="file"], input[type="submit"]').forEach(el => {
+        el.disabled = false;
+        el.style.opacity = '';
+        el.style.cursor = '';
+      });
+      
+      // Remove overlay
+      const overlay = document.getElementById('trial-expired-overlay');
+      if (overlay) overlay.remove();
     },
     
     showTrialExpiredModal() {
@@ -68,11 +129,10 @@
       const modal = document.createElement('div');
       modal.className = 'trial-expired-modal';
       modal.innerHTML = `
-        <div class="modal-overlay"></div>
-        <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-overlay" style="pointer-events: all;"></div>
+        <div class="modal-content" style="max-width: 500px; z-index: 10001;">
           <div class="modal-header">
             <h3>⏰ Trial Period Ended</h3>
-            <button class="modal-close" onclick="this.closest('.trial-expired-modal').remove()">×</button>
           </div>
           <div class="modal-body">
             <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
@@ -91,9 +151,9 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
               <button class="btn btn-primary" style="flex: 1;" onclick="window.open('https://rai89.gumroad.com/l/bdspjn', '_blank');">
-                Purchase License ($14.99/month)
+                Purchase License
               </button>
-              <button class="btn btn-ghost" onclick="document.getElementById('activateLicenseBtn').click(); this.closest('.trial-expired-modal').remove();">
+              <button class="btn btn-secondary" onclick="document.getElementById('activateLicenseBtn').click();">
                 I Have a Key
               </button>
             </div>
@@ -102,9 +162,7 @@
       `;
       document.body.appendChild(modal);
       
-      modal.querySelector('.modal-overlay').addEventListener('click', () => {
-        modal.remove();
-      });
+      // Make modal non-dismissible (no click to close)
     },
     
     showActivationModal() {
