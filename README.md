@@ -7,7 +7,6 @@
 ## 🖥️ Platform
 
 - **Windows Only** (Windows 10/11)
-- Accessible throughout your **Local Area Network (LAN)**
 - No internet connection required for operation
 
 ---
@@ -27,11 +26,6 @@
 - Batch processing of ZIP files containing multiple PDFs
 - Scheduled processing and background operations
 
-### 🌐 LAN Access
-- Run on one computer, access from any device on your network
-- Share validation results across your team
-- Centralized rule management
-- Web-based interface – no installation needed on client machines
 
 ### 🛠️ Built-in Help
 The application includes a comprehensive **"How To Use"** section with:
