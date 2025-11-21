@@ -153,3 +153,7 @@ docker-compose.override.yml
 *.key
 *.cer
 *.crt
+
+# Installer packages
+*Installer.zip
+*.iss
