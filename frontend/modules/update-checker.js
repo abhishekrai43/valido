@@ -7,6 +7,10 @@ const UpdateChecker = {
     try {
       const response = await fetch(this.GITHUB_API);
       if (!response.ok) {
+        if (response.status === 404) {
+          Toast.show('No releases available yet', 'info');
+          return;
+        }
         throw new Error('Failed to fetch release info');
       }
       
