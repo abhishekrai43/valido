@@ -311,19 +311,45 @@ def extract_column_from_value(
             
             for table in tables:
                 lines = table.strip().split('\n')
-                if lines:
-                    # First line is usually the header
-                    header = lines[0]
-                    # Split by tab (pdfplumber uses tabs to separate columns)
-                    header_cols = header.split('\t')
-                    logger.info(f"DEBUG extract_column_from_value: Found table header: {header_cols}")
+                if len(lines) >= 2:
+                    # Try to build multi-line headers
+                    # Sometimes headers span multiple lines (e.g., "Salary (₹)" on line 1, "Per Month" on line 2)
+                    header_line1 = lines[0].split('\t')
+                    header_line2 = lines[1].split('\t') if len(lines) > 1 else []
                     
-                    # Search for the column name in headers (case-insensitive)
-                    for idx, header_col in enumerate(header_cols):
-                        if header_col.strip().lower() == column.lower().strip():
-                            column_index = idx
-                            logger.info(f"DEBUG extract_column_from_value: Found column '{column}' at index {idx}")
-                            break
+                    # Build combined headers if they have same column count
+                    if len(header_line1) == len(header_line2):
+                        combined_headers = [f"{h1} {h2}".strip() for h1, h2 in zip(header_line1, header_line2)]
+                        logger.info(f"DEBUG extract_column_from_value: Combined multi-line headers: {combined_headers}")
+                        
+                        # Search in combined headers (exact match first, then partial match)
+                        for idx, header_col in enumerate(combined_headers):
+                            header_normalized = header_col.strip().lower()
+                            column_normalized = column.lower().strip()
+                            
+                            # Exact match
+                            if header_normalized == column_normalized:
+                                column_index = idx
+                                logger.info(f"DEBUG extract_column_from_value: Found exact match for column '{column}' at index {idx}")
+                                break
+                            
+                            # Partial match (column name appears in header)
+                            if column_normalized in header_normalized or header_normalized in column_normalized:
+                                column_index = idx
+                                logger.info(f"DEBUG extract_column_from_value: Found partial match for column '{column}' at index {idx} (header: '{header_col}')")
+                                break
+                    
+                    if column_index is None:
+                        # Fallback to single-line header search
+                        logger.info(f"DEBUG extract_column_from_value: Single-line header search: {header_line1}")
+                        for idx, header_col in enumerate(header_line1):
+                            header_normalized = header_col.strip().lower()
+                            column_normalized = column.lower().strip()
+                            
+                            if column_normalized in header_normalized or header_normalized in column_normalized:
+                                column_index = idx
+                                logger.info(f"DEBUG extract_column_from_value: Found column '{column}' at index {idx} in single-line header")
+                                break
                     
                     if column_index is not None:
                         break
@@ -341,13 +367,9 @@ def extract_column_from_value(
             logger.info(f"Column name '{column}' contains annual/year keyword - using last column: {columns[-1]}")
             return columns[-1]
         elif 'month' in column_keywords_lower or 'monthly' in column_keywords_lower:
-            # Likely the Per Month column (usually 2nd column, index 1)
-            if len(columns) >= 2:
-                logger.info(f"Column name '{column}' contains month keyword - using 2nd column (index 1): {columns[1]}")
-                return columns[1]
-            else:
-                logger.info(f"Column name '{column}' contains month keyword but only 1 column - returning first: {columns[0]}")
-                return columns[0]
+            # Likely the Per Month column (usually 1st value column, index 0)
+            logger.info(f"Column name '{column}' contains month keyword - using 1st column (index 0): {columns[0]}")
+            return columns[0]
         else:
             # Generic column name - default to second column (first value column)
             # if there are 3+ columns, since first column is typically the row label.

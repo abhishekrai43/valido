@@ -55,7 +55,14 @@ export class JobFormManager {
 
         fields.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.value = '';
+            if (el) {
+                el.value = '';
+                // Clear cloud config data attributes
+                if (id === 'watchFolderInput') {
+                    if (el.dataset.cloudConfig) delete el.dataset.cloudConfig;
+                    if (el.dataset.cloudPath) delete el.dataset.cloudPath;
+                }
+            }
         });
         
         // Leave output path empty - user will specify their own path
@@ -107,16 +114,33 @@ export class JobFormManager {
             .map(input => input.value.trim())
             .filter(time => time);
         
+        const inputField = document.getElementById('watchFolderInput');
+        let inputPath = inputField?.value.trim();
+        
+        // Check if cloud configuration is set
+        let cloudConfig = null;
+        if (inputField?.dataset.cloudConfig) {
+            try {
+                cloudConfig = JSON.parse(inputField.dataset.cloudConfig);
+                // Use the actual cloud path for backend, not the display name
+                inputPath = inputField.dataset.cloudPath || inputPath;
+            } catch (e) {
+                console.error('Failed to parse cloud config:', e);
+            }
+        }
+        
         const formData = {
             name: document.getElementById('watchFolderName')?.value.trim(),
-            input_path: document.getElementById('watchFolderInput')?.value.trim(),
+            input_path: inputPath,
             output_path: document.getElementById('watchFolderOutput')?.value.trim(),
             ruleset_id: parseInt(document.getElementById('watchFolderRuleset')?.value) || null,
             enabled: true,
             schedule_times: scheduleTimes.length > 0 ? scheduleTimes.join(',') : "18:00",
             move_processed: false,
             processed_path: null,
-            delete_after: false
+            delete_after: false,
+            // Add cloud configuration if present
+            cloud_config: cloudConfig
         };
 
         // Validation
@@ -125,7 +149,7 @@ export class JobFormManager {
             return;
         }
         if (!formData.input_path) {
-            window.toast.warning('Please enter an input folder path');
+            window.toast.warning('Please enter an input folder path or configure cloud storage');
             return;
         }
         if (!formData.output_path) {

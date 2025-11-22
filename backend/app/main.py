@@ -144,6 +144,14 @@ except Exception as e:
 from app.routes.watch_folder_routes import router as watch_folder_router
 app.include_router(watch_folder_router)
 
+# WebSocket routes (Real-time job status updates)
+try:
+    from app.routes.websocket_routes import router as websocket_router
+    app.include_router(websocket_router)
+    logger.info("✓ WebSocket routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register WebSocket routes: {e}", exc_info=True)
+
 # Agent routes
 from app.routes.agent_routes import router as agent_router
 app.include_router(agent_router)
@@ -155,6 +163,22 @@ try:
     logger.info("✓ Table extraction routes registered")
 except Exception as e:
     logger.error(f"✗ Failed to register table routes: {e}", exc_info=True)
+
+# Cloud storage routes (Azure, AWS, GCP)
+try:
+    from app.routes.cloud_storage_routes import router as cloud_storage_router
+    app.include_router(cloud_storage_router)
+    logger.info("✓ Cloud storage routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register cloud storage routes: {e}", exc_info=True)
+
+# Cloud sources routes (Saved cloud configurations)
+try:
+    from app.routes.cloud_sources_routes import router as cloud_sources_router
+    app.include_router(cloud_sources_router)
+    logger.info("✓ Cloud sources routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register cloud sources routes: {e}", exc_info=True)
 
 # Preview routes (PDF text extraction for live preview)
 from app.routes.preview_routes import router as preview_router

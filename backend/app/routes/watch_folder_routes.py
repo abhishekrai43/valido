@@ -22,6 +22,45 @@ logger = get_logger("WatchFolderRoutes")
 router = APIRouter(prefix="/api/v1/watch-folders", tags=["watch-folders"])
 
 
+def check_schedule_conflicts(session: Session, schedule_times: str, exclude_id: int = None) -> dict:
+    """
+    Check if schedule times conflict with existing watch folders.
+    Returns {"has_conflict": bool, "conflicts": [{"id": int, "name": str, "times": [str]}]}
+    """
+    if not schedule_times or not schedule_times.strip():
+        return {"has_conflict": False, "conflicts": []}
+    
+    # Parse new schedule times
+    new_times = set(t.strip() for t in schedule_times.split(',') if t.strip())
+    
+    # Get all other enabled watch folders with schedules
+    statement = select(WatchFolder).where(WatchFolder.enabled == True)
+    if exclude_id:
+        statement = statement.where(WatchFolder.id != exclude_id)
+    
+    existing_folders = session.exec(statement).all()
+    
+    conflicts = []
+    for folder in existing_folders:
+        if not folder.schedule_times:
+            continue
+        
+        existing_times = set(t.strip() for t in folder.schedule_times.split(',') if t.strip())
+        overlapping = new_times & existing_times  # Set intersection
+        
+        if overlapping:
+            conflicts.append({
+                "id": folder.id,
+                "name": folder.name,
+                "times": sorted(list(overlapping))
+            })
+    
+    return {
+        "has_conflict": len(conflicts) > 0,
+        "conflicts": conflicts
+    }
+
+
 @router.get("/", response_model=List[WatchFolder])
 def list_watch_folders():
     """List all watch folder configurations."""
@@ -31,6 +70,37 @@ def list_watch_folders():
         watch_folders = session.exec(statement).all()
         logger.info(f"Found {len(watch_folders)} watch folders")
         return watch_folders
+
+
+@router.get("/active-jobs")
+def get_active_jobs():
+    """Get currently running watch folder jobs across all folders."""
+    logger.info("Getting active jobs")
+    with Session(engine) as session:
+        # Find all job runs with status='running'
+        statement = (
+            select(JobRun)
+            .where(JobRun.status == "running")
+            .order_by(JobRun.started_at.desc())
+        )
+        active_runs = session.exec(statement).all()
+        
+        # Format response with watch folder info
+        active_jobs = []
+        for run in active_runs:
+            watch_folder = session.get(WatchFolder, run.watch_folder_id)
+            if watch_folder:
+                active_jobs.append({
+                    "watch_folder_id": run.watch_folder_id,
+                    "watch_folder_name": watch_folder.name,
+                    "job_run_id": run.id,
+                    "files_found": run.files_found,
+                    "files_processed": run.files_processed,
+                    "started_at": run.started_at.isoformat() if run.started_at else None
+                })
+        
+        logger.info(f"Found {len(active_jobs)} active jobs")
+        return {"active_jobs": active_jobs}
 
 
 @router.get("/{watch_folder_id}", response_model=WatchFolder)
@@ -52,9 +122,11 @@ def get_watch_folder(watch_folder_id: int):
 def create_watch_folder(watch_folder: WatchFolder):
     """Create a new watch folder configuration."""
     logger.info(f"Creating watch folder: {watch_folder.name}")
-    # Validate paths
+    # Validate paths (skip validation for cloud storage paths)
     import os
-    if not os.path.isabs(watch_folder.input_path):
+    is_cloud_input = watch_folder.input_path.startswith('cloud://')
+    
+    if not is_cloud_input and not os.path.isabs(watch_folder.input_path):
         logger.warning(f"Input path not absolute: {watch_folder.input_path}")
         raise HTTPException(status_code=400, detail="Input path must be absolute")
     if not os.path.isabs(watch_folder.output_path):
@@ -66,6 +138,20 @@ def create_watch_folder(watch_folder: WatchFolder):
         if not ruleset:
             logger.warning(f"Ruleset not found: {watch_folder.ruleset_id}")
             raise HTTPException(status_code=404, detail="Ruleset not found")
+        
+        # Check for schedule conflicts if enabled and has schedule
+        if watch_folder.enabled and watch_folder.schedule_times:
+            conflict_check = check_schedule_conflicts(session, watch_folder.schedule_times)
+            if conflict_check["has_conflict"]:
+                conflicts_msg = "; ".join([
+                    f"{c['name']} at {', '.join(c['times'])}" 
+                    for c in conflict_check["conflicts"]
+                ])
+                logger.warning(f"Schedule conflict detected: {conflicts_msg}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Schedule conflict detected with: {conflicts_msg}"
+                )
         
         session.add(watch_folder)
         session.commit()
@@ -92,9 +178,11 @@ def update_watch_folder(watch_folder_id: int, updated: WatchFolder):
     if watch_folder_id <= 0:
         logger.warning(f"Invalid watch folder ID: {watch_folder_id}")
         raise HTTPException(status_code=400, detail="Invalid watch folder ID")
-    # Validate paths
+    # Validate paths (skip validation for cloud storage paths)
     import os
-    if not os.path.isabs(updated.input_path):
+    is_cloud_input = updated.input_path.startswith('cloud://')
+    
+    if not is_cloud_input and not os.path.isabs(updated.input_path):
         logger.warning(f"Input path not absolute: {updated.input_path}")
         raise HTTPException(status_code=400, detail="Input path must be absolute")
     if not os.path.isabs(updated.output_path):
@@ -105,6 +193,20 @@ def update_watch_folder(watch_folder_id: int, updated: WatchFolder):
         if not watch_folder:
             logger.warning(f"Watch folder not found for update: {watch_folder_id}")
             raise HTTPException(status_code=404, detail="Watch folder not found")
+        
+        # Check for schedule conflicts if enabled and has schedule (exclude current watch folder)
+        if updated.enabled and updated.schedule_times:
+            conflict_check = check_schedule_conflicts(session, updated.schedule_times, exclude_id=watch_folder_id)
+            if conflict_check["has_conflict"]:
+                conflicts_msg = "; ".join([
+                    f"{c['name']} at {', '.join(c['times'])}" 
+                    for c in conflict_check["conflicts"]
+                ])
+                logger.warning(f"Schedule conflict detected: {conflicts_msg}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Schedule conflict detected with: {conflicts_msg}"
+                )
         
         # Update fields
         watch_folder.name = updated.name
@@ -249,16 +351,55 @@ def run_watch_folder_now(watch_folder_id: int):
             logger.warning(f"Ruleset not found: {watch_folder.ruleset_id}")
             raise HTTPException(status_code=404, detail="Ruleset not found")
         
-        # Check input folder exists and has files
-        if not os.path.exists(watch_folder.input_path):
-            logger.warning(f"Input folder does not exist: {watch_folder.input_path}")
-            raise HTTPException(status_code=400, detail="Input folder does not exist")
+        # Detect if this is cloud storage or local folder
+        is_cloud_storage = watch_folder.input_path.startswith('cloud://')
+        cloud_temp_dir = None
         
-        # Get list of PDF files
-        pdf_files = [f for f in os.listdir(watch_folder.input_path) if f.lower().endswith('.pdf')]
+        if is_cloud_storage:
+            # Handle cloud storage input
+            logger.info(f"Detected cloud storage input: {watch_folder.input_path}")
+            
+            # Get cloud config from watch folder
+            cloud_config = watch_folder.cloud_config
+            if not cloud_config:
+                logger.error(f"Cloud storage path but no cloud_config found")
+                raise HTTPException(status_code=400, detail="Cloud storage configuration missing")
+            
+            # Use CloudOrchestrator to download files
+            from app.services.cloud.cloud_orchestrator import CloudOrchestrator
+            
+            provider = cloud_config.get('provider')
+            config = cloud_config.get('config')
+            
+            logger.info(f"Downloading PDFs from {provider}...")
+            download_result = CloudOrchestrator.download_pdfs_to_temp(provider, config)
+            
+            if not download_result['success']:
+                logger.error(f"Failed to download from cloud: {download_result.get('message')}")
+                raise HTTPException(status_code=500, detail=f"Cloud download failed: {download_result.get('message')}")
+            
+            cloud_temp_dir = download_result['temp_dir']
+            pdf_files = [os.path.basename(f) for f in download_result['files']]
+            
+            logger.info(f"Downloaded {len(pdf_files)} PDF files from {provider} to {cloud_temp_dir}")
+            
+        else:
+            # Handle local folder input (EXISTING LOGIC - NO CHANGES)
+            # Check input folder exists and has files
+            if not os.path.exists(watch_folder.input_path):
+                logger.warning(f"Input folder does not exist: {watch_folder.input_path}")
+                raise HTTPException(status_code=400, detail="Input folder does not exist")
+            
+            # Get list of PDF files
+            pdf_files = [f for f in os.listdir(watch_folder.input_path) if f.lower().endswith('.pdf')]
+        
         if not pdf_files:
-            logger.info(f"No PDF files found in {watch_folder.input_path}")
-            raise HTTPException(status_code=400, detail="No PDF files found in input folder")
+            logger.info(f"No PDF files found")
+            # Clean up cloud temp dir if used
+            if cloud_temp_dir:
+                from app.services.cloud.cloud_orchestrator import CloudOrchestrator
+                CloudOrchestrator.cleanup_temp_directory(cloud_temp_dir)
+            raise HTTPException(status_code=400, detail="No PDF files found in input source")
         
         # Create JobRun record to track execution
         import socket
@@ -277,10 +418,31 @@ def run_watch_folder_now(watch_folder_id: int):
         session.refresh(job_run)
         logger.info(f"Created job run {job_run.id} for watch folder {watch_folder_id}")
         
+        # 🚀 BROADCAST IMMEDIATELY - User sees badge within milliseconds
+        try:
+            from app.routes.websocket_routes import broadcast_job_status_sync
+            broadcast_job_status_sync(
+                watch_folder_id=watch_folder_id,
+                status="started",
+                data={
+                    "job_run_id": job_run.id,
+                    "files_count": len(pdf_files),
+                    "files_found": len(pdf_files),
+                    "files_processed": 0
+                }
+            )
+            logger.info(f"✓ Broadcasted job start for watch folder {watch_folder_id}")
+        except Exception as e:
+            logger.warning(f"Failed to broadcast job start via WebSocket: {e}")
+        
         # Read PDF files into memory for processing
         files_list = []
+        
+        # Determine the source folder (cloud temp dir or local folder)
+        source_folder = cloud_temp_dir if (is_cloud_storage and cloud_temp_dir) else watch_folder.input_path
+        
         for filename in pdf_files:
-            filepath = os.path.join(watch_folder.input_path, filename)
+            filepath = os.path.join(source_folder, filename)
             try:
                 with open(filepath, 'rb') as f:
                     content = f.read()
@@ -303,7 +465,13 @@ def run_watch_folder_now(watch_folder_id: int):
             job_run.error_message = "Failed to read any PDF files"
             session.add(job_run)
             session.commit()
-            logger.error(f"Failed to read any PDF files from {watch_folder.input_path}")
+            
+            # Clean up cloud temp dir if used
+            if cloud_temp_dir:
+                from app.services.cloud.cloud_orchestrator import CloudOrchestrator
+                CloudOrchestrator.cleanup_temp_directory(cloud_temp_dir)
+            
+            logger.error(f"Failed to read any PDF files")
             raise HTTPException(status_code=500, detail="Failed to read PDF files")
         
         job_run.files_processed = len(files_list)
@@ -324,7 +492,8 @@ def run_watch_folder_now(watch_folder_id: int):
             'execution_type': 'Manual Trigger',
             'schedule_times': watch_folder.schedule_times or 'Not scheduled',
             'ruleset_name': ruleset.name if ruleset else 'Unknown',
-            'job_run_id': job_run.id  # Pass job run ID so worker can update it
+            'job_run_id': job_run.id,  # Pass job run ID so worker can update it
+            'cloud_temp_dir': cloud_temp_dir  # For cleanup after processing
         }
         
         # Submit task to local worker
@@ -337,6 +506,8 @@ def run_watch_folder_now(watch_folder_id: int):
         )
         
         logger.info(f"Submitted watch folder {watch_folder_id} as task {task_id} with {len(files_list)} files")
+        
+        # Note: cloud_temp_dir will be cleaned up by worker after processing completes
         
         # Update watch folder last_run
         watch_folder.last_run = datetime.utcnow()

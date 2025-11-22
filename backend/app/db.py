@@ -45,7 +45,7 @@ engine = create_engine(SQLITE_URL, echo=False, connect_args={"check_same_thread"
 def create_db_and_tables() -> None:
     """Create all database tables. Models must be imported before calling this."""
     # Import all models to register them with SQLModel metadata
-    from app.models import Ruleset, User, WatchFolder, JobRun, UsageRecord, DeviceActivation  # noqa: F401
+    from app.models import Ruleset, User, WatchFolder, JobRun, UsageRecord, DeviceActivation, CloudSource  # noqa: F401
     
     # Now create all tables
     SQLModel.metadata.create_all(engine)
@@ -88,6 +88,15 @@ def _migrate_database() -> None:
             if 'license_activated_at' not in columns:
                 print("📦 Migrating User table: adding license_activated_at column")
                 session.execute(text("ALTER TABLE user ADD COLUMN license_activated_at TIMESTAMP"))
+                session.commit()
+            
+            # Check if WatchFolder table needs migration (add cloud_config column if missing)
+            result = session.execute(text("PRAGMA table_info(watchfolder)"))
+            watchfolder_columns = {row[1] for row in result.fetchall()}
+            
+            if 'cloud_config' not in watchfolder_columns:
+                print("📦 Migrating WatchFolder table: adding cloud_config column")
+                session.execute(text("ALTER TABLE watchfolder ADD COLUMN cloud_config JSON"))
                 session.commit()
             
             print("✓ Database migration completed successfully")

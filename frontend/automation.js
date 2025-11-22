@@ -3,7 +3,23 @@
 let watchFolders = [];
 let editingWatchFolderId = null;
 let autoRefreshInterval = null;
+let activeJobsPollingInterval = null;  // Deprecated - replaced by WebSocket
 let loadedJobRunFolders = new Set(); // Track which folders have loaded job runs
+let activeJobPollers = new Map(); // Track active job polling intervals: jobId -> {taskId, intervalId}
+let jobStatusWebSocket = null;  // WebSocket connection for real-time updates
+let wsReconnectAttempts = 0;
+let wsReconnectDelay = 1000;  // Start with 1 second
+const WS_MAX_RECONNECT_DELAY = 30000;  // Max 30 seconds
+
+// Add CSS for spinner animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
 
 // Utility: Show toast notification
 function showToast(message, type = 'error') {
@@ -25,10 +41,230 @@ async function initAutomation() {
     
     // Start auto-refresh for job runs
     startAutoRefresh();
+    
+    // Connect WebSocket for real-time job status (replaces polling)
+    connectJobStatusWebSocket();
 }
+
+//===============================
+// ENTERPRISE: WebSocket Real-Time Updates
+//===============================
+
+function connectJobStatusWebSocket() {
+    try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/job-status`;
+        
+        console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
+        
+        jobStatusWebSocket = new WebSocket(wsUrl);
+        
+        jobStatusWebSocket.onopen = () => {
+            console.log('✅ WebSocket connected - Real-time job updates active');
+            wsReconnectAttempts = 0;
+            wsReconnectDelay = 1000;  // Reset delay on successful connection
+        };
+        
+        jobStatusWebSocket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            } catch (error) {
+                console.error('Failed to parse WebSocket message:', error);
+            }
+        };
+        
+        jobStatusWebSocket.onerror = (error) => {
+            console.error('❌ WebSocket error:', error);
+        };
+        
+        jobStatusWebSocket.onclose = () => {
+            console.warn('⚠️ WebSocket disconnected - Attempting reconnection...');
+            jobStatusWebSocket = null;
+            
+            // Exponential backoff reconnection
+            wsReconnectAttempts++;
+            wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_RECONNECT_DELAY);
+            
+            console.log(`Reconnecting in ${wsReconnectDelay/1000}s (attempt ${wsReconnectAttempts})...`);
+            setTimeout(() => {
+                if (document.getElementById('automationSection') && 
+                    document.getElementById('automationSection').style.display !== 'none') {
+                    connectJobStatusWebSocket();
+                }
+            }, wsReconnectDelay);
+        };
+        
+    } catch (error) {
+        console.error('Failed to create WebSocket connection:', error);
+    }
+}
+
+function handleWebSocketMessage(message) {
+    console.log('📨 WebSocket message:', message);
+    
+    switch (message.type) {
+        case 'ping':
+            // Server keepalive - respond with pong
+            if (jobStatusWebSocket && jobStatusWebSocket.readyState === WebSocket.OPEN) {
+                jobStatusWebSocket.send(JSON.stringify({ type: 'pong' }));
+            }
+            break;
+            
+        case 'job_status':
+            handleJobStatusUpdate(message);
+            break;
+            
+        default:
+            console.log('Unknown message type:', message.type);
+    }
+}
+
+function handleJobStatusUpdate(message) {
+    const { watch_folder_id, status, data } = message;
+    
+    console.log(`📊 Job status update for folder ${watch_folder_id}: ${status}`, data);
+    
+    switch (status) {
+        case 'started':
+            showJobRunningBadge(watch_folder_id, data);
+            break;
+            
+        case 'progress':
+            updateJobProgress(watch_folder_id, data);
+            break;
+            
+        case 'completed':
+            removeJobRunningBadge(watch_folder_id);
+            // Refresh execution history immediately
+            loadJobRuns(watch_folder_id);
+            // Reload watch folders to update stats
+            loadWatchFolders();
+            break;
+    }
+}
+
+function showJobRunningBadge(watchFolderId, data) {
+    const playButton = document.querySelector(`button[onclick*="runWatchFolderNow(${watchFolderId})"]`);
+    if (playButton) {
+        const card = playButton.closest('.watch-folder-card');
+        if (card) {
+            const headerInfo = card.querySelector('.watch-folder-info');
+            if (headerInfo) {
+                // Remove old badge if exists
+                const oldBadge = headerInfo.querySelector('.running-badge');
+                if (oldBadge) oldBadge.remove();
+                
+                // Add new badge
+                const badge = createRunningBadge({
+                    watch_folder_id: watchFolderId,
+                    files_found: data.files_found || 0,
+                    files_processed: data.files_processed || 0
+                });
+                headerInfo.appendChild(badge);
+            }
+        }
+    }
+}
+
+function updateJobProgress(watchFolderId, data) {
+    const badge = document.querySelector(`.running-badge[data-folder-id="${watchFolderId}"]`);
+    if (badge) {
+        badge.innerHTML = `
+            <div class="spinner" style="width: 12px; height: 12px; border: 2px solid #1976d2; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem;"></div>
+            Running... (${data.files_processed || 0}/${data.files_found || 0} files)
+        `;
+    }
+}
+
+function removeJobRunningBadge(watchFolderId) {
+    const playButton = document.querySelector(`button[onclick*="runWatchFolderNow(${watchFolderId})"]`);
+    if (playButton) {
+        const card = playButton.closest('.watch-folder-card');
+        if (card) {
+            const badge = card.querySelector('.running-badge');
+            if (badge) {
+                badge.remove();
+                console.log(`✅ Job ${watchFolderId} completed - badge removed`);
+            }
+        }
+    }
+}
+
+function disconnectJobStatusWebSocket() {
+    if (jobStatusWebSocket) {
+        console.log('🔌 Disconnecting WebSocket...');
+        jobStatusWebSocket.close();
+        jobStatusWebSocket = null;
+    }
+}
+
+// DEPRECATED: Polling replaced by WebSocket real-time updates
+// Keeping for backward compatibility / fallback only
+function startActiveJobsPolling() {
+    console.log('⚠️ startActiveJobsPolling() is deprecated - using WebSocket instead');
+    // Don't start polling - WebSocket handles this now
+}
+
+// DEPRECATED: Update logic moved to WebSocket message handler
+function updateActiveJobIndicators(activeJobs) {
+    console.log('⚠️ updateActiveJobIndicators() is deprecated - using WebSocket instead');
+    // This function is no longer used
+}
+
+// Create running status badge
+function createRunningBadge(job) {
+    const badge = document.createElement('span');
+    badge.className = 'running-badge';
+    badge.dataset.folderId = job.watch_folder_id;  // For easy lookup during updates
+    badge.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875em;
+        font-weight: 600;
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        color: #1976d2;
+        margin-left: 0.5rem;
+        animation: pulse 1.5s ease-in-out infinite;
+    `;
+    
+    badge.innerHTML = `
+        <div class="spinner" style="width: 12px; height: 12px; border: 2px solid #1976d2; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem;"></div>
+        Running... (${job.files_processed || 0}/${job.files_found || 0} files)
+    `;
+    
+    return badge;
+}
+
+// Add pulse animation for badge
+const pulseStyle = document.createElement('style');
+pulseStyle.textContent = `
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+`;
+document.head.appendChild(pulseStyle);
 
 // Expose to window for app.js to call
 window.initAutomation = initAutomation;
+
+// Stop connections when leaving automation tab
+window.stopAutomationPolling = function() {
+    // Disconnect WebSocket
+    disconnectJobStatusWebSocket();
+    
+    // Clear any legacy polling intervals
+    if (activeJobsPollingInterval) {
+        clearInterval(activeJobsPollingInterval);
+        activeJobsPollingInterval = null;
+    }
+    
+    // Clear running badges
+    document.querySelectorAll('.running-badge').forEach(badge => badge.remove());
+};
 
 // Load watch folders from server
 async function loadWatchFolders() {
@@ -148,12 +384,26 @@ function renderWatchFolders() {
                 </div>
                 ` : ''}
                 
+                <!-- Progress Bar (hidden by default) -->
+                <div id="progressBar_${folder.id}" class="job-progress-bar" style="display: none; margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 8px; border-left: 4px solid #2196f3;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #2196f3; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                            <span id="progressText_${folder.id}" style="font-weight: 600; color: #1976d2;">Starting job...</span>
+                        </div>
+                        <span id="progressPercent_${folder.id}" style="font-weight: 600; color: #1976d2;">0%</span>
+                    </div>
+                    <div style="background: #fff; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="progressFill_${folder.id}" style="background: linear-gradient(90deg, #2196f3 0%, #1976d2 100%); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div id="progressDetails_${folder.id}" style="margin-top: 0.5rem; font-size: 0.875em; color: #1565c0;"></div>
+                </div>
+                
                 <!-- Execution History Section -->
                 <div class="execution-history" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                         <h5 style="margin: 0; font-size: 1em; color: #666;">
-                            Recent Executions
-                            <span style="font-size: 0.75em; color: #999; font-weight: normal;">• Auto-refreshes</span>
+                            Recent Executions (Last 3)
                         </h5>
                         <button onclick="loadJobRuns(${folder.id})" style="padding: 0.25rem 0.75rem; font-size: 0.875em; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #0066cc;">
                             Refresh Now
@@ -239,9 +489,20 @@ async function loadJobRuns(watchFolderId) {
 // Format schedule times
 function formatSchedule(scheduleJson) {
     try {
+        // Try parsing as JSON array first (old format)
         const times = JSON.parse(scheduleJson || '[]');
-        return times.length > 0 ? times.join(', ') : 'Not scheduled';
+        if (times.length > 0) {
+            return `Daily at ${times.join(', ')}`;
+        }
+        return 'Not scheduled';
     } catch {
+        // If JSON parse fails, treat as comma-separated string (new format)
+        if (scheduleJson && scheduleJson.trim()) {
+            const times = scheduleJson.split(',').map(t => t.trim()).filter(t => t);
+            if (times.length > 0) {
+                return `Daily at ${times.join(', ')}`;
+            }
+        }
         return 'Not scheduled';
     }
 }
@@ -389,7 +650,12 @@ function addScheduleTime() {
 // Save watch folder
 async function saveWatchFolder() {
     const name = document.getElementById('watchFolderName').value.trim();
-    const inputPath = document.getElementById('watchFolderInput').value.trim();
+    const inputField = document.getElementById('watchFolderInput');
+    
+    // Check if this is a cloud source (has cloudPath data attribute)
+    const inputPath = inputField.dataset.cloudPath || inputField.value.trim();
+    const cloudConfig = inputField.dataset.cloudConfig ? JSON.parse(inputField.dataset.cloudConfig) : null;
+    
     const outputPath = document.getElementById('watchFolderOutput').value.trim();
     const rulesetId = parseInt(document.getElementById('watchFolderRuleset').value);
     const processedPath = document.getElementById('watchFolderProcessed').value.trim();
@@ -413,11 +679,12 @@ async function saveWatchFolder() {
         input_path: inputPath,
         output_path: outputPath,
         ruleset_id: rulesetId,
-        schedule_times: JSON.stringify(scheduleTimes),
+        schedule_times: scheduleTimes.join(','),  // Convert array to comma-separated string
         move_processed: moveProcessed,
         processed_path: moveProcessed ? processedPath : null,
         delete_after: deleteAfter,
-        enabled: true
+        enabled: true,
+        cloud_config: cloudConfig  // Include cloud config if present
     };
     
     try {
@@ -513,12 +780,22 @@ async function toggleWatchFolder(id) {
 
 // Run watch folder job immediately
 async function runWatchFolderNow(id) {
-    const container = document.getElementById(`jobRuns_${id}`);
-    if (container) {
-        container.innerHTML = '<div style="text-align: center; color: #0066cc; padding: 1rem;"><small>Starting job...</small></div>';
-    }
-    
     try {
+        // Show progress bar
+        const progressBar = document.getElementById(`progressBar_${id}`);
+        const progressText = document.getElementById(`progressText_${id}`);
+        const progressPercent = document.getElementById(`progressPercent_${id}`);
+        const progressFill = document.getElementById(`progressFill_${id}`);
+        const progressDetails = document.getElementById(`progressDetails_${id}`);
+        
+        if (progressBar) {
+            progressBar.style.display = 'block';
+            progressText.textContent = 'Starting job...';
+            progressPercent.textContent = '0%';
+            progressFill.style.width = '0%';
+            progressDetails.textContent = '';
+        }
+        
         const response = await fetch(`/api/v1/watch-folders/${id}/run`, {
             method: 'POST'
         });
@@ -529,21 +806,109 @@ async function runWatchFolderNow(id) {
         }
         
         const result = await response.json();
+        const taskId = result.task_id;
+        const filesCount = result.files_count || 0;
         
-        // Show success message
-        showToast(`Job started! Processing ${result.files_count} files...`, 'success');
+        // Update progress bar
+        if (progressText) {
+            progressText.textContent = `Processing ${filesCount} files...`;
+            progressDetails.textContent = 'Downloading and validating PDFs';
+        }
         
-        // Reload watch folders to update stats
-        await loadWatchFolders();
+        // Stop any existing poller for this job
+        if (activeJobPollers.has(id)) {
+            clearInterval(activeJobPollers.get(id).intervalId);
+        }
         
-        // Load job runs after a short delay to see the new run
-        setTimeout(() => loadJobRuns(id), 2000);
+        // Start polling for progress
+        const pollInterval = setInterval(async () => {
+            try {
+                const statusResponse = await fetch(`/api/v1/watch-folders/tasks/${taskId}`);
+                if (!statusResponse.ok) return;
+                
+                const taskStatus = await statusResponse.json();
+                
+                // Update progress
+                if (taskStatus.status === 'PROGRESS' && taskStatus.result) {
+                    const processed = taskStatus.result.processed || 0;
+                    const total = taskStatus.result.total || filesCount;
+                    const percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+                    
+                    if (progressText) progressText.textContent = `Processing ${processed}/${total} files`;
+                    if (progressPercent) progressPercent.textContent = `${percent}%`;
+                    if (progressFill) progressFill.style.width = `${percent}%`;
+                    if (progressDetails) progressDetails.textContent = taskStatus.result.current_file || '';
+                }
+                
+                // Job completed
+                if (taskStatus.status === 'SUCCESS' || taskStatus.status === 'FAILURE' || taskStatus.status === 'REVOKED') {
+                    clearInterval(pollInterval);
+                    activeJobPollers.delete(id);
+                    
+                    if (taskStatus.status === 'SUCCESS') {
+                        const total = taskStatus.result?.total || filesCount;
+                        if (progressBar) {
+                            progressBar.style.background = 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
+                            progressBar.style.borderLeftColor = '#4caf50';
+                        }
+                        if (progressText) progressText.textContent = `✅ Completed successfully!`;
+                        if (progressPercent) progressPercent.textContent = '100%';
+                        if (progressFill) {
+                            progressFill.style.width = '100%';
+                            progressFill.style.background = 'linear-gradient(90deg, #4caf50 0%, #388e3c 100%)';
+                        }
+                        if (progressDetails) progressDetails.textContent = `Processed ${total} files`;
+                        
+                        // Hide progress bar after 3 seconds
+                        setTimeout(() => {
+                            if (progressBar) progressBar.style.display = 'none';
+                        }, 3000);
+                    } else {
+                        if (progressBar) {
+                            progressBar.style.background = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+                            progressBar.style.borderLeftColor = '#f44336';
+                        }
+                        if (progressText) progressText.textContent = `❌ Job failed`;
+                        if (progressDetails) progressDetails.textContent = taskStatus.error || 'Check logs for details';
+                        
+                        // Hide progress bar after 5 seconds
+                        setTimeout(() => {
+                            if (progressBar) progressBar.style.display = 'none';
+                        }, 5000);
+                    }
+                    
+                    // Reload job runs
+                    await loadJobRuns(id);
+                }
+            } catch (error) {
+                console.error('Error polling task status:', error);
+            }
+        }, 1500); // Poll every 1.5 seconds
+        
+        // Store the interval ID
+        activeJobPollers.set(id, { taskId, intervalId: pollInterval });
+        
     } catch (error) {
         console.error('Failed to run watch folder:', error);
         showToast(error.message || 'Failed to start job', 'error');
-        if (container) {
-            container.innerHTML = `<div style="text-align: center; color: #dc3545; padding: 1rem;"><small>Error: ${error.message}</small></div>`;
+        
+        // Show error in progress bar
+        const progressBar = document.getElementById(`progressBar_${id}`);
+        const progressText = document.getElementById(`progressText_${id}`);
+        const progressDetails = document.getElementById(`progressDetails_${id}`);
+        
+        if (progressBar) {
+            progressBar.style.display = 'block';
+            progressBar.style.background = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+            progressBar.style.borderLeftColor = '#f44336';
         }
+        if (progressText) progressText.textContent = '❌ Failed to start job';
+        if (progressDetails) progressDetails.textContent = error.message;
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            if (progressBar) progressBar.style.display = 'none';
+        }, 5000);
     }
 }
 
@@ -647,14 +1012,7 @@ function startAutoRefresh() {
     }
     
     // Note: Initial load happens in renderWatchFolders()
-    
-    // Refresh every 30 seconds
-    autoRefreshInterval = setInterval(() => {
-        // Only refresh folders that have been loaded at least once
-        loadedJobRunFolders.forEach(folderId => {
-            loadJobRuns(folderId);
-        });
-    }, 30000); // 30 seconds
+    // Auto-refresh removed - users can click "Refresh Now" button if needed
 }
 
 function stopAutoRefresh() {

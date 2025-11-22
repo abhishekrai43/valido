@@ -68,7 +68,6 @@ def create_user(payload: UserCreate):
 @router.get("/trial-status")
 def get_trial_status():
     """Get trial status for the default user."""
-    logger.info("Getting trial status")
     with get_session() as session:
         user = session.exec(select(User).where(User.username == "default")).first()
         if not user:

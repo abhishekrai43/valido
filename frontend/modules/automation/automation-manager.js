@@ -137,14 +137,23 @@ window.jobManager = null;
 
 // Initialize when automation section is shown
 export function initAutomation() {
-    if (!window.jobManager) {
-        window.jobManager = new AutomationManager();
+    console.log('🚀 initAutomation() called');
+    try {
+        if (!window.jobManager) {
+            console.log('📦 Creating new AutomationManager');
+            window.jobManager = new AutomationManager();
+        }
+        console.log('⚙️ Calling jobManager.init()');
+        window.jobManager.init();
+    } catch (error) {
+        console.error('❌ Error in initAutomation:', error);
+        alert('Failed to initialize automation system. Check console for details.');
     }
-    window.jobManager.init();
 }
 
 // Export for use in HTML
 window.initAutomation = initAutomation;
+console.log('✅ automation-manager.js loaded, initAutomation exported to window');
 
 // Browse folder function (called by inline onclick in HTML)
 async function browseFolder(inputId) {

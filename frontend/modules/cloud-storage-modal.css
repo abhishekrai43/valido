@@ -1,0 +1,296 @@
+/**
+ * Cloud Storage Modal Styles
+ * Modular styles for cloud provider selection and configuration
+ */
+
+.cloud-storage-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.cloud-storage-modal-container {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: cloudModalSlideIn 0.3s ease-out;
+}
+
+@keyframes cloudModalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.cloud-storage-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    border-bottom: 2px solid #e0e0e0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.cloud-storage-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.cloud-storage-close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 32px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.cloud-storage-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.cloud-storage-modal-body {
+    padding: 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.cloud-provider-selection h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.cloud-provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.cloud-provider-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.cloud-provider-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.cloud-provider-card .provider-icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    margin-bottom: 12px;
+}
+
+.cloud-provider-card h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+}
+
+.cloud-provider-config {
+    animation: cloudConfigSlideIn 0.3s ease-out;
+}
+
+@keyframes cloudConfigSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.cloud-provider-config h3 {
+    margin: 0 0 24px 0;
+    color: #333;
+    font-size: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.cloud-provider-config .form-group {
+    margin-bottom: 20px;
+}
+
+.cloud-provider-config .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.cloud-provider-config .form-group label .required {
+    color: #e74c3c;
+    margin-left: 4px;
+}
+
+.cloud-provider-config .form-group input,
+.cloud-provider-config .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.cloud-provider-config .form-group input:focus,
+.cloud-provider-config .form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.cloud-provider-config .form-group textarea {
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.cloud-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.cloud-actions button {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cloud-actions .btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.cloud-actions .btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.cloud-actions .btn-test {
+    background: #3498db;
+    color: white;
+}
+
+.cloud-actions .btn-test:hover {
+    background: #2980b9;
+}
+
+.cloud-actions .btn-test:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.cloud-actions .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.cloud-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.test-result {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.test-result .test-loading {
+    background: #f0f8ff;
+    color: #2980b9;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #3498db;
+}
+
+.test-result .test-success {
+    background: #d4edda;
+    color: #155724;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #28a745;
+}
+
+.test-result .test-error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .cloud-storage-modal-container {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .cloud-provider-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cloud-actions {
+        flex-direction: column;
+    }
+
+    .cloud-actions button {
+        width: 100%;
+    }
+}

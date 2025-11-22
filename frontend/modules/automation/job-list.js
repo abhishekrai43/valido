@@ -124,17 +124,20 @@ export class JobListManager {
                 </div>
 
                 ${isRunning && progress ? `
-                    <div class="job-progress">
-                        <div class="progress-header">
-                            <span>Processing ${progress.processed} of ${progress.total} files...</span>
-                            <span>${Math.round(progress.percent)}%</span>
+                    <div class="job-progress" style="margin-top: 1rem; padding: 1rem; background: ${progress.percent >= 100 ? 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' : 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'}; border-radius: 8px; border-left: 4px solid ${progress.percent >= 100 ? '#4caf50' : '#2196f3'};">
+                        <div class="progress-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                ${progress.percent < 100 ? '<div class="spinner" style="width: 16px; height: 16px; border: 2px solid #2196f3; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>' : ''}
+                                <span style="font-weight: 600; color: ${progress.percent >= 100 ? '#2e7d32' : '#1976d2'};">${progress.percent >= 100 ? '✅ ' : ''}Processing ${progress.processed} of ${progress.total} files...</span>
+                            </div>
+                            <span style="font-weight: 600; color: ${progress.percent >= 100 ? '#2e7d32' : '#1976d2'};">${Math.round(progress.percent)}%</span>
                         </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress.percent}%"></div>
+                        <div class="progress-bar" style="background: #fff; border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div class="progress-fill" style="background: ${progress.percent >= 100 ? 'linear-gradient(90deg, #4caf50 0%, #388e3c 100%)' : 'linear-gradient(90deg, #2196f3 0%, #1976d2 100%)'}; height: 100%; width: ${progress.percent}%; transition: width 0.3s ease;"></div>
                         </div>
                         ${progress.currentFile ? `
-                            <div class="current-file">
-                                Current: ${this.escapeHtml(progress.currentFile)}
+                            <div class="current-file" style="margin-top: 0.5rem; font-size: 0.875em; color: ${progress.percent >= 100 ? '#2e7d32' : '#1565c0'};">
+                                ${this.escapeHtml(progress.currentFile)}
                             </div>
                         ` : ''}
                     </div>

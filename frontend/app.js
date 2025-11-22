@@ -26,10 +26,6 @@
       
       const { trial, access, license_active, license_type } = status;
       
-      console.log('Trial status received:', status);
-      console.log('Trial expired?', trial?.expired);
-      console.log('Days remaining:', trial?.days_remaining);
-      
       // Update UI based on status
       if (license_active) {
         // Licensed user
@@ -291,9 +287,6 @@
   function init() {
     // Update trial status on load
     TrialManager.updateUI();
-    
-    // Refresh trial status every minute
-    setInterval(() => TrialManager.updateUI(), 60000);
     
     // Fetch and display beta banner (now trial/license banner)
     function updateBetaBanner() {
@@ -1385,6 +1378,8 @@
         navAutomation.classList.remove('active');
         navHowTo.classList.remove('active');
         featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Stop automation polling
+        if (window.stopAutomationPolling) window.stopAutomationPolling();
       });
 
       // Try It Now tab (upload section)
@@ -1400,6 +1395,8 @@
         
         // Reset to Step 1 (force reset)
         navigateToStep(1, true);
+        // Stop automation polling
+        if (window.stopAutomationPolling) window.stopAutomationPolling();
       });
 
       // Automation tab
@@ -1412,7 +1409,10 @@
         navFeatures.classList.remove('active');
         navUpload.classList.remove('active');
         navHowTo.classList.remove('active');
-        window.initAutomation && window.initAutomation();
+        // Load automation jobs using automation.js
+        if (typeof loadWatchFolders === 'function') {
+          loadWatchFolders();
+        }
       });
 
       // How To tab
@@ -1426,6 +1426,8 @@
         navFeatures.classList.remove('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
+        // Stop automation polling
+        if (window.stopAutomationPolling) window.stopAutomationPolling();
       });
 
       // How To section tabs

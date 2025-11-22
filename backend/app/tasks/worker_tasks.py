@@ -87,6 +87,40 @@ def process_pdfs_sync(
         try:
             if progress_callback:
                 progress_callback(state, meta)
+            
+            # Also broadcast via WebSocket for real-time UI updates
+            if state == "PROGRESS" and job_metadata:
+                watch_folder_id = None
+                # Extract watch_folder_id from job_run if available
+                job_run_id = job_metadata.get('job_run_id')
+                if job_run_id:
+                    try:
+                        from app.db import get_session
+                        from app.models import JobRun
+                        with get_session() as session:
+                            job_run = session.get(JobRun, job_run_id)
+                            if job_run:
+                                watch_folder_id = job_run.watch_folder_id
+                    except:
+                        pass
+                
+                if watch_folder_id:
+                    try:
+                        from app.routes.websocket_routes import broadcast_job_status_sync
+                        broadcast_job_status_sync(
+                            watch_folder_id=watch_folder_id,
+                            status="progress",
+                            data={
+                                "job_run_id": job_run_id,
+                                "files_processed": meta.get("processed", 0),
+                                "files_found": meta.get("total", 0),
+                                "current_file": meta.get("current_file", ""),
+                                "percent": meta.get("percent", 0)
+                            }
+                        )
+                    except Exception as ws_error:
+                        # Silent fail - don't break job processing for WebSocket issues
+                        pass
         except Exception:
             pass
 
@@ -712,8 +746,36 @@ def process_pdfs_sync(
                     session.add(job_run)
                     session.commit()
                     print(f"Updated JobRun {job_run_id}: {job_run.status}, {files_succeeded} succeeded, {files_failed} failed")
+                    
+                    # Broadcast job completion via WebSocket
+                    try:
+                        from app.routes.websocket_routes import broadcast_job_status_sync
+                        broadcast_job_status_sync(
+                            watch_folder_id=job_run.watch_folder_id,
+                            status="completed",
+                            data={
+                                "job_run_id": job_run_id,
+                                "final_status": job_run.status,
+                                "files_processed": processed,
+                                "files_succeeded": files_succeeded,
+                                "files_failed": files_failed
+                            }
+                        )
+                    except Exception as ws_error:
+                        print(f"Failed to broadcast completion via WebSocket: {ws_error}")
+                    
         except Exception as e:
             print(f"Failed to update JobRun: {e}")
+    
+    # Clean up cloud temp directory if used
+    cloud_temp_dir = job_metadata.get('cloud_temp_dir') if job_metadata else None
+    if cloud_temp_dir:
+        try:
+            from app.services.cloud.cloud_orchestrator import CloudOrchestrator
+            CloudOrchestrator.cleanup_temp_directory(cloud_temp_dir)
+            logger.info(f"Cleaned up cloud temp directory: {cloud_temp_dir}")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup cloud temp directory: {e}")
     
     # Determine response status
     response_status = 'completed'

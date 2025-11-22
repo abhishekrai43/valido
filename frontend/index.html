@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/modules/automation/automation.css">
     <link rel="stylesheet" href="/modules/toast.css">
     <link rel="stylesheet" href="/modules/table-wizard.css">
+    <link rel="stylesheet" href="/modules/cloud-storage-modal.css">
   </head>
   <body>
     <div class="container">
@@ -934,20 +935,28 @@
                 </div>
 
                 <div class="form-group">
-                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Input Folder Path</label>
-                  <div class="input-with-button">
-                    <input type="text" id="watchFolderInput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\ToProcess\" />
-                    <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')" id="browseInputBtn" title="Click for instructions on how to copy folder paths">
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
-                        <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      </svg>
-                      Help
-                    </button>
+                  <label style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600;">Input Source</label>
+                  <select id="inputSourceType" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" onchange="toggleInputSource()">
+                    <option value="local">📁 Local Folder</option>
+                    <option value="cloud-new">☁️ Add New Cloud Source...</option>
+                  </select>
+                  
+                  <!-- Local Folder Input -->
+                  <div id="localFolderInput" style="margin-top: 1rem;">
+                    <div class="input-with-button">
+                      <input type="text" id="watchFolderInput" class="form-input" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1.1em; padding: 0.8rem;" placeholder="C:\Invoices\ToProcess\" />
+                      <button type="button" class="btn btn-secondary btn-browse" onclick="browseFolder('watchFolderInput')" id="browseInputBtn" title="Click for instructions on how to copy folder paths">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                          <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Help
+                      </button>
+                    </div>
+                    <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                      📂 <strong>How to get the path:</strong> Open File Explorer, navigate to your folder, click the address bar, copy the full path (e.g., C:\Invoices\ToProcess or \\SERVER\Share\Folder), and paste it here.
+                    </p>
                   </div>
-                  <p class="helper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                    📂 <strong>How to get the path:</strong> Open File Explorer, navigate to your folder, click the address bar, copy the full path (e.g., C:\Invoices\ToProcess or \\SERVER\Share\Folder), and paste it here.
-                  </p>
                 </div>
 
                 <div class="form-group">
@@ -1701,6 +1710,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
   <script src="/modules/toast.js?v=20251115165000"></script>
+  <script src="/modules/cloud-storage-modal.js"></script>
   <script src="/modules/update-checker.js"></script>
   <script src="/modules/field-wizard.js?v=20251115175500"></script>
   <script src="/modules/validations-builder.js?v=20251115163500"></script>
@@ -1718,10 +1728,111 @@
   <script src="/modules/rules-builder-main.js?v=20251115175500"></script>
   
   <!-- Load automation modules as ES6 modules -->
-  <script type="module" src="/modules/automation/automation-manager.js"></script>
+  <!-- <script type="module" src="/modules/automation/automation-manager.js"></script> -->
+  
+  <!-- Load automation.js (working version with progress bar) -->
+  <script src="/automation.js?v=20251122143800"></script>
+  
+  <!-- Cloud Storage Integration -->
+  <script>
+    // Load cloud sources into dropdown
+    async function loadCloudSources() {
+      try {
+        const response = await fetch('/api/v1/cloud-sources/');
+        const sources = await response.json();
+        
+        const select = document.getElementById('inputSourceType');
+        if (!select) return;
+        
+        // Remove old saved cloud sources (but keep cloud-new option)
+        Array.from(select.options).forEach(opt => {
+          if (opt.value.startsWith('cloud-') && opt.value !== 'cloud-new') {
+            select.remove(opt.index);
+          }
+        });
+        
+        // Add saved cloud sources after the "Add New" option
+        sources.forEach(source => {
+          const option = document.createElement('option');
+          option.value = `cloud-${source.id}`;
+          option.textContent = `☁️ ${source.name} (${source.provider.toUpperCase()})`;
+          option.dataset.cloudConfig = JSON.stringify({
+            provider: source.provider,
+            providerName: source.name,
+            config: source.config
+          });
+          select.appendChild(option);
+        });
+        
+      } catch (error) {
+        console.error('Failed to load cloud sources:', error);
+      }
+    }
+    
+    // Toggle between local folder and cloud storage input
+    function toggleInputSource() {
+      const select = document.getElementById('inputSourceType');
+      const localDiv = document.getElementById('localFolderInput');
+      const inputField = document.getElementById('watchFolderInput');
+      
+      if (select.value === 'local') {
+        localDiv.style.display = 'block';
+        inputField.value = '';
+        delete inputField.dataset.cloudConfig;
+        delete inputField.dataset.cloudPath;
+      } else if (select.value === 'cloud-new') {
+        // Open cloud storage modal to configure new source
+        localDiv.style.display = 'none';
+        openCloudStorageModal();
+      } else if (select.value.startsWith('cloud-')) {
+        // Use existing saved cloud source
+        localDiv.style.display = 'none';
+        const option = select.selectedOptions[0];
+        const cloudConfig = JSON.parse(option.dataset.cloudConfig);
+        
+        // Set cloud config
+        inputField.dataset.cloudConfig = option.dataset.cloudConfig;
+        inputField.dataset.cloudPath = `cloud://${cloudConfig.provider}/${cloudConfig.config.bucket_name || cloudConfig.config.container_name}`;
+        inputField.value = `☁️ ${cloudConfig.providerName}`;
+      }
+    }
+    
+    // Open cloud sources manager (simplified - just reuse the modal for now)
+    function openCloudSourcesManager() {
+      alert('Cloud Sources Manager\n\nTo add a new cloud source:\n1. Select a cloud option from the dropdown\n2. Configure your credentials\n3. Save\n\nComing soon: Full management UI');
+      // TODO: Create dedicated cloud sources management modal
+    }
+    
+    // Load cloud sources when automation page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCloudSources();
+    });
+    
+    // Global function to open cloud storage modal (kept for backwards compatibility)
+    function openCloudStorageModal() {
+      window.cloudStorageModal.show((cloudConfig) => {
+        const inputField = document.getElementById('watchFolderInput');
+        if (inputField) {
+          const displayNames = {
+            'azure': '☁️ Azure Cloud Storage',
+            'aws': '☁️ AWS S3',
+            'gcp': '☁️ Google Cloud Storage'
+          };
+          
+          inputField.value = displayNames[cloudConfig.provider] || `☁️ ${cloudConfig.providerName}`;
+          inputField.dataset.cloudConfig = JSON.stringify(cloudConfig);
+          inputField.dataset.cloudPath = `cloud://${cloudConfig.provider}/${cloudConfig.config.bucket_name || cloudConfig.config.container_name}`;
+        }
+        
+        if (window.toast) {
+          window.toast.success(`✅ Cloud storage configured: ${cloudConfig.providerName}`);
+        }
+      });
+    }
+  </script>
   
   <!-- Load other main files -->
-  <script src="/app.js?v=20251118092500"></script>
+  <script src="/app.js?v=20251122150800"></script>
   </body>
 </html>
 

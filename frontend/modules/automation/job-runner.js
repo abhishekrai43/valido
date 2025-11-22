@@ -18,20 +18,49 @@ export class JobRunner {
             const job = this.jobListManager.jobs.find(j => j.id === jobId);
             if (!job) throw new Error('Job not found');
 
+            // Show progress bar IMMEDIATELY with "Starting..." message
+            this.jobListManager.activeTaskPollers.set(jobId, {
+                taskId: null, // Will be set after API response
+                progress: { processed: 0, total: 0, percent: 0, currentFile: 'Starting job...' }
+            });
+            this.updateJobCard(jobId);
 
             // Trigger job execution on backend
             const response = await fetch(`/api/v1/watch-folders/${jobId}/run`, {
                 method: 'POST'
             });
 
-            if (!response.ok) throw new Error('Failed to start job');
+            if (!response.ok) {
+                const errorText = await response.text();
+                // Remove progress bar on error
+                this.jobListManager.activeTaskPollers.delete(jobId);
+                this.updateJobCard(jobId);
+                throw new Error(errorText || 'Failed to start job');
+            }
 
             const result = await response.json();
             const taskId = result.task_id;
+            const filesCount = result.files_count || 0;
 
+            if (!taskId) {
+                // Remove progress bar on error
+                this.jobListManager.activeTaskPollers.delete(jobId);
+                this.updateJobCard(jobId);
+                throw new Error('No task ID returned from server');
+            }
+
+            console.log(`Job ${jobId} started with task ID: ${taskId}, files: ${filesCount}`);
+
+            // Update progress tracker with actual file count and start polling
+            const tracker = this.jobListManager.activeTaskPollers.get(jobId);
+            if (tracker) {
+                tracker.taskId = taskId;
+                tracker.progress = { processed: 0, total: filesCount, percent: 0, currentFile: 'Downloading files from cloud...' };
+                this.updateJobCard(jobId);
+            }
 
             // Start polling for progress
-            this.startPolling(jobId, taskId);
+            this.startPolling(jobId, taskId, filesCount);
 
         } catch (error) {
             console.error('Failed to run job:', error);
@@ -42,26 +71,31 @@ export class JobRunner {
     /**
      * Start polling for task progress
      */
-    startPolling(jobId, taskId) {
+    startPolling(jobId, taskId, filesCount = 0) {
         // Stop any existing polling for this job
         this.stopPolling(jobId);
 
-        // Initialize progress tracker
-        this.jobListManager.activeTaskPollers.set(jobId, {
-            taskId: taskId,
-            progress: { processed: 0, total: 0, percent: 0, currentFile: '' }
-        });
+        console.log(`Starting progress polling for job ${jobId}, task ${taskId}, files: ${filesCount}`);
 
-        // Re-render to show progress UI
-        this.jobListManager.render();
+        // Progress tracker is already set in runNow(), just update it
+        const tracker = this.jobListManager.activeTaskPollers.get(jobId);
+        if (tracker) {
+            tracker.taskId = taskId;
+            tracker.progress.total = filesCount;
+            tracker.progress.currentFile = 'Processing files...';
+        }
 
         // Poll every 1.5 seconds
         const intervalId = setInterval(async () => {
             try {
                 const response = await fetch(`/api/v1/watch-folders/tasks/${taskId}`);
-                if (!response.ok) throw new Error('Failed to get task status');
+                if (!response.ok) {
+                    console.error(`Failed to get task status: ${response.status} ${response.statusText}`);
+                    throw new Error('Failed to get task status');
+                }
 
                 const taskStatus = await response.json();
+                console.log(`Task ${taskId} status:`, taskStatus.status, taskStatus.result);
                 
 
                 // Update progress
@@ -82,33 +116,50 @@ export class JobRunner {
 
                 // Task completed
                 if (taskStatus.status === 'SUCCESS' || taskStatus.status === 'FAILURE' || taskStatus.status === 'REVOKED') {
+                    console.log(`Task ${taskId} completed with status: ${taskStatus.status}`);
                     this.stopPolling(jobId);
                     
-                    // Show completion message
-                    if (taskStatus.status === 'SUCCESS') {
-                        const total = taskStatus.result?.total || taskStatus.result?.reports?.length || 0;
-                        window.toast.success(`Job completed successfully! Processed ${total} files.`);
-                    } else if (taskStatus.status === 'FAILURE') {
-                        window.toast.error(`Job failed: ${taskStatus.error || 'Check logs for details'}`);
+                    // Update progress tracker with completion status
+                    const tracker = this.jobListManager.activeTaskPollers.get(jobId);
+                    if (tracker && taskStatus.status === 'SUCCESS') {
+                        const total = taskStatus.result?.total || tracker.progress.total;
+                        tracker.progress = {
+                            processed: total,
+                            total: total,
+                            percent: 100,
+                            currentFile: `✅ Completed successfully! Processed ${total} files`
+                        };
+                        
+                        // Update just this job card to show completion
+                        this.updateJobCard(jobId);
+                        
+                        // Remove progress tracker after 3 seconds
+                        setTimeout(() => {
+                            this.jobListManager.activeTaskPollers.delete(jobId);
+                            this.updateJobCard(jobId);
+                            
+                            // Refresh job runs to show new execution
+                            if (window.jobManager && window.jobManager.loadJobRuns) {
+                                window.jobManager.loadJobRuns(jobId);
+                            }
+                        }, 3000);
                     } else {
-                        window.toast.warning('Job was cancelled');
-                    }
-
-                    // Re-render to remove progress UI
-                    this.jobListManager.render();
-                    
-                    // Auto-refresh job runs after completion
-                    setTimeout(() => {
+                        // For failures, just remove the progress tracker
+                        this.jobListManager.activeTaskPollers.delete(jobId);
+                        this.updateJobCard(jobId);
+                        
+                        // Still refresh job runs
                         if (window.jobManager && window.jobManager.loadJobRuns) {
                             window.jobManager.loadJobRuns(jobId);
                         }
-                    }, 1000);
+                    }
                 }
 
             } catch (error) {
                 console.error('Error polling task:', error);
                 this.stopPolling(jobId);
-                this.jobListManager.render();
+                this.jobListManager.activeTaskPollers.delete(jobId);
+                this.updateJobCard(jobId);
             }
         }, 1500);
 

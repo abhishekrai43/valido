@@ -40,12 +40,12 @@ class WatchFolder(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)  # User-friendly name
-    input_path: str  # Folder to watch
+    input_path: str  # Folder to watch (or cloud:// URL for cloud storage)
     output_path: str  # Where to save results
     ruleset_id: int  # Which ruleset to apply
     
     # Schedule configuration
-    schedule_times: Optional[str] = Field(default=None)  # JSON array of times e.g. ["18:00", "12:00"]
+    schedule_times: Optional[str] = Field(default=None)  # Comma-separated times e.g. "18:00, 12:00"
     
     # Post-processing
     move_processed: bool = Field(default=True)
@@ -57,6 +57,9 @@ class WatchFolder(SQLModel, table=True):
     last_run: Optional[datetime] = Field(default=None)
     files_processed_total: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Cloud storage configuration (Enterprise feature)
+    cloud_config: Optional[Any] = Field(default=None, sa_column=Column(JSON))  # Stores cloud provider config
 
 
 class JobRun(SQLModel, table=True):
@@ -93,6 +96,18 @@ class UsageRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     pdf_count: int = Field(default=0)  # Number of PDFs processed in this batch
     processed_at: datetime = Field(default_factory=datetime.now, index=True)  # When processed
+
+
+class CloudSource(SQLModel, table=True):
+    """Stores saved cloud storage configurations for reuse."""
+    __table_args__ = {'extend_existing': True}
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)  # User-friendly name (e.g., "Production Azure", "Dev S3")
+    provider: str = Field(index=True)  # 'azure', 'aws', or 'gcp'
+    config: Any = Field(sa_column=Column(JSON))  # Provider-specific configuration (credentials, etc.)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_used: Optional[datetime] = Field(default=None)  # Track usage for sorting
 
 
 class DeviceActivation(SQLModel, table=True):
