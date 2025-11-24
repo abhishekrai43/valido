@@ -38,6 +38,13 @@ def gumroad_webhook():
         
         cursor = conn.cursor()
         
+        # Calculate expiration date
+        from datetime import datetime, timedelta
+        if license_type == 'annual':
+            expires_at = datetime.utcnow() + timedelta(days=365)
+        else:  # monthly
+            expires_at = datetime.utcnow() + timedelta(days=30)
+        
         # Insert new license (or update if exists)
         cursor.execute("""
             INSERT INTO licenses (
@@ -47,15 +54,17 @@ def gumroad_webhook():
                 is_active, 
                 max_devices, 
                 device_ids,
+                expires_at,
                 created_at,
                 gumroad_sale_id
-            ) VALUES (%s, %s, %s, %s, %s, ARRAY[]::text[], NOW(), %s)
+            ) VALUES (%s, %s, %s, %s, %s, ARRAY[]::text[], %s, NOW(), %s)
             ON CONFLICT (license_key) 
             DO UPDATE SET 
                 purchase_email = EXCLUDED.purchase_email,
                 is_active = EXCLUDED.is_active,
+                expires_at = EXCLUDED.expires_at,
                 gumroad_sale_id = EXCLUDED.gumroad_sale_id
-        """, (email, license_key, license_type, True, 3, sale_id))
+        """, (email, license_key, license_type, True, 1, expires_at, sale_id))
         
         conn.commit()
         cursor.close()
@@ -185,6 +194,28 @@ def validate():
                 "message": "License is not active"
             })
         
+        # Check expiration
+        if expires_at:
+            from datetime import datetime, timezone
+            try:
+                # PostgreSQL returns timezone-aware datetime
+                now_utc = datetime.now(timezone.utc)
+                # If expires_at is naive, make it UTC-aware
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                
+                if now_utc > expires_at:
+                    cursor.close()
+                    conn.close()
+                    return jsonify({
+                        "valid": False,
+                        "message": "License has expired. Please renew your subscription."
+                    })
+            except Exception as exp_error:
+                # If expiration check fails, log and continue (don't block valid licenses)
+                print(f"Expiration check error: {exp_error}")
+                pass
+        
         # Parse device IDs - PostgreSQL might return as string or list
         if isinstance(device_ids_json, str):
             device_ids = json.loads(device_ids_json) if device_ids_json else []
@@ -244,7 +275,11 @@ def validate():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Validation error: {str(e)}")
+        print(f"Traceback: {error_details}")
+        return jsonify({"valid": False, "message": f"Validation error: {str(e)}"}), 500
 
 
 @app.route('/api/version')

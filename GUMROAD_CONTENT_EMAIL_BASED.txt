@@ -1,0 +1,61 @@
+═══════════════════════════════════════════════════════════════════
+🎉 Thank you for purchasing Valido!
+═══════════════════════════════════════════════════════════════════
+
+Your purchase is confirmed! Here's how to activate:
+
+═══════════════════════════════════════════════════════════════════
+🔑 ACTIVATION STEPS:
+═══════════════════════════════════════════════════════════════════
+
+1. Open Valido on your computer (the app you've been using in trial mode)
+
+2. Click the "Activate License" button in the top-right corner
+
+3. Enter YOUR EMAIL: {email}
+   (The same email you used for this purchase)
+
+4. Select your license type: {product_name}
+
+5. Click "Activate" - you're done!
+
+Your trial will immediately convert to a full license with no interruption!
+
+═══════════════════════════════════════════════════════════════════
+📋 YOUR LICENSE DETAILS:
+═══════════════════════════════════════════════════════════════════
+
+License Type: {product_name}
+Purchase Email: {email}
+Valid For: 30 days (Monthly) or 365 days (Annual)
+
+⚠️ IMPORTANT: To continue using Valido after your license expires, 
+simply purchase again using the SAME EMAIL ADDRESS. Your license 
+will be automatically extended!
+
+Renewal Link: [Same link you used to purchase]
+
+═══════════════════════════════════════════════════════════════════
+❓ NEED HELP?
+═══════════════════════════════════════════════════════════════════
+
+• Don't have Valido installed yet? Download: https://validoapp.com/download
+• Forgot which email you used? Check your email receipt from Gumroad
+• Installation issues? Check our FAQ: https://validoapp.com/faq  
+• Contact support: support@validoapp.com
+
+═══════════════════════════════════════════════════════════════════
+📌 WHAT'S INCLUDED:
+═══════════════════════════════════════════════════════════════════
+
+✓ Validate unlimited PDFs with custom rules
+✓ AI-powered pattern detection
+✓ Extract and validate tables automatically  
+✓ Process PDFs 100% offline (after activation)
+✓ Install on 1 device (move license via deactivation)
+
+═══════════════════════════════════════════════════════════════════
+
+Happy validating! 🚀
+
+- The Valido Team

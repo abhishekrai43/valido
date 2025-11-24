@@ -9,8 +9,8 @@ import uuid
 import os
 from typing import Optional, Dict, Any
 
-# Your secure license API endpoint
-LICENSE_API_URL = "https://license-47cn7dnzb-abhishekrai43s-projects.vercel.app"
+# Your secure license API endpoint - stable production URL
+LICENSE_API_URL = "https://license-5k1dudzhe-abhishekrai43s-projects.vercel.app"
 
 
 class CloudLicenseManager:
