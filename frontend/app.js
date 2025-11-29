@@ -429,24 +429,139 @@
       });
     }
     
-    // Feedback button functionality
+    // Feedback button functionality with smart rating system
     const feedbackBtn = document.getElementById('feedbackBtn');
     if (feedbackBtn) {
       feedbackBtn.addEventListener('click', () => {
+        // Check if user has completed a validation and hasn't rated yet
+        const hasCompletedValidation = localStorage.getItem('validationCompleted') === 'true';
+        const hasRated = localStorage.getItem('userHasRated') === 'true';
+        const showRatingFirst = hasCompletedValidation && !hasRated;
+        
         const modal = document.createElement('div');
         modal.className = 'share-modal';
-        modal.innerHTML = `
-          <div class="share-modal-overlay"></div>
-          <div class="share-modal-content">
-            <div class="share-modal-header">
-              <h3>Report Issues / Request Features</h3>
-              <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
+        
+        if (showRatingFirst) {
+          // Show rating prompt first
+          modal.innerHTML = `
+            <div class="share-modal-overlay"></div>
+            <div class="share-modal-content">
+              <div class="share-modal-header">
+                <h3>How's your experience with Valido?</h3>
+                <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
+              </div>
+              <div class="share-modal-body">
+                <p style="margin-bottom: 25px; color: #666; line-height: 1.6; text-align: center;">
+                  You've completed your first validation! We'd love to hear your thoughts.
+                </p>
+                
+                <div id="ratingStep" style="text-align: center;">
+                  <div style="margin-bottom: 20px;">
+                    <div class="star-rating" style="font-size: 48px; cursor: pointer; user-select: none;">
+                      <span class="star" data-rating="1">☆</span>
+                      <span class="star" data-rating="2">☆</span>
+                      <span class="star" data-rating="3">☆</span>
+                      <span class="star" data-rating="4">☆</span>
+                      <span class="star" data-rating="5">☆</span>
+                    </div>
+                  </div>
+                  <p style="color: #999; font-size: 14px;">Click to rate your experience</p>
+                  <button onclick="this.closest('.share-modal').remove(); localStorage.setItem('userHasRated', 'true');" style="margin-top: 15px; background: #e5e7eb; color: #6b7280; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Skip for now</button>
+                </div>
+                
+                <div id="testimonialStep" style="display: none;">
+                  <form id="testimonialForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+                    <input type="hidden" name="type" value="testimonial">
+                    <input type="hidden" name="rating" id="ratingValue">
+                    
+                    <div style="text-align: center; margin-bottom: 15px;">
+                      <div style="font-size: 48px; margin-bottom: 10px;" id="ratingDisplay"></div>
+                      <p style="color: #10b981; font-weight: 600; font-size: 18px;">Thank you for the great rating!</p>
+                      <p style="color: #666; font-size: 14px;">Would you like to share your experience publicly?</p>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Name *</label>
+                      <input type="text" name="name" required placeholder="John Smith" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Job Title / Company *</label>
+                      <input type="text" name="title" required placeholder="Accountant at ABC Corp" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">LinkedIn Profile (optional)</label>
+                      <input type="url" name="linkedin" placeholder="https://linkedin.com/in/yourprofile" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Testimonial *</label>
+                      <textarea name="testimonial" required placeholder="What do you like about Valido? How has it helped you?" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <button type="submit" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                      Submit Testimonial
+                    </button>
+                    <button type="button" onclick="this.closest('.share-modal').remove(); localStorage.setItem('userHasRated', 'true');" style="background: #e5e7eb; color: #6b7280; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                      Skip - Don't share publicly
+                    </button>
+                  </form>
+                </div>
+                
+                <div id="improvementStep" style="display: none;">
+                  <form id="improvementForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+                    <input type="hidden" name="type" value="improvement">
+                    <input type="hidden" name="rating" id="improvementRatingValue">
+                    
+                    <div style="text-align: center; margin-bottom: 15px;">
+                      <div style="font-size: 48px; margin-bottom: 10px;" id="improvementRatingDisplay"></div>
+                      <p style="color: #d97706; font-weight: 600; font-size: 18px;">Thanks for your honest feedback</p>
+                      <p style="color: #666; font-size: 14px;">Help us improve! What should we work on?</p>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">What needs improvement? *</label>
+                      <textarea name="improvement" required placeholder="Be specific:
+• What features are missing?
+• What's confusing or difficult?
+• What bugs did you encounter?
+• What would make Valido more useful for you?" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Email (optional - for follow-up)</label>
+                      <input type="email" name="email" placeholder="your@email.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <button type="submit" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                      Send Feedback
+                    </button>
+                  </form>
+                </div>
+                
+                <div id="feedbackSuccess" style="display: none; text-align: center; padding: 20px;">
+                  <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                  <h3 style="color: #10b981; margin-bottom: 10px;">Thank you!</h3>
+                  <p style="color: #666;">Your feedback has been received.</p>
+                </div>
+              </div>
             </div>
-            <div class="share-modal-body">
-              <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
-                Found a bug? Have a feature request? We'd love to hear from you!<br>
-                <strong style="color: #764ba2;">💡 Tip:</strong> For common issues and solutions, check the <strong>Troubleshooting</strong> section in the "How To Use" tab first.
-              </p>
+          `;
+        } else {
+          // Show normal feedback form
+          modal.innerHTML = `
+            <div class="share-modal-overlay"></div>
+            <div class="share-modal-content">
+              <div class="share-modal-header">
+                <h3>Report Issues / Request Features</h3>
+                <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
+              </div>
+              <div class="share-modal-body">
+                <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+                  Found a bug? Have a feature request? We'd love to hear from you!<br>
+                  <strong style="color: #764ba2;">💡 Tip:</strong> For common issues and solutions, check the <strong>Troubleshooting</strong> section in the "How To Use" tab first.
+                </p>
               
               <form id="feedbackForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
                 <div>
@@ -488,6 +603,8 @@
             </div>
           </div>
         `;
+        }
+        
         document.body.appendChild(modal);
         
         // Close on overlay click
@@ -495,33 +612,137 @@
           modal.remove();
         });
         
-        // Handle form submission
-        const form = modal.querySelector('#feedbackForm');
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
+        // If showing rating modal, add star interaction logic
+        if (showRatingFirst) {
+          const stars = modal.querySelectorAll('.star');
+          const ratingStep = modal.querySelector('#ratingStep');
+          const testimonialStep = modal.querySelector('#testimonialStep');
+          const improvementStep = modal.querySelector('#improvementStep');
           
-          const formData = new FormData(form);
+          let selectedRating = 0;
           
-          try {
-            const response = await fetch(form.action, {
-              method: 'POST',
-              body: formData,
-              headers: {
-                'Accept': 'application/json'
-              }
+          // Star hover and click effects
+          stars.forEach((star, index) => {
+            star.addEventListener('mouseenter', () => {
+              stars.forEach((s, i) => {
+                s.textContent = i <= index ? '★' : '☆';
+              });
             });
             
-            if (response.ok) {
-              form.style.display = 'none';
-              modal.querySelector('#feedbackSuccess').style.display = 'block';
-              setTimeout(() => modal.remove(), 3000);
-            } else {
-              alert('Failed to send feedback. Please try again.');
+            star.addEventListener('click', () => {
+              selectedRating = index + 1;
+              localStorage.setItem('userHasRated', 'true');
+              
+              // Display selected rating
+              const displayStars = '★'.repeat(selectedRating) + '☆'.repeat(5 - selectedRating);
+              
+              ratingStep.style.display = 'none';
+              
+              if (selectedRating >= 4) {
+                // High rating - ask for testimonial
+                modal.querySelector('#ratingValue').value = selectedRating;
+                modal.querySelector('#ratingDisplay').textContent = displayStars;
+                testimonialStep.style.display = 'block';
+              } else {
+                // Low rating - ask for improvement suggestions
+                modal.querySelector('#improvementRatingValue').value = selectedRating;
+                modal.querySelector('#improvementRatingDisplay').textContent = displayStars;
+                improvementStep.style.display = 'block';
+              }
+            });
+          });
+          
+          // Reset stars on mouse leave
+          modal.querySelector('.star-rating').addEventListener('mouseleave', () => {
+            if (selectedRating === 0) {
+              stars.forEach(s => s.textContent = '☆');
             }
-          } catch (error) {
-            alert('Failed to send feedback. Please check your internet connection.');
+          });
+          
+          // Handle testimonial form submission
+          const testimonialForm = modal.querySelector('#testimonialForm');
+          if (testimonialForm) {
+            testimonialForm.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const formData = new FormData(testimonialForm);
+              
+              try {
+                const response = await fetch(testimonialForm.action, {
+                  method: 'POST',
+                  body: formData,
+                  headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                  testimonialStep.style.display = 'none';
+                  modal.querySelector('#feedbackSuccess').style.display = 'block';
+                  setTimeout(() => modal.remove(), 3000);
+                } else {
+                  alert('Failed to submit testimonial. Please try again.');
+                }
+              } catch (error) {
+                alert('Failed to submit. Please check your internet connection.');
+              }
+            });
           }
-        });
+          
+          // Handle improvement form submission
+          const improvementForm = modal.querySelector('#improvementForm');
+          if (improvementForm) {
+            improvementForm.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const formData = new FormData(improvementForm);
+              
+              try {
+                const response = await fetch(improvementForm.action, {
+                  method: 'POST',
+                  body: formData,
+                  headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                  improvementStep.style.display = 'none';
+                  modal.querySelector('#feedbackSuccess').style.display = 'block';
+                  setTimeout(() => modal.remove(), 3000);
+                } else {
+                  alert('Failed to send feedback. Please try again.');
+                }
+              } catch (error) {
+                alert('Failed to send. Please check your internet connection.');
+              }
+            });
+          }
+        } else {
+          // Handle normal feedback form submission
+          const form = modal.querySelector('#feedbackForm');
+          if (form) {
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              const formData = new FormData(form);
+              
+              try {
+                const response = await fetch(form.action, {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                    'Accept': 'application/json'
+                  }
+                });
+                
+                if (response.ok) {
+                  form.style.display = 'none';
+                  modal.querySelector('#feedbackSuccess').style.display = 'block';
+                  setTimeout(() => modal.remove(), 3000);
+                } else {
+                  alert('Failed to send feedback. Please try again.');
+                }
+              } catch (error) {
+                alert('Failed to send feedback. Please check your internet connection.');
+              }
+            });
+          }
+        }
       });
     }
 
@@ -1244,7 +1465,7 @@
             ` : '';
             
             downloadLink.innerHTML = `
-              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
+              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn" onclick="localStorage.setItem('validationCompleted', 'true');">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1257,7 +1478,7 @@
           .catch(error => {
             console.warn('Failed to fetch results path:', error);
             downloadLink.innerHTML = `
-              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
+              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn" onclick="localStorage.setItem('validationCompleted', 'true');">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 14V16C2 17.1046 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

@@ -1,9 +1,31 @@
 // Update Checker Module
 const UpdateChecker = {
   GITHUB_API: 'https://api.github.com/repos/Valido-App/valido-app.github.io/releases/latest',
-  CURRENT_VERSION: '1.0.8',
+  CURRENT_VERSION: null, // Will be fetched from backend
+  
+  async getCurrentVersion() {
+    if (this.CURRENT_VERSION) return this.CURRENT_VERSION;
+    
+    try {
+      const response = await fetch('/api/v1/version');
+      if (response.ok) {
+        const data = await response.json();
+        this.CURRENT_VERSION = data.version;
+        return this.CURRENT_VERSION;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch current version from backend:', error);
+    }
+    
+    // Fallback to hardcoded version if backend fails
+    this.CURRENT_VERSION = '1.10.0';
+    return this.CURRENT_VERSION;
+  },
   
   async checkForUpdates() {
+    // First, get current version from backend
+    const currentVersion = await this.getCurrentVersion();
+    
     try {
       const response = await fetch(this.GITHUB_API);
       if (!response.ok) {
@@ -17,10 +39,10 @@ const UpdateChecker = {
       const release = await response.json();
       const latestVersion = release.tag_name.replace('v', '');
       
-      if (this.isNewerVersion(latestVersion, this.CURRENT_VERSION)) {
-        this.showUpdateModal(latestVersion, release.body, release.html_url);
+      if (this.isNewerVersion(latestVersion, currentVersion)) {
+        this.showUpdateModal(latestVersion, release.body, release.html_url, currentVersion);
       } else {
-        this.showNoUpdateModal();
+        this.showNoUpdateModal(currentVersion);
       }
     } catch (error) {
       console.error('Update check failed:', error);
@@ -39,7 +61,7 @@ const UpdateChecker = {
     return false;
   },
   
-  showUpdateModal(version, changelog, downloadUrl) {
+  showUpdateModal(version, changelog, downloadUrl, currentVersion) {
     const modal = document.createElement('div');
     modal.className = 'update-modal';
     modal.innerHTML = `
@@ -51,7 +73,7 @@ const UpdateChecker = {
         </div>
         <div class="modal-body">
           <div style="background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
-            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px;">Current: v${this.CURRENT_VERSION}</div>
+            <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px;">Current: v${currentVersion}</div>
             <div style="font-size: 2rem; font-weight: 700;">v${version}</div>
             <div style="font-size: 0.875rem; opacity: 0.9; margin-top: 8px;">Latest Release</div>
           </div>
@@ -61,7 +83,7 @@ const UpdateChecker = {
             <pre style="white-space: pre-wrap; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.875rem; line-height: 1.6;">${changelog}</pre>
           </div>
           
-          <button class="btn btn-primary" style="width: 100%;" onclick="window.open('${downloadUrl}', '_blank'); this.closest('.update-modal').remove();">
+          <button class="btn btn-primary" style="width: 100%;" onclick="window.open('https://valido.site/', '_blank'); this.closest('.update-modal').remove();">
             Download v${version}
           </button>
         </div>
@@ -70,7 +92,7 @@ const UpdateChecker = {
     document.body.appendChild(modal);
   },
   
-  showNoUpdateModal() {
+  showNoUpdateModal(currentVersion) {
     const modal = document.createElement('div');
     modal.className = 'update-modal';
     modal.innerHTML = `
@@ -87,7 +109,7 @@ const UpdateChecker = {
               You have the latest version
             </div>
             <div style="color: #6b7280;">
-              v${this.CURRENT_VERSION}
+              v${currentVersion}
             </div>
           </div>
         </div>

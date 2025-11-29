@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.0.0",
+    version="1.10.0",  # Smart feedback/testimonial system
     lifespan=lifespan
 )
 
@@ -114,6 +114,13 @@ def list_routes():
                 "name": route.name
             })
     return {"routes": routes}
+
+
+# --- Version Endpoint (for update checker) ---
+@app.get("/api/v1/version")
+def get_version():
+    """Return the current application version."""
+    return {"version": app.version}
 
 
 # --- Register Route Modules ---
