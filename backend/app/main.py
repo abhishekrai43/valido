@@ -65,6 +65,16 @@ async def lifespan(app: FastAPI):
         scheduler.reload_schedules()
         logger.info("Job scheduler initialized and schedules loaded")
         
+        # Send anonymous usage ping (non-blocking, silent fail)
+        try:
+            from app.utils.cloud_license_manager import CloudLicenseManager
+            import threading
+            def ping_async():
+                CloudLicenseManager.ping_usage("1.10.0", "app_open")
+            threading.Thread(target=ping_async, daemon=True).start()
+        except:
+            pass  # Never let usage tracking break the app
+        
         # Banner is now available via API endpoint /api/v1/banner
         # No need to print to console for packaged executable
         logger.info("Startup complete")
@@ -87,7 +97,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.0",  # Smart feedback/testimonial system
+    version="1.10.1",  # Excel fix + usage tracking
     lifespan=lifespan
 )
 

@@ -10,7 +10,7 @@ import os
 from typing import Optional, Dict, Any
 
 # Your secure license API endpoint - stable production URL
-LICENSE_API_URL = "https://license-5k1dudzhe-abhishekrai43s-projects.vercel.app"
+LICENSE_API_URL = "https://license-api-three-delta.vercel.app"
 
 
 class CloudLicenseManager:
@@ -29,6 +29,36 @@ class CloudLicenseManager:
         device_hash = hashlib.sha256(device_string.encode()).hexdigest()[:32]
         
         return device_hash
+    
+    @staticmethod
+    def ping_usage(app_version: str, action: str = "app_open") -> bool:
+        """
+        Send anonymous usage ping to track active users.
+        
+        Args:
+            app_version: Current app version
+            action: What action triggered the ping (app_open, validation, etc.)
+            
+        Returns:
+            True if ping succeeded, False otherwise
+        """
+        device_id = CloudLicenseManager.get_device_id()
+        
+        try:
+            response = requests.post(
+                f"{LICENSE_API_URL}/api/ping",
+                json={
+                    "device_id": device_id,
+                    "app_version": app_version,
+                    "action": action,
+                    "platform": platform.system()
+                },
+                timeout=5  # Short timeout, non-blocking
+            )
+            return response.status_code == 200
+        except:
+            # Silently fail - usage tracking should never break the app
+            return False
     
     @staticmethod
     def validate_license(license_key: str, timeout: int = 10) -> Dict[str, Any]:

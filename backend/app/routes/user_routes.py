@@ -129,13 +129,14 @@ class EmailLicenseActivation(BaseModel):
 def activate_license_email(payload: EmailLicenseActivation):
     """Activate license using email (looks up license from Vercel API)."""
     import requests
+    from app.utils.cloud_license_manager import LICENSE_API_URL
     
     logger.info(f"Activating license via email: {payload.purchase_email}")
     
     try:
         # Call Vercel API to get license key
         response = requests.post(
-            "https://license-47cn7dnzb-abhishekrai43s-projects.vercel.app/api/activate",
+            f"{LICENSE_API_URL}/api/activate",
             json={
                 "email": payload.purchase_email,
                 "license_type": payload.license_type

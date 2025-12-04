@@ -326,5 +326,50 @@ def version():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/ping', methods=['POST'])
+def ping():
+    """Track anonymous usage - called when app opens"""
+    try:
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'unknown')
+        app_version = data.get('app_version', 'unknown')
+        action = data.get('action', 'app_open')
+        platform = data.get('platform', 'unknown')
+        
+        # Connect to Supabase
+        conn = psycopg2.connect(
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            host=os.environ.get('DB_HOST'),
+            port=os.environ.get('DB_PORT'),
+            dbname=os.environ.get('DB_NAME')
+        )
+        
+        cursor = conn.cursor()
+        
+        # Insert usage record (upsert - update if same device today)
+        cursor.execute("""
+            INSERT INTO app_usage (device_id, app_version, action, platform, created_at, last_seen)
+            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            ON CONFLICT (device_id) 
+            DO UPDATE SET 
+                app_version = EXCLUDED.app_version,
+                action = EXCLUDED.action,
+                last_seen = NOW(),
+                open_count = app_usage.open_count + 1
+        """, (device_id, app_version, action, platform))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        # Never fail on ping - just return success
+        print(f"Ping error (non-fatal): {e}")
+        return jsonify({"success": True})
+
+
 if __name__ == '__main__':
     app.run()
