@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.1",  # Excel fix + usage tracking
+    version="1.10.2",  # Trial text fix + minor UI
     lifespan=lifespan
 )
 

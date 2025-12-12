@@ -136,7 +136,7 @@
           </div>
           <div class="modal-body">
             <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
-              Your 14-day trial has ended. Thank you for trying Valido!
+              Your 7-day trial has ended. Thank you for trying Valido!
             </p>
             <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
               To continue using Valido, please purchase a license:
