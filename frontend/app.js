@@ -182,8 +182,7 @@
             
             <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
               <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
-                <strong>ℹ️ Internet Required:</strong> License activation requires internet connection to validate with our server. 
-                Your PDF files are processed 100% offline and never uploaded.
+                <strong>ℹ️ Internet Required:</strong> License activation needs internet to validate your purchase.
               </p>
             </div>
             
@@ -362,7 +361,22 @@
     // Share button functionality
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
-      shareBtn.addEventListener('click', () => {
+      shareBtn.addEventListener('click', async () => {
+        const baseUrl = 'https://valido.site';
+
+        const templates = {
+          short: `Valido — validate & automate checks on PDFs (Windows). Runs locally (no upload).\n${baseUrl}`,
+          business: `Check out Valido — PDF validation and automation for Windows.\n\nWorks on any text-based PDF (selectable text). Build rules to check content, dates, signatures, totals, page metadata, and more — then export results.\n\nLearn more: ${baseUrl}`,
+          it: `Valido (Windows) — validate PDFs locally (no cloud upload; no OCR by design for reliability).\n\nWorks on any text-based PDF (selectable text). Website: ${baseUrl}`
+        };
+
+        let selectedTemplateKey = 'business';
+        const getShareText = () => templates[selectedTemplateKey] || templates.business;
+        const emailSubject = encodeURIComponent('Check out Valido — PDF validation tool');
+
+        // NOTE: Valido is a Windows app; avoid Web Share API here.
+        // Some embedded browsers/webviews expose navigator.share but behave inconsistently.
+
         const modal = document.createElement('div');
         modal.className = 'share-modal';
         modal.innerHTML = `
@@ -373,50 +387,179 @@
               <button class="share-modal-close" onclick="this.closest('.share-modal').remove()">×</button>
             </div>
             <div class="share-modal-body">
-              <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
-                Love Valido? Share it with your colleagues and help them streamline their document validation workflow!
+              <p style="margin-bottom: 14px; color: #666; line-height: 1.6;">
+                Copy a ready-to-send message, or share via email/LinkedIn.
               </p>
+
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                <div style="font-weight:600; margin-bottom:6px;">Message to copy</div>
+                <div style="display:flex; gap:8px; margin-bottom: 8px; flex-wrap: wrap;">
+                  <button class="btn btn-ghost" type="button" id="btnShareTplShort" style="padding:6px 10px; font-size:12px;">Short</button>
+                  <button class="btn btn-ghost" type="button" id="btnShareTplBusiness" style="padding:6px 10px; font-size:12px;">Business</button>
+                  <button class="btn btn-ghost" type="button" id="btnShareTplIT" style="padding:6px 10px; font-size:12px;">IT / Security</button>
+                </div>
+                <textarea id="shareMessage" readonly rows="5" style="width:100%; resize:none; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; color:#111;">${templates.business}</textarea>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                  <button class="btn btn-primary" type="button" id="btnCopyShare">Copy message</button>
+                  <button class="btn btn-ghost" type="button" id="btnCopyLink">Copy link only</button>
+                  <button class="btn btn-ghost" type="button" id="btnShowQr">QR</button>
+                </div>
+
+                <div id="qrWrap" style="display:none; margin-top:10px; text-align:center;">
+                  <div style="font-size:12px; color:#64748b; margin-bottom:8px;">Scan to open ${baseUrl}</div>
+                  <div style="font-size:12px; color:#475569; line-height:1.5; padding:10px; border:1px dashed #cbd5e1; border-radius:10px; background:#fff;">
+                    QR rendering is optional. Use <strong>Copy link only</strong> if your environment blocks external resources.
+                  </div>
+                </div>
+              </div>
               
-              <div class="share-options">
-                <button class="share-option" onclick="window.open('mailto:?subject=Check out Valido - PDF Validation Tool&body=I found this amazing PDF validation tool that runs locally on your computer. No cloud upload, fully private!%0A%0ACheck it out: https://valido-app.github.io/', '_blank')">
+              <div class="share-options" style="margin-top: 14px;">
+                <button class="share-option" type="button" id="btnShareEmail">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
                     <path d="M3 7L12 13L21 7" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   <span>Share via Email</span>
                 </button>
-                
-                <button class="share-option" onclick="navigator.clipboard.writeText('https://valido-app.github.io/').then(() => { alert('Link copied to clipboard!'); this.closest('.share-modal').remove(); })">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M8 5H6C4.89543 5 4 5.89543 4 7V19C4 20.1046 4.89543 21 6 21H16C17.1046 21 18 20.1046 18 19V18" stroke="currentColor" stroke-width="2"/>
-                    <rect x="8" y="3" width="12" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  <span>Copy Link</span>
-                </button>
-                
-                <button class="share-option" onclick="window.open('https://twitter.com/intent/tweet?text=Check out Valido - a privacy-first PDF validation tool that runs locally on your computer!&url=https://valido-app.github.io/', '_blank', 'width=550,height=420')">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  <span>Share on Twitter</span>
-                </button>
-                
-                <button class="share-option" onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://valido-app.github.io/', '_blank', 'width=550,height=420')">
+
+                <button class="share-option" type="button" id="btnShareLinkedIn">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" stroke="currentColor" stroke-width="2"/>
                     <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   <span>Share on LinkedIn</span>
                 </button>
+
+                <button class="share-option" type="button" id="btnShareWhatsApp">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 12a8 8 0 0 1-11.9 7L4 20l1-4.1A8 8 0 1 1 20 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M9.5 9.5c.3-.7-.3-1.6-.7-2C8.4 7 8 7 7.6 7c-.3 0-.7.1-.9.5-.3.5-.6 1.2-.6 2 0 .8.6 1.9 1 2.4 1.3 1.8 3 3.2 5.2 4 .7.3 1.6.5 2.3.3.5-.2 1.5-.7 1.7-1.4.2-.7.2-1.3.1-1.4-.1-.1-.4-.2-.8-.4l-2.1-1c-.3-.1-.6-.2-.9.2-.3.4-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.1-1.4-.5-2.6-1.6-1-.9-1.6-2.1-1.8-2.4-.2-.3 0-.5.1-.7.1-.2.3-.4.4-.6.1-.2.2-.4.3-.6Z" fill="currentColor"/>
+                  </svg>
+                  <span>Share on WhatsApp</span>
+                </button>
+
+                <button class="share-option" type="button" id="btnShareX">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 4l7.5 8.8L4.5 20H7l5.1-5.8L17 20h3L13.2 12.2 19.5 4H17l-4.6 5.2L8 4H4Z" fill="currentColor"/>
+                  </svg>
+                  <span>Share on X</span>
+                </button>
+
+                <button class="share-option" type="button" id="btnShareReddit">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="2"/>
+                    <path d="M16 10c1.5-1 3.5-.5 4 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M8 10c-1.5-1-3.5-.5-4 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M10 13h0M14 13h0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M9.5 15.5c.7.7 1.6 1 2.5 1s1.8-.3 2.5-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M13 6l1-3 4 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Share on Reddit</span>
+                </button>
               </div>
             </div>
           </div>
         `;
         document.body.appendChild(modal);
-        
-        // Close on overlay click
-        modal.querySelector('.share-modal-overlay').addEventListener('click', () => {
+
+        const copyToClipboard = async (text) => {
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text);
+            } else {
+              // Fallback for environments without clipboard API.
+              const ta = document.createElement('textarea');
+              ta.value = text;
+              ta.style.position = 'fixed';
+              ta.style.left = '-9999px';
+              document.body.appendChild(ta);
+              ta.focus();
+              ta.select();
+              document.execCommand('copy');
+              ta.remove();
+            }
+            alert('Copied to clipboard');
+          } catch (e) {
+            alert('Could not copy automatically. Please select and copy the text manually.');
+          }
+        };
+
+        const setTemplate = (key) => {
+          selectedTemplateKey = key;
+          const ta = modal.querySelector('#shareMessage');
+          if (ta) ta.value = getShareText();
+        };
+
+        // Template buttons
+        modal.querySelector('#btnShareTplShort')?.addEventListener('click', () => setTemplate('short'));
+        modal.querySelector('#btnShareTplBusiness')?.addEventListener('click', () => setTemplate('business'));
+        modal.querySelector('#btnShareTplIT')?.addEventListener('click', () => setTemplate('it'));
+
+        modal.querySelector('#btnCopyShare')?.addEventListener('click', async () => {
+          await copyToClipboard(getShareText());
           modal.remove();
+        });
+        modal.querySelector('#btnCopyLink')?.addEventListener('click', async () => {
+          await copyToClipboard(baseUrl);
+          modal.remove();
+        });
+
+        modal.querySelector('#btnShowQr')?.addEventListener('click', () => {
+          const qrWrap = modal.querySelector('#qrWrap');
+          if (!qrWrap) return;
+
+          if (qrWrap.style.display === 'none') {
+            qrWrap.style.display = 'block';
+          } else {
+            qrWrap.style.display = 'none';
+          }
+        });
+
+        modal.querySelector('#btnShareEmail')?.addEventListener('click', () => {
+          const body = encodeURIComponent(getShareText());
+          window.open(`mailto:?subject=${emailSubject}&body=${body}`, '_blank');
+          modal.remove();
+        });
+        modal.querySelector('#btnShareLinkedIn')?.addEventListener('click', () => {
+          // Prefer prefilled text where possible.
+          // LinkedIn often restricts arbitrary prefill, but the shareArticle endpoint can include a title/summary.
+          // If LinkedIn ignores these params, the fallback still shares the canonical URL.
+          const linkedInTitle = encodeURIComponent('Valido — PDF validation & automation');
+          const linkedInSummary = encodeURIComponent(getShareText());
+          const linkedInSource = encodeURIComponent('valido.site');
+          const shareUrl = encodeURIComponent(baseUrl);
+          const liUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${shareUrl}&title=${linkedInTitle}&summary=${linkedInSummary}&source=${linkedInSource}`;
+          window.open(liUrl, '_blank', 'width=760,height=720');
+          modal.remove();
+        });
+
+        modal.querySelector('#btnShareWhatsApp')?.addEventListener('click', () => {
+          const text = encodeURIComponent(getShareText());
+          window.open(`https://wa.me/?text=${text}`, '_blank');
+          modal.remove();
+        });
+
+        modal.querySelector('#btnShareX')?.addEventListener('click', () => {
+          const text = encodeURIComponent(getShareText());
+          window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+          modal.remove();
+        });
+
+        modal.querySelector('#btnShareReddit')?.addEventListener('click', () => {
+          const title = encodeURIComponent('Valido — PDF validation & automation');
+          const url = encodeURIComponent(baseUrl);
+          window.open(`https://www.reddit.com/submit?url=${url}&title=${title}`, '_blank');
+          modal.remove();
+        });
+
+        // Close on overlay click (but NOT when clicking inside the modal content)
+        modal.querySelector('.share-modal-overlay')?.addEventListener('click', () => {
+          modal.remove();
+        });
+
+        // Prevent overlay click handler from firing when user clicks inside the modal
+        modal.querySelector('.share-modal-content')?.addEventListener('click', (e) => {
+          e.stopPropagation();
         });
       });
     }
@@ -562,12 +705,33 @@
                   Found a bug? Have a feature request? We'd love to hear from you!<br>
                   <strong style="color: #764ba2;">💡 Tip:</strong> For common issues and solutions, check the <strong>Troubleshooting</strong> section in the "How To Use" tab first.
                 </p>
+
+              <div style="background:#eff6ff; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 14px; border-radius: 6px;">
+                <div style="font-weight:600; color:#1e40af; margin-bottom: 4px;">Want a guaranteed response?</div>
+                <div style="font-size:13px; color:#1e3a8a; line-height:1.5;">
+                  If the in-app send fails (offline / firewall), you can use <strong>Send via Email</strong> below — it includes useful diagnostic details.
+                </div>
+              </div>
               
               <form id="feedbackForm" action="https://formspree.io/f/movyvknd" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
                 <div>
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Email (optional)</label>
                   <input type="email" name="email" placeholder="your@email.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
                 </div>
+
+                <!-- Honeypot (helps reduce automated spam) -->
+                <div style="position:absolute; left:-9999px; height:0; overflow:hidden;" aria-hidden="true">
+                  <label>Website</label>
+                  <input type="text" name="website" tabindex="-1" autocomplete="off">
+                </div>
+
+                <input type="hidden" name="source" value="valido-app">
+                <input type="hidden" name="client_time" value="${new Date().toISOString()}">
+                <input type="hidden" name="app_url" value="${(window.location && window.location.href) ? window.location.href : ''}">
+                <input type="hidden" name="user_agent" value="${navigator.userAgent}">
+
+                <!-- Helps email deliverability & inbox rules in Formspree -->
+                <input type="hidden" name="_subject" value="Valido feedback">
                 
                 <div>
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Type</label>
@@ -589,10 +753,15 @@
 • Any error messages?
 • Copy/paste relevant logs from data/logs/ folder if available" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
-                
-                <button type="submit" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
-                  Send Feedback
-                </button>
+
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <button type="submit" id="btnSendFeedback" style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                    Send Feedback
+                  </button>
+                  <button type="button" id="btnSendFeedbackEmail" style="background: #e5e7eb; color: #111827; padding: 12px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                    Send via Email
+                  </button>
+                </div>
               </form>
               
               <div id="feedbackSuccess" style="display: none; text-align: center; padding: 20px;">
@@ -600,6 +769,8 @@
                 <h3 style="color: #10b981; margin-bottom: 10px;">Thank you!</h3>
                 <p style="color: #666;">Your feedback has been sent successfully.</p>
               </div>
+
+              <div id="feedbackError" style="display:none; margin-top: 10px; padding: 12px; border-radius: 8px; background: #fee2e2; color:#7f1d1d; font-size: 13px; line-height: 1.5;"></div>
             </div>
           </div>
         `;
@@ -713,34 +884,96 @@
             });
           }
         } else {
-          // Handle normal feedback form submission
+          // Normal feedback: submit to Formspree without opening a new tab.
+          // We post to a hidden iframe and then show a success message in-app.
           const form = modal.querySelector('#feedbackForm');
+          const submitBtn = modal.querySelector('#btnSendFeedback');
+          const emailBtn = modal.querySelector('#btnSendFeedbackEmail');
+          const bodyEl = modal.querySelector('.share-modal-body');
+          const successEl = modal.querySelector('#feedbackSuccess');
+          const errorEl = modal.querySelector('#feedbackError');
+
           if (form) {
-            form.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              
-              const formData = new FormData(form);
-              
-              try {
-                const response = await fetch(form.action, {
-                  method: 'POST',
-                  body: formData,
-                  headers: {
-                    'Accept': 'application/json'
-                  }
-                });
-                
-                if (response.ok) {
-                  form.style.display = 'none';
-                  modal.querySelector('#feedbackSuccess').style.display = 'block';
-                  setTimeout(() => modal.remove(), 3000);
-                } else {
-                  alert('Failed to send feedback. Please try again.');
-                }
-              } catch (error) {
-                alert('Failed to send feedback. Please check your internet connection.');
+            // Create a hidden iframe target for the form.
+            const iframeName = `valido_feedback_iframe_${Date.now()}`;
+            const iframe = document.createElement('iframe');
+            iframe.name = iframeName;
+            iframe.style.display = 'none';
+            modal.appendChild(iframe);
+            form.setAttribute('target', iframeName);
+
+            let submitStartedAt = null;
+            let fallbackTimer = null;
+
+            form.addEventListener('submit', (e) => {
+              // If honeypot is filled, silently stop (likely bot)
+              const hp = form.querySelector('input[name="website"]');
+              if (hp && hp.value && hp.value.trim().length > 0) {
+                e.preventDefault();
+                return;
               }
+
+              submitStartedAt = Date.now();
+
+              if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sending...';
+              }
+              if (errorEl) {
+                errorEl.style.display = 'none';
+                errorEl.textContent = '';
+              }
+
+              // If we don't get a load event, still show a soft-success after a short delay.
+              // (Some blockers prevent iframe load events even though form submits.)
+              fallbackTimer = window.setTimeout(() => {
+                if (successEl && form.style.display !== 'none') {
+                  form.style.display = 'none';
+                  if (successEl) successEl.style.display = 'block';
+                  window.setTimeout(() => modal.remove(), 2500);
+                }
+              }, 1800);
             });
+
+            iframe.addEventListener('load', () => {
+              // Ignore the initial empty load.
+              if (!submitStartedAt) return;
+              // Avoid instant load noise; require a tiny delay after submit.
+              if (Date.now() - submitStartedAt < 250) return;
+
+              if (fallbackTimer) {
+                window.clearTimeout(fallbackTimer);
+                fallbackTimer = null;
+              }
+
+              // Success UI
+              if (form) form.style.display = 'none';
+              if (successEl) successEl.style.display = 'block';
+              window.setTimeout(() => modal.remove(), 2500);
+            });
+
+            // Mailto fallback (works even when Formspree is blocked)
+            if (emailBtn) {
+              emailBtn.addEventListener('click', () => {
+                const email = form?.querySelector('input[name="email"]')?.value?.trim() || '';
+                const type = form?.querySelector('select[name="type"]')?.value || 'feedback';
+                const message = form?.querySelector('textarea[name="message"]')?.value?.trim() || '';
+
+                const body = [
+                  message,
+                  '',
+                  '---',
+                  `Type: ${type}`,
+                  email ? `Reply-to (provided): ${email}` : 'Reply-to: (not provided)',
+                  `Time: ${new Date().toISOString()}`,
+                  `URL: ${(window.location && window.location.href) ? window.location.href : ''}`,
+                  `User-Agent: ${navigator.userAgent}`
+                ].join('\n');
+
+                const subject = `Valido feedback (${type})`;
+                window.open(`mailto:info@valido.site?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+              });
+            }
           }
         }
       });
@@ -1361,7 +1594,8 @@
     }
     
     function showSuccess(taskId, taskResult) {
-      isSubmitting = false;  // Reset submission flag
+      // Mark run complete to prevent accidental resubmits
+      if (window._validoSubmissionState) window._validoSubmissionState.completed = true;
       processingStatus.style.display = 'none';
       successStatus.style.display = 'flex';
       startNewBtn.style.display = 'inline-flex';
@@ -1401,7 +1635,7 @@
       if (status === 'partial' && filesSkipped > 0) {
         // Partial processing due to limit
         isPartial = true;
-        titleText = '⚠️ Partial Processing';
+        titleText = 'Partial Processing';
         messageText = message || `Processed ${filesSucceeded} of ${totalFiles} files. ${filesSkipped} files skipped due to free tier limit.`;
       } else {
         // Normal completion
@@ -1524,10 +1758,41 @@
     }
     
     function showError(message) {
-      isSubmitting = false;  // Reset submission flag
+      // Ensure user can retry without refreshing
+      if (window._validoSubmissionState) window._validoSubmissionState.completed = false;
       processingStatus.style.display = 'none';
       errorStatus.style.display = 'flex';
-      errorMessage.textContent = message;
+
+      // Actionable error guidance (reduces "black box" feeling)
+      const safeMsg = (message || 'Validation failed. Please try again.').toString();
+      errorMessage.innerHTML = `
+        <div style="margin-bottom: 10px;">${escapeHtml(safeMsg)}</div>
+        <div style="margin-top: 10px; padding: 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; color: #7c2d12;">
+          <div style="font-weight: 600; margin-bottom: 6px;">Try this next:</div>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
+            <li><strong>Scanned PDF?</strong> Try selecting and copying text in your PDF viewer. If you can't select words, it won't work.</li>
+            <li><strong>Field not found?</strong> Copy/paste the label text directly from the PDF (watch for spaces and punctuation).</li>
+            <li><strong>Wrong value?</strong> Use a more specific label or change strategy (First/Last/All).</li>
+          </ul>
+          <div style="margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" id="openTroubleshootingBtn" style="padding: 0.6rem 1rem;">
+              Open Troubleshooting
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Wire the button (safe if missing)
+      const openTroubleshootingBtn = document.getElementById('openTroubleshootingBtn');
+      if (openTroubleshootingBtn) {
+        openTroubleshootingBtn.onclick = () => {
+          const navHowTo = document.getElementById('navHowTo');
+          const tabBtn = document.querySelector('.howto-tab[data-tab="troubleshooting"]');
+          if (navHowTo) navHowTo.click();
+          // Switch to troubleshooting tab
+          if (tabBtn) tabBtn.click();
+        };
+      }
       submitBtn.style.display = 'inline-flex';
       submitBtn.disabled = false;  // Re-enable button
     }
@@ -1587,8 +1852,36 @@
     const howToSection = document.getElementById('howToSection');
     const featuresSection = document.getElementById('featuresSection');
 
+    // First-run guidance modal (defined in index.html)
+    const firstRunGuideModal = document.getElementById('firstRunGuideModal');
+    const firstRunGuideClose = document.getElementById('firstRunGuideClose');
+    const firstRunGuideGotIt = document.getElementById('firstRunGuideGotIt');
+    const firstRunGuideOverlay = document.getElementById('firstRunGuideOverlay');
+
+    function showFirstRunGuideOnce() {
+      try {
+        if (!firstRunGuideModal) return;
+        const key = 'valido:firstRunGuideShown';
+        if (localStorage.getItem(key) === '1') return;
+        localStorage.setItem(key, '1');
+        firstRunGuideModal.style.display = 'flex';
+      } catch (e) {
+        // If storage is blocked, we still don't want to fail the app.
+        if (firstRunGuideModal) firstRunGuideModal.style.display = 'flex';
+      }
+    }
+
+    function closeFirstRunGuide() {
+      if (!firstRunGuideModal) return;
+      firstRunGuideModal.style.display = 'none';
+    }
+
+    if (firstRunGuideClose) firstRunGuideClose.addEventListener('click', closeFirstRunGuide);
+    if (firstRunGuideGotIt) firstRunGuideGotIt.addEventListener('click', closeFirstRunGuide);
+    if (firstRunGuideOverlay) firstRunGuideOverlay.addEventListener('click', closeFirstRunGuide);
+
     if (navUpload && navAutomation && navHowTo && navFeatures && uploadSection && automationSection && howToSection && featuresSection) {
-      // Features tab (default view)
+      // Overview tab (Features)
       navFeatures.addEventListener('click', () => {
         uploadSection.style.display = 'none';
         automationSection.style.display = 'none';
@@ -1616,6 +1909,9 @@
         
         // Reset to Step 1 (force reset)
         navigateToStep(1, true);
+
+        // First-run guidance is most useful right here
+        showFirstRunGuideOnce();
         // Stop automation polling
         if (window.stopAutomationPolling) window.stopAutomationPolling();
       });
@@ -1676,13 +1972,19 @@
         });
       });
 
-      // Set default view to Features (landing page)
-      featuresSection.style.display = 'block';
-      uploadSection.style.display = 'none';
+      // Set default view to Upload & Validate (straight to value)
+      featuresSection.style.display = 'none';
+      uploadSection.style.display = 'block';
       automationSection.style.display = 'none';
       howToSection.style.display = 'none';
       pricingSection.style.display = 'none';
-      navFeatures.classList.add('active');
+      navUpload.classList.add('active');
+      navFeatures.classList.remove('active');
+      navAutomation.classList.remove('active');
+      navHowTo.classList.remove('active');
+
+      // Show first-run guide when landing directly in Upload
+      showFirstRunGuideOnce();
     }
 
     

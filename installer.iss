@@ -1,5 +1,5 @@
 #define MyAppName "Valido"
-#define MyAppVersion "1.0.7"
+#define MyAppVersion "1.10.3"
 #define MyAppPublisher "Abhishek Rai"
 #define MyAppURL "https://github.com/abhishekrai43/valido"
 #define MyAppExeName "valido-app.exe"
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=installer
-OutputBaseFilename=Valido-Setup-1.0.7
+OutputBaseFilename=Valido-Setup-1.10.3
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin

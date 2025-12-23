@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
             from app.utils.cloud_license_manager import CloudLicenseManager
             import threading
             def ping_async():
-                CloudLicenseManager.ping_usage("1.10.0", "app_open")
+                CloudLicenseManager.ping_usage("1.10.3", "app_open")
             threading.Thread(target=ping_async, daemon=True).start()
         except:
             pass  # Never let usage tracking break the app
@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.2",  # Trial text fix + minor UI
+    version="1.10.3",  # Release
     lifespan=lifespan
 )
 

@@ -87,11 +87,11 @@
           </button>
         </div>
         <div class="nav-buttons">
-          <button id="navFeatures" class="btn btn-nav active" type="button">
+          <button id="navFeatures" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M9 3L11 8L16 9L12 13L13 18L9 15L5 18L6 13L2 9L7 8L9 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
             </svg>
-            Features
+            Overview
           </button>
           <button id="navUpload" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -120,7 +120,13 @@
         <!-- Simple Intro -->
         <div class="intro-section">
           <h1 class="page-title">PDF Validations. Simplified.</h1>
-          <p class="page-subtitle">Upload PDFs, define validation rules, get professional reports. Your files never leave your computer.</p>
+          <p class="page-subtitle">Upload PDFs, define validation rules, and export professional reports.</p>
+          <div style="margin-top: 10px;">
+            <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600; text-decoration:none;">
+              Watch demo (2 min)
+            </a>
+            <span style="color:#94a3b8; font-size: 13px; margin-left: 8px;">(opens in browser)</span>
+          </div>
           <div style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 8px; display: inline-block;">
             <span style="font-weight: 600; color: #0c4a6e;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
@@ -277,13 +283,7 @@
               <strong>Perfect for testing and tweaking:</strong> Use this manual upload to validate your rules and make adjustments. Once you're satisfied with the results, head to the Automation tab to set up recurring batch processing for your documents.
             </div>
             
-            <div class="privacy-notice" style="margin-bottom: 16px;">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
-                <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-                <circle cx="8" cy="7" r="1.5" fill="currentColor"/>
-              </svg>
-              <strong>100% Local Processing:</strong> All documents are processed on your computer. Nothing is uploaded to the cloud.
-            </div>
+            <!-- Note: Local processing is already explained on the Features screen; avoid repeating it here. -->
             
             <div class="upload-area" id="uploadArea">
               <input id="files" name="files" type="file" multiple accept=".pdf,.zip" hidden />
@@ -295,7 +295,44 @@
                 <div class="upload-text">
                   <strong>Click to browse</strong> or drag files here
                   <div class="upload-hint">PDF or ZIP files accepted</div>
-                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">Warning: Scanned PDFs or images are not supported</div>
+                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">For reliable automation, Valido supports text-based PDFs (selectable text) only.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- First-run guidance modal (shown once; JS lives in app.js) -->
+            <div id="firstRunGuideModal" class="modal" style="display:none">
+              <div class="modal-overlay" id="firstRunGuideOverlay"></div>
+              <div class="modal-content" style="max-width: 640px;">
+                <div class="modal-header">
+                  <h3>Quick Start</h3>
+                  <button class="modal-close" id="firstRunGuideClose" type="button">×</button>
+                </div>
+                <div class="modal-body" style="color:#444; line-height:1.6;">
+                  <p style="margin-top:0;">
+                    <strong>Perfect for testing and tweaking:</strong> Use manual upload to validate your rules and make adjustments.
+                    Once you're satisfied with the results, head to the <strong>Automation</strong> tab to set up recurring batch processing.
+                  </p>
+                  <div style="margin: 8px 0 0 0;">
+                    <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600; text-decoration:none;">
+                      Watch the demo video
+                    </a>
+                    <span style="color:#94a3b8; font-size: 13px; margin-left: 8px;">(opens in browser)</span>
+                  </div>
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin:14px 0;">
+                    <div style="font-weight:600; margin-bottom:6px;">Why start with manual upload?</div>
+                    <ul style="margin:0; padding-left:18px;">
+                      <li>Fast feedback while you tune rules</li>
+                      <li>See exactly what gets extracted and why a validation fails</li>
+                      <li>Save a ruleset when you're happy, then automate it</li>
+                    </ul>
+                  </div>
+                  <p style="margin-bottom:0; color:#666; font-size:13px;">
+                    Tip: You can revisit this anytime from the <strong>How To Use</strong> tab.
+                  </p>
+                </div>
+                <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid #eee;">
+                  <button type="button" class="btn btn-primary" id="firstRunGuideGotIt">Got it</button>
                 </div>
               </div>
             </div>
@@ -1301,7 +1338,7 @@
             <ul class="how-to-list">
               <li><strong>Save Rulesets:</strong> Create and save rules you use frequently</li>
               <li><strong>Test First:</strong> Try with 1-2 documents before batch processing hundreds</li>
-              <li><strong>Text-Based PDFs Only:</strong> Scanned images won't work (must be text-based PDFs with selectable text)</li>
+              <li><strong>Text-Based PDFs Only:</strong> For reliable automation, Valido supports text-based PDFs (selectable text) only.</li>
               <li><strong>Clear Field Names:</strong> Use descriptive names when extracting data</li>
               <li><strong>Check Results:</strong> Always review the summary before relying on automated results</li>
               <li><strong>Your Data Stays Local:</strong> All processing happens on your computer - nothing uploaded to the cloud</li>
@@ -1656,7 +1693,7 @@
                 <path d="M10 1L4 4V9C4 13 7 16.5 10 18.5C13 16.5 16 13 16 9V4L10 1Z" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
                 <circle cx="10" cy="9" r="2" fill="#10b981"/>
               </svg>
-              <span style="color: #10b981; font-weight: 600; font-size: 14px;">Your data never leaves your system</span>
+              <span style="color: #10b981; font-weight: 600; font-size: 14px;">Local processing — no cloud upload</span>
             </div>
           </div>
 
@@ -1665,15 +1702,7 @@
               <h4 class="footer-heading">Product</h4>
               <ul class="footer-list">
                 <li><a href="#howto" class="footer-link" onclick="document.getElementById('navHowTo').click(); return false;">How To Use</a></li>
-                <li><a href="mailto:support@valido.app" class="footer-link">Contact Support</a></li>
-              </ul>
-            </div>
-
-            <div class="footer-column">
-              <h4 class="footer-heading">Legal</h4>
-              <ul class="footer-list">
-                <li><a href="#privacy" class="footer-link">Privacy Policy</a></li>
-                <li><a href="#terms" class="footer-link">Terms of Service</a></li>
+                <li><a href="mailto:info@valido.site" class="footer-link">Contact Support</a></li>
               </ul>
             </div>
           </div>
@@ -1832,7 +1861,7 @@
   </script>
   
   <!-- Load other main files -->
-  <script src="/app.js?v=20251122150800"></script>
+  <script src="/app.js?v=20251220"></script>
   </body>
 </html>
 
