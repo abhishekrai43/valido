@@ -1244,6 +1244,16 @@
     // Step navigation buttons
     continueToRules && continueToRules.addEventListener('click', () => {
       if (selectedFiles.length > 0) {
+        // Telemetry: user reached Step 2
+        try {
+          fetch('/api/v1/telemetry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'step2_enter' })
+          }).catch(() => {});
+        } catch (e) {
+          // ignore
+        }
         navigateToStep(2);
       }
     });
@@ -1254,6 +1264,17 @@
         window.buildRulesPreview();
       }
       updateSummary();
+
+      // Telemetry: user reached Step 3
+      try {
+        fetch('/api/v1/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'step3_enter' })
+        }).catch(() => {});
+      } catch (e) {
+        // ignore
+      }
       navigateToStep(3);
     });
     
@@ -1264,6 +1285,9 @@
     backToRules && backToRules.addEventListener('click', () => {
       navigateToStep(2);
     });
+
+    // Guided onboarding tour is started after the user dismisses the Quick Start modal
+    // (see closeFirstRunGuide), so we don't stack UI elements.
     
     // Listen for rules updates
     document.addEventListener('rulesUpdated', () => {
@@ -1874,11 +1898,56 @@
     function closeFirstRunGuide() {
       if (!firstRunGuideModal) return;
       firstRunGuideModal.style.display = 'none';
+
+      // Only start the guided tooltip tour AFTER the user acknowledges the modal.
+      // This avoids stacking modals/tooltips and keeps the flow calm.
+      try {
+        if (window.ValidoTour && typeof window.ValidoTour.maybeStart === 'function') {
+          window.ValidoTour.maybeStart([
+            {
+              selector: '#uploadArea',
+              title: 'Step 1: Upload 1 PDF',
+              body: 'Start with a single PDF so you can see results quickly. Click here to browse or drag a PDF in.',
+              placement: 'bottom',
+              advanceOn: { event: 'click' }
+            },
+            {
+              selector: '#continueToRules',
+              title: 'Next: Continue to Rules',
+              body: 'After selecting a file, click here to move to Step 2 and choose what to validate/extract.',
+              placement: 'top',
+              advanceOn: { event: 'click' }
+            },
+            {
+              getTarget: () => document.querySelector('[data-step="2"]') || document.querySelector('.step[data-step="2"]'),
+              title: 'Step 2: Choose Rules',
+              body: 'Pick a couple of checks first (signature/date/text). Keep it simple for the first run.',
+              placement: 'bottom'
+            },
+            {
+              selector: '#continueToValidate',
+              title: 'Step 3: Validate',
+              body: 'When you’re ready, continue to Step 3 and run the validation.',
+              placement: 'top',
+              advanceOn: { event: 'click' }
+            },
+            {
+              selector: '#submitBtn',
+              title: 'Run Validation',
+              body: 'Click to validate and generate your results. Then download the report/CSV/ZIP.',
+              placement: 'top',
+              advanceOn: { event: 'click' }
+            }
+          ], { key: 'valido.tour.upload.validate.v1', startDelayMs: 250 });
+        }
+      } catch (e) {
+        console.debug('[tour] failed to start after Quick Start modal', e);
+      }
     }
 
-    if (firstRunGuideClose) firstRunGuideClose.addEventListener('click', closeFirstRunGuide);
-    if (firstRunGuideGotIt) firstRunGuideGotIt.addEventListener('click', closeFirstRunGuide);
-    if (firstRunGuideOverlay) firstRunGuideOverlay.addEventListener('click', closeFirstRunGuide);
+  if (firstRunGuideClose) firstRunGuideClose.addEventListener('click', closeFirstRunGuide);
+  if (firstRunGuideGotIt) firstRunGuideGotIt.addEventListener('click', closeFirstRunGuide);
+  if (firstRunGuideOverlay) firstRunGuideOverlay.addEventListener('click', closeFirstRunGuide);
 
     if (navUpload && navAutomation && navHowTo && navFeatures && uploadSection && automationSection && howToSection && featuresSection) {
       // Overview tab (Features)

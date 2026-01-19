@@ -8,6 +8,29 @@ let fields = window.fields;
 // Flag to prevent duplicate initialization
 let isFieldWizardInitialized = false;
 
+function _normalizeFieldName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function _getFieldsArray() {
+  // Always read from global to avoid stale references if another script reassigns window.fields
+  if (!Array.isArray(window.fields)) {
+    window.fields = [];
+  }
+  fields = window.fields;
+  return fields;
+}
+
+function _fieldNameExists(name) {
+  const norm = _normalizeFieldName(name);
+  if (!norm) return false;
+  const arr = _getFieldsArray();
+  return arr.some(f => _normalizeFieldName(f && f.name) === norm);
+}
+
 function initFieldWizard() {
   // Prevent duplicate initialization
   if (isFieldWizardInitialized) {
@@ -102,6 +125,9 @@ function initFieldWizard() {
   // Save field
   if (fieldWizardSave) {
     fieldWizardSave.addEventListener('click', () => {
+      // Ensure we always validate against the current global fields array
+      _getFieldsArray();
+
       const name = fieldNameInput.value.trim();
       const lookFor = fieldLookForInput.value.trim();
       const type = document.querySelector('input[name="fieldType"]:checked')?.value || 'text';
@@ -128,8 +154,7 @@ function initFieldWizard() {
       }
 
       // Check for duplicate field names
-      const exists = fields.some(f => f.name === name);
-      if (exists) {
+      if (_fieldNameExists(name)) {
         window.toast.error('A field with this name already exists');
         return;
       }
@@ -188,7 +213,7 @@ function initFieldWizard() {
       } else {
       }
       
-      fields.push(newField);
+  _getFieldsArray().push(newField);
       
 
       // Reset form for next field
@@ -254,6 +279,9 @@ function initFieldWizard() {
   // Save between words field
   if (betweenWordsSave) {
     betweenWordsSave.addEventListener('click', () => {
+      // Ensure we always validate against the current global fields array
+      _getFieldsArray();
+
       const name = document.getElementById('betweenFieldName').value.trim();
       const startWord = document.getElementById('betweenStartWord').value.trim();
       const endWord = document.getElementById('betweenEndWord').value.trim();
@@ -271,8 +299,7 @@ function initFieldWizard() {
       }
       
       // Check for duplicate field names
-      const exists = fields.some(f => f.name === name);
-      if (exists) {
+      if (_fieldNameExists(name)) {
         window.toast.error('A field with this name already exists');
         return;
       }
@@ -288,7 +315,7 @@ function initFieldWizard() {
         validations: []
       };
       
-      fields.push(newField);
+  _getFieldsArray().push(newField);
       
       // Reset between words form
       document.getElementById('betweenFieldName').value = '';
@@ -309,6 +336,9 @@ function initFieldWizard() {
   // Listen for table-selected events from table wizard
   document.addEventListener('table-selected', (event) => {
     const { page, tableIndex, extractionType } = event.detail;
+
+    // Ensure we always validate against the current global fields array
+    _getFieldsArray();
     
     // Create a descriptive field name
     let fieldName;
@@ -321,8 +351,7 @@ function initFieldWizard() {
     }
     
     // Check if field already exists
-    const exists = fields.some(f => f.name === fieldName);
-    if (exists) {
+    if (_fieldNameExists(fieldName)) {
       window.toast && window.toast.error(`Field "${fieldName}" already exists. Remove it first or use a different name.`);
       return;
     }
@@ -345,7 +374,7 @@ function initFieldWizard() {
       newField.tableIndex = tableIndex;
     }
     
-    fields.push(newField);
+  _getFieldsArray().push(newField);
     
     // Close table wizard modal if it exists
     const tableWizardModal = document.getElementById('tableWizardModal');

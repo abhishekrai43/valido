@@ -216,7 +216,13 @@
   }
 
   if (fieldWizardSave) {
-    fieldWizardSave.addEventListener('click', () => {
+     // NOTE: The app now uses the dedicated `frontend/modules/field-wizard.js` module
+     // for wizard behavior (including duplicate detection). If that module is loaded,
+     // avoid attaching a second click handler here; double-binding can cause confusing
+     // behavior including duplicate-toasts firing unexpectedly.
+     const hasDedicatedFieldWizard = typeof window.initFieldWizard === 'function' || typeof window.fieldWizard?.init === 'function';
+     if (fieldWizardSave && !hasDedicatedFieldWizard) {
+      fieldWizardSave.addEventListener('click', () => {
       const name = fieldNameInput ? fieldNameInput.value.trim() : '';
       const lookFor = fieldLookForInput ? fieldLookForInput.value.trim() : '';
       const type = document.querySelector('input[name="fieldType"]:checked')?.value || 'text';
@@ -322,6 +328,7 @@
       fieldWizardModal.style.display = 'none';
       renderFields();
     });
+    }
   }
 
   function buildRulesPreview(){

@@ -65,14 +65,13 @@ async def lifespan(app: FastAPI):
         scheduler.reload_schedules()
         logger.info("Job scheduler initialized and schedules loaded")
         
-        # Send anonymous usage ping (non-blocking, silent fail)
+        # Send anonymous usage ping (best-effort, de-duped)
         try:
-            from app.utils.cloud_license_manager import CloudLicenseManager
-            import threading
-            def ping_async():
-                CloudLicenseManager.ping_usage("1.10.3", "app_open")
-            threading.Thread(target=ping_async, daemon=True).start()
-        except:
+            from app.utils.telemetry import ping as telemetry_ping
+            # De-dupe app_open to reduce invocation noise (default: 6 hours)
+            dedupe_s = int(os.environ.get("VALIDO_PING_DEDUP_WINDOW_S", "21600"))
+            telemetry_ping("app_open", app_version=app.version, dedupe_window_s=dedupe_s, dedupe_key="app_open")
+        except Exception:
             pass  # Never let usage tracking break the app
         
         # Banner is now available via API endpoint /api/v1/banner
@@ -97,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.3",  # Release
+    version="1.10.4",  # Release
     lifespan=lifespan
 )
 
@@ -148,6 +147,14 @@ app.include_router(diagnostics_router)
 # User routes
 from app.routes.user_routes import router as user_router
 app.include_router(user_router)
+
+# Telemetry routes (frontend onboarding/events)
+try:
+    from app.routes.telemetry_routes import router as telemetry_router
+    app.include_router(telemetry_router)
+    logger.info("✓ Telemetry routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register telemetry routes: {e}", exc_info=True)
 
 # Ruleset routes
 try:

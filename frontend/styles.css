@@ -1211,6 +1211,77 @@ textarea {
   font-weight: 700;
 }
 
+/* =========================
+   Guided Tour (tooltips)
+   ========================= */
+
+.valido-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.valido-tour-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  pointer-events: auto;
+}
+
+.valido-tour-popover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: min(420px, calc(100vw - 32px));
+  background: #ffffff;
+  border: 1px solid #e6e9ef;
+  border-radius: 14px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  padding: 14px 14px 12px;
+  pointer-events: auto;
+  transform: translate(16px, 16px);
+}
+
+.valido-tour-title {
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: #0b1220;
+}
+
+.valido-tour-body {
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.valido-tour-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.valido-tour-actions-right {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.valido-tour-footnote {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.valido-tour-highlight {
+  position: relative;
+  z-index: 100000; /* above dim */
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25), 0 0 0 2px rgba(59, 130, 246, 0.65) !important;
+  border-radius: 10px;
+}
+
 .field-add {
   display: flex;
   gap: 8px;

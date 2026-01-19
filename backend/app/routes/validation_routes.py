@@ -25,6 +25,12 @@ from app.utils.trial_manager import check_access, start_trial
 import time
 import hashlib
 
+# Telemetry is best-effort only.
+try:
+    from app.utils.telemetry import ping as telemetry_ping
+except Exception:
+    telemetry_ping = None
+
 logger = get_logger("ValidationRoutes")
 
 router = APIRouter(prefix="/api/v1", tags=["validation"])
@@ -60,6 +66,13 @@ async def upload_pdf(file: UploadFile = File(...)):
     Returns immediate validation results.
     """
     logger.info(f"Upload request for file: {file.filename}")
+
+    # Progress ping: step 1 upload reached
+    try:
+        if telemetry_ping:
+            telemetry_ping("step1_upload")
+    except Exception:
+        pass
     
     filename_val = (file.filename or "").lower()
     if not filename_val.endswith('.pdf'):
@@ -96,6 +109,13 @@ async def submit_files(
     Returns task_id for tracking progress.
     """
     logger.info(f"📥 Submit request received: {len(files)} files, username: {username}")
+
+    # Progress ping: submission attempted (step 3)
+    try:
+        if telemetry_ping:
+            telemetry_ping("step3_submit")
+    except Exception:
+        pass
     
     # Check for duplicate submissions within a short time window
     current_time = time.time()
@@ -294,10 +314,20 @@ async def download_task_csv(task_id: str):
         raise HTTPException(status_code=400, detail="Invalid task ID")
     
     # Security: prevent path traversal
+    if not RESULTS_ROOT:
+        raise HTTPException(status_code=500, detail="Server misconfigured")
+
     results_dir = os.path.join(RESULTS_ROOT, task_id)
     if not results_dir.startswith(RESULTS_ROOT):
         logger.error(f"Path traversal attempt: {results_dir}")
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # Telemetry (best-effort)
+    try:
+        if telemetry_ping:
+            telemetry_ping("download_csv")
+    except Exception:
+        pass
     
     # Find CSV file
     csv_files = glob.glob(os.path.join(results_dir, 'valido_results_*.csv'))
@@ -327,8 +357,18 @@ async def download_task_report(task_id: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID")
     
+    if not RESULTS_ROOT:
+        raise HTTPException(status_code=500, detail="Server misconfigured")
+
     results_dir = os.path.join(RESULTS_ROOT, task_id)
     report_path = os.path.join(results_dir, 'report.json')
+
+    # Telemetry (best-effort)
+    try:
+        if telemetry_ping:
+            telemetry_ping("download_report")
+    except Exception:
+        pass
     
     if not os.path.exists(report_path):
         raise HTTPException(status_code=404, detail="Report not found")
@@ -353,10 +393,20 @@ async def download_task_zip(task_id: str):
         raise HTTPException(status_code=400, detail="Invalid task ID")
     
     # Security: prevent path traversal
+    if not RESULTS_ROOT:
+        raise HTTPException(status_code=500, detail="Server misconfigured")
+
     results_dir = os.path.join(RESULTS_ROOT, task_id)
     if not results_dir.startswith(RESULTS_ROOT):
         logger.error(f"Path traversal attempt: {results_dir}")
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # Telemetry (best-effort)
+    try:
+        if telemetry_ping:
+            telemetry_ping("download_zip")
+    except Exception:
+        pass
     
     # Find ZIP file
     zip_files = glob.glob(os.path.join(results_dir, 'valido_results_*.zip'))

@@ -31,7 +31,7 @@
           <a href="#" id="betaBannerLink" class="beta-banner-link" target="_blank"></a>
         </div>
       </div>
-      
+  
       <!-- Header -->
       <div class="header">
         <div class="brand-section">
@@ -135,6 +135,8 @@
               </svg>
               For Windows 10/11
             </span>
+
+          <script src="/modules/tour.js"></script>
           </div>
         </div>
 
@@ -272,8 +274,11 @@
                 <path d="M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h2>Step 1: Upload Your Documents</h2>
-            <p class="card-description">Choose one or more PDF files to validate. You can also upload a ZIP file containing multiple PDFs. <strong>Maximum 2000 pages total.</strong></p>
+            <h2>Step 1: Upload 1 PDF First</h2>
+            <p class="card-description">
+              Start simple: upload <strong>one</strong> PDF so you can see how the rules work.
+              (You can always validate multiple PDFs later.)
+            </p>
             
             <div class="helper-text" style="margin-bottom: 16px; padding: 12px; background-color: #e8f4fd; border-left: 3px solid #0078d4; border-radius: 4px;">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
@@ -293,9 +298,9 @@
                   <path d="M24 16V32M24 16L19 21M24 16L29 21" stroke="#0066ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <div class="upload-text">
-                  <strong>Click to browse</strong> or drag files here
-                  <div class="upload-hint">PDF or ZIP files accepted</div>
-                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">For reliable automation, Valido supports text-based PDFs (selectable text) only.</div>
+                  <strong>Click to browse</strong> or drag a PDF here
+                  <div class="upload-hint">Recommended: 1 PDF (to get a quick win)</div>
+                  <div class="upload-hint" style="color: #f59e0b; margin-top: 4px;">Tip: Best results with text-based PDFs (selectable text).</div>
                 </div>
               </div>
             </div>
@@ -447,7 +452,7 @@
             <!-- Field Extraction Section -->
             <div id="fieldBuilder" class="field-builder">
               <h3>Extract Information</h3>
-              <p class="helper">Define what information to extract from your documents.</p>
+              <p class="helper" style="margin-bottom: 12px;">Choose what information to extract from your documents.</p>
               
               <!-- Extraction Actions -->
               <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
@@ -1861,6 +1866,7 @@
   </script>
   
   <!-- Load other main files -->
+  <script src="/modules/tour.js"></script>
   <script src="/app.js?v=20251220"></script>
   </body>
 </html>
