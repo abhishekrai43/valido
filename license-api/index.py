@@ -335,6 +335,7 @@ def ping():
         app_version = data.get('app_version', 'unknown')
         action = data.get('action', 'app_open')
         platform = data.get('platform', 'unknown')
+        details = data.get('details')
         
         # Connect to Supabase
         conn = psycopg2.connect(
@@ -346,6 +347,20 @@ def ping():
         )
         
         cursor = conn.cursor()
+
+        # 1) Append-only event stream (best-effort)
+        # This table might not exist in older deployments; ignore failures.
+        try:
+            cursor.execute(
+                """
+                INSERT INTO app_usage_events (device_id, app_version, action, platform, created_at, details)
+                VALUES (%s, %s, %s, %s, NOW(), %s::jsonb)
+                """,
+                (device_id, app_version, action, platform, json.dumps(details) if details is not None else None),
+            )
+        except Exception:
+            # Keep legacy behavior even if the events table isn't there.
+            pass
         
         # Insert usage record (upsert - update if same device today)
         cursor.execute("""
@@ -356,7 +371,7 @@ def ping():
                 app_version = EXCLUDED.app_version,
                 action = EXCLUDED.action,
                 last_seen = NOW(),
-                open_count = app_usage.open_count + 1
+                open_count = COALESCE(app_usage.open_count, 0) + 1
         """, (device_id, app_version, action, platform))
         
         conn.commit()
@@ -369,6 +384,58 @@ def ping():
         # Never fail on ping - just return success
         print(f"Ping error (non-fatal): {e}")
         return jsonify({"success": True})
+
+
+@app.route('/api/ping/debug/last', methods=['GET'])
+def ping_debug_last():
+    """Debug helper to inspect recent telemetry events.
+
+    Returns 200 with a list when app_usage_events exists; otherwise returns an empty list.
+    Never throws.
+    """
+    try:
+        limit = int(request.args.get('limit', '50'))
+        limit = max(1, min(limit, 500))
+
+        conn = psycopg2.connect(
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            host=os.environ.get('DB_HOST'),
+            port=os.environ.get('DB_PORT'),
+            dbname=os.environ.get('DB_NAME')
+        )
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(
+                """
+                SELECT device_id, app_version, action, platform, created_at
+                FROM app_usage_events
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cursor.fetchall() or []
+        except Exception:
+            rows = []
+
+        cursor.close()
+        conn.close()
+
+        events = []
+        for r in rows:
+            events.append({
+                "device_id": r[0],
+                "app_version": r[1],
+                "action": r[2],
+                "platform": r[3],
+                "created_at": str(r[4])
+            })
+        return jsonify({"success": True, "events": events})
+    except Exception as e:
+        print(f"ping_debug_last error (non-fatal): {e}")
+        return jsonify({"success": True, "events": []})
 
 
 if __name__ == '__main__':

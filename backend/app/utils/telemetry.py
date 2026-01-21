@@ -71,6 +71,7 @@ def get_app_version(fallback: str = "unknown") -> str:
 def ping(
     action: str,
     app_version: Optional[str] = None,
+    details: Optional[dict] = None,
     *,
     dedupe_window_s: Optional[int] = None,
     dedupe_key: Optional[str] = None,
@@ -102,7 +103,7 @@ def ping(
 
         def _do_ping():
             try:
-                CloudLicenseManager.ping_usage(version, action)
+                CloudLicenseManager.ping_usage(version, action, details=details)
             except Exception:
                 return
 

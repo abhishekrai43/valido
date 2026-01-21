@@ -210,10 +210,17 @@ def validate_license_key(license_key: str) -> Dict:
         else:
             # Validation failed
             logger.warning(f"License validation failed: {result.get('message')}")
-            return {
+            error_payload = {
                 'valid': False,
                 'error': result.get('message', 'Invalid license key')
             }
+
+            # If the server is failing (5xx), treat as transient so routes can return 503.
+            if result.get('transient'):
+                error_payload['transient'] = True
+                error_payload['status_code'] = result.get('status_code')
+
+            return error_payload
             
     except Exception as e:
         logger.error(f"License validation error: {e}")

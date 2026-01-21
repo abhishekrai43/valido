@@ -139,6 +139,48 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         ws_summary['B6'] = error_count
         ws_summary['A7'] = "Scanned PDFs:"
         ws_summary['B7'] = scanned_count
+
+        # If batch included invalid/corrupt files, list them clearly.
+        skipped_rows = []
+        for r in (csv_rows or []):
+            status = (r.get('Status') or '').strip()
+            if status in ('Error', 'Scanned PDF'):
+                fname = r.get('Filename', '')
+                raw_err = r.get('Error Details') or r.get('Error') or ''
+
+                # Human-friendly reason mapping.
+                if status == 'Scanned PDF':
+                    reason = 'Image-only / Scanned PDF'
+                    message = 'No selectable text found. Please upload a digitally-generated PDF (selectable text).'
+                else:
+                    reason = 'Invalid / Corrupted PDF'
+                    message = 'This file could not be parsed as a valid PDF. Re-download it or re-export as PDF.'
+
+                # Improve message if we have a more specific backend error string.
+                if raw_err:
+                    msg_lower = str(raw_err).lower()
+                    if 'missing %pdf' in msg_lower or 'not a pdf' in msg_lower:
+                        reason = 'Not a PDF'
+                        message = 'This file is not a real PDF (it may be a renamed Word/Excel/ZIP file).'
+                    elif 'empty' in msg_lower:
+                        reason = 'Empty file'
+                        message = 'The file is empty (0 bytes).'
+                    elif 'scanned' in msg_lower:
+                        reason = 'Image-only / Scanned PDF'
+                        message = 'No selectable text found. Please upload a digitally-generated PDF (selectable text).'
+
+                skipped_rows.append({
+                    'Filename': fname,
+                    'Reason': reason,
+                    'Message': message,
+                    'Raw Error': str(raw_err)[:500],
+                })
+
+        if skipped_rows:
+            ws_summary['A12'] = 'Skipped / Failed Files:'
+            ws_summary['B12'] = len(skipped_rows)
+            ws_summary['A12'].font = Font(bold=True)  # type: ignore
+            ws_summary['A12'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")  # type: ignore
         
         # Count signature types
         signed_count = sum(1 for r in csv_rows if r.get('Signed') == 'Yes')
@@ -159,6 +201,38 @@ def generate_excel_report(csv_rows: List[Dict], output_path: str, timestamp: str
         
         # Details sheet
         ws_details = wb.create_sheet("Details")
+
+        # Skipped Files sheet (human-friendly reasons)
+        if skipped_rows:
+            ws_skipped = wb.create_sheet("Skipped Files")
+            skipped_headers = ['Filename', 'Reason', 'Message', 'Raw Error']
+            ws_skipped.append(skipped_headers)
+            for cell in ws_skipped[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+            for r in skipped_rows:
+                ws_skipped.append([r.get(h, '') for h in skipped_headers])
+
+            # Style skipped rows
+            thin_border = Border(
+                left=Side(style='thin', color='CCCCCC'),
+                right=Side(style='thin', color='CCCCCC'),
+                top=Side(style='thin', color='CCCCCC'),
+                bottom=Side(style='thin', color='CCCCCC')
+            )
+            for row in ws_skipped.iter_rows(min_row=2, max_row=len(skipped_rows) + 1):
+                for cell in row:
+                    cell.border = thin_border
+                    cell.alignment = Alignment(vertical='top', wrap_text=True)
+                    cell.fill = PatternFill(start_color="FFF4CC", end_color="FFF4CC", fill_type="solid")
+
+            # Column widths
+            ws_skipped.column_dimensions['A'].width = 50
+            ws_skipped.column_dimensions['B'].width = 28
+            ws_skipped.column_dimensions['C'].width = 70
+            ws_skipped.column_dimensions['D'].width = 60
         
         # Write headers
         if csv_rows:

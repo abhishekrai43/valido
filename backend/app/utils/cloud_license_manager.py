@@ -31,7 +31,7 @@ class CloudLicenseManager:
         return device_hash
     
     @staticmethod
-    def ping_usage(app_version: str, action: str = "app_open") -> bool:
+    def ping_usage(app_version: str, action: str = "app_open", details: Optional[Dict[str, Any]] = None) -> bool:
         """
         Send anonymous usage ping to track active users.
         
@@ -45,14 +45,18 @@ class CloudLicenseManager:
         device_id = CloudLicenseManager.get_device_id()
         
         try:
+            payload: Dict[str, Any] = {
+                "device_id": device_id,
+                "app_version": app_version,
+                "action": action,
+                "platform": platform.system(),
+            }
+            if details is not None:
+                payload["details"] = details
+
             response = requests.post(
                 f"{LICENSE_API_URL}/api/ping",
-                json={
-                    "device_id": device_id,
-                    "app_version": app_version,
-                    "action": action,
-                    "platform": platform.system()
-                },
+                json=payload,
                 timeout=5  # Short timeout, non-blocking
             )
             return response.status_code == 200
@@ -90,11 +94,22 @@ class CloudLicenseManager:
             
             if response.status_code == 200:
                 return response.json()
-            else:
+
+            # Treat server-side failures differently from user/input failures.
+            # The desktop app should not blame the user for a server outage.
+            if 500 <= response.status_code <= 599:
                 return {
                     "valid": False,
-                    "message": f"API error: {response.status_code}"
+                    "transient": True,
+                    "status_code": response.status_code,
+                    "message": "License server error (temporary). Please try again in a minute."
                 }
+
+            return {
+                "valid": False,
+                "status_code": response.status_code,
+                "message": f"API error: {response.status_code}"
+            }
                 
         except requests.Timeout:
             return {

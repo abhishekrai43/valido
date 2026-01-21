@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.4",  # Release
+    version="1.10.5.1",  # Release
     lifespan=lifespan
 )
 
@@ -241,8 +241,8 @@ else:
 
 
 # --- Main Entry Point ---
-# For PyInstaller, __name__ is not "__main__", so check frozen or __main__
-if __name__ == "__main__" or getattr(sys, 'frozen', False):
+# Only run this if we're directly executing main.py, not when imported by launcher.py
+if __name__ == "__main__":
     import uvicorn
     import socket
     import webbrowser

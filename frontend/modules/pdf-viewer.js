@@ -21,6 +21,7 @@
   let canvas = null;
   let ctx = null;
   let textLayerDiv = null;
+  let selectionListenerAttached = false;
 
   function init() {
     
@@ -348,7 +349,10 @@
     textLayerDiv = modal.querySelector('#textLayer');
 
     // Setup text selection detection
-    document.addEventListener('mouseup', handleTextSelection);
+    if (!selectionListenerAttached) {
+      selectionListenerAttached = true;
+      document.addEventListener('mouseup', handleTextSelection);
+    }
   }
 
   /**
@@ -465,32 +469,6 @@
   }
 
   /**
-   * Handle text selection
-   */
-  function handleTextSelection() {
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
-    
-    if (selectedText.length > 0) {
-      showSelectedText(selectedText);
-    }
-  }
-
-  /**
-   * Show selected text preview
-   */
-  function showSelectedText(text) {
-    const preview = document.getElementById('selectedTextPreview');
-    const valueDiv = document.getElementById('selectedTextValue');
-    
-    if (preview && valueDiv) {
-      valueDiv.textContent = text;
-      preview.style.display = 'block';
-      preview.dataset.selectedText = text;
-    }
-  }
-
-  /**
    * Handle text selection in PDF
    */
   function handleTextSelection() {
@@ -498,6 +476,20 @@
     if (!modal || modal.style.display !== 'flex') return;
 
     const selection = window.getSelection();
+    if (!selection) return;
+
+    // Only accept selections that originate from inside our PDF text layer.
+    // This prevents accidentally capturing text from other parts of the page/modals.
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    const selectionInTextLayer = !!(
+      textLayerDiv &&
+      (anchorNode && textLayerDiv.contains(anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode : anchorNode.parentElement)) &&
+      (focusNode && textLayerDiv.contains(focusNode.nodeType === Node.ELEMENT_NODE ? focusNode : focusNode.parentElement))
+    );
+
+    if (!selectionInTextLayer) return;
+
     const text = selection.toString().trim();
 
     if (text && text.length > 0) {

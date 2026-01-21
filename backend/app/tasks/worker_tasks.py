@@ -16,7 +16,7 @@ from typing import List, Dict, Any, Optional, Tuple, Callable
 from datetime import datetime
 
 # Core dependencies
-from app.services.parser import extract_text_from_bytes, is_valid_pdf
+from app.services.parser import extract_text_from_bytes, is_valid_pdf, classify_pdf_bytes
 from app.services.validator import validate_text
 from app.utils.logger import get_logger
 from PyPDF2 import PdfReader
@@ -183,17 +183,20 @@ def process_pdfs_sync(
         if content:
             print(f"First 20 bytes: {content[:20]}")
 
-        valid = False
         try:
-            valid = is_valid_pdf(content or b'')
-            if not valid:
-                print(f"PDF validation failed for {fname}: is_valid_pdf returned False")
+            ok, issue, message = classify_pdf_bytes(content or b'')
         except Exception as e:
-            print(f"PDF validation exception for {fname}: {type(e).__name__}: {e}")
-            valid = False
+            ok, issue, message = False, "corrupt", f"PDF validation exception: {type(e).__name__}: {e}"
 
-        if not valid:
-            reports.append({"filename": fname, "error": "invalid or corrupted pdf"})
+        if not ok:
+            reports.append(
+                {
+                    "filename": fname,
+                    "status": "failed",
+                    "reason": issue,
+                    "error": message,
+                }
+            )
             processed += 1
             _emit_progress(
                 "PROGRESS",
@@ -209,10 +212,10 @@ def process_pdfs_sync(
         try:
             text = extract_text_from_bytes(content or b'')
             report = validate_text(text, rules, pdf_bytes=content)
-            reports.append({"filename": fname, "report": report})
+            reports.append({"filename": fname, "status": "ok", "report": report})
             files_successfully_validated += 1  # Only count successful validations
         except Exception as exc:
-            reports.append({"filename": fname, "error": f"processing error: {exc}"})
+            reports.append({"filename": fname, "status": "failed", "reason": "error", "error": f"processing error: {exc}"})
 
         processed += 1
         _emit_progress(
@@ -779,7 +782,8 @@ def process_pdfs_sync(
     
     # Determine response status
     response_status = 'completed'
-    response_message = "All files processed successfully" if files_succeeded == total else None
+    # Never claim full success if any file failed.
+    response_message = "All files processed successfully" if (files_succeeded == total and files_failed == 0) else None
     
     return {
         'status': response_status,
@@ -787,6 +791,7 @@ def process_pdfs_sync(
         'total': total,
         'processed': processed,
         'files_succeeded': files_succeeded,
+        'files_failed': files_failed,
         'files_skipped': 0,
         'files': reports,
         'result_files': {

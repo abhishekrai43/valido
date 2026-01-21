@@ -6,7 +6,7 @@ Tests PDF validation and text extraction.
 
 import pytest
 import io
-from app.services.parser import is_valid_pdf, extract_text_from_bytes
+from app.services.parser import is_valid_pdf, extract_text_from_bytes, classify_pdf_bytes
 
 
 class TestPDFValidation:
@@ -120,6 +120,56 @@ class TestEdgeCases:
         pdf_with_unicode = b"%PDF-1.4\n1 0 obj\n<</Title(\xc3\xa9\xc3\xa0)>>endobj\n%%EOF"
         result = is_valid_pdf(pdf_with_unicode)
         assert isinstance(result, bool)
+
+
+class TestPdfClassification:
+    def test_classify_empty(self):
+        ok, issue, msg = classify_pdf_bytes(b"")
+        assert ok is False
+        assert issue == "empty"
+        assert "Empty" in msg
+
+    def test_classify_not_pdf(self):
+        ok, issue, msg = classify_pdf_bytes(b"Not a PDF")
+        assert ok is False
+        assert issue in ("not_pdf", "corrupt")
+
+    def test_classify_corrupt_pdf_like_bytes(self):
+        # Has header, but likely not parseable by fitz/pdfplumber -> should be marked corrupt.
+        corrupt = b"%PDF-1.4\nthis-is-not-a-real-pdf\x00\xff\xfe"
+        ok, issue, _ = classify_pdf_bytes(corrupt)
+        assert ok is False
+        assert issue in ("corrupt", "scanned_or_image_only")
+
+    def test_classify_allows_preamble_before_header(self, monkeypatch):
+        # Some real PDFs have non-whitespace bytes before %PDF-; we should not reject
+        # purely on header position if the parser can open it.
+        from app.services import parser as parser_mod
+
+        # Force is_valid_pdf to succeed to simulate PyMuPDF opening the file.
+        monkeypatch.setattr(parser_mod, "is_valid_pdf", lambda b: True)
+        monkeypatch.setattr(parser_mod, "extract_text_from_bytes", lambda b: "hello world")
+
+        pdf_bytes = b"GARBAGEBYTES" + b"%PDF-1.7\n...\n%%EOF"
+        ok, issue, _ = parser_mod.classify_pdf_bytes(pdf_bytes)
+        assert ok is True
+        assert issue == "ok"
+
+    def test_classify_scanned_sentinel(self, monkeypatch):
+        # Force extract_text_from_bytes to return scanned sentinel to test classification reliably.
+        from app.services import parser as parser_mod
+        monkeypatch.setattr(
+            parser_mod,
+            "extract_text_from_bytes",
+            lambda b: "[SCANNED_PDF] This PDF appears to be a scan",
+        )
+        # Also ensure structural validation passes in this test
+        monkeypatch.setattr(parser_mod, "is_valid_pdf", lambda b: True)
+
+        ok, issue, msg = parser_mod.classify_pdf_bytes(b"%PDF-1.4\n%%EOF")
+        assert ok is False
+        assert issue == "scanned_or_image_only"
+        assert "scanned" in msg.lower()
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ import glob
 import re
 import ast
 
-from app.services.parser import extract_text_from_bytes
+from app.services.parser import extract_text_from_bytes, classify_pdf_bytes
 from app.services.validator import validate_text
 from app.utils.logger import get_logger
 from app.license import get_license_banner
@@ -84,7 +84,19 @@ async def upload_pdf(file: UploadFile = File(...)):
         if len(body) == 0:
             logger.warning(f"Empty file uploaded: {file.filename}")
             raise HTTPException(status_code=400, detail="Empty file not allowed")
-        
+
+        ok, issue, message = classify_pdf_bytes(body)
+        if not ok:
+            logger.warning(f"Upload rejected ({issue}) for {file.filename}: {message}")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_pdf",
+                    "reason": issue,
+                    "message": message,
+                },
+            )
+
         logger.info(f"Processing file: {file.filename}, size: {len(body)} bytes")
         text = extract_text_from_bytes(body)
     except HTTPException:

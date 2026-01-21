@@ -145,8 +145,20 @@ def activate_license_email(payload: EmailLicenseActivation):
         )
         
         if response.status_code != 200:
-            error_msg = response.json().get('message', 'License not found')
+            try:
+                error_msg = response.json().get('message', 'License not found')
+            except Exception:
+                error_msg = 'License lookup failed'
+
             logger.warning(f"License lookup failed: {error_msg}")
+
+            # If the license server is down (5xx), surface as 503 so the UI can show a retry message.
+            if 500 <= response.status_code <= 599:
+                raise HTTPException(
+                    status_code=503,
+                    detail="License server error (temporary). Please try again in a minute."
+                )
+
             raise HTTPException(status_code=response.status_code, detail=error_msg)
         
         data = response.json()
@@ -160,6 +172,11 @@ def activate_license_email(payload: EmailLicenseActivation):
         
         if not validation['valid']:
             logger.warning(f"License validation failed: {validation.get('error')}")
+            if validation.get('transient'):
+                raise HTTPException(
+                    status_code=503,
+                    detail=validation.get('error', 'License server temporarily unavailable. Please try again shortly.')
+                )
             raise HTTPException(
                 status_code=400,
                 detail=validation.get('error', 'Could not validate license')
@@ -207,6 +224,11 @@ def activate_license(payload: LicenseActivation):
     
     if not validation['valid']:
         logger.warning(f"License validation failed: {validation.get('error')}")
+        if validation.get('transient'):
+            raise HTTPException(
+                status_code=503,
+                detail=validation.get('error', 'License server temporarily unavailable. Please try again shortly.')
+            )
         raise HTTPException(
             status_code=400,
             detail=validation.get('error', 'Could not validate license')

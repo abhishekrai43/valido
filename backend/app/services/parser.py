@@ -9,7 +9,7 @@ Behavior:
 Small, actionable comments only.
 """
 
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Literal
 import io
 import os
 from app.utils.logger import get_logger
@@ -18,16 +18,54 @@ from app.services.table_extractor import TableExtractor
 logger = get_logger("ValidoParser")
 
 
+PdfIssue = Literal["ok", "empty", "not_pdf", "corrupt", "scanned_or_image_only"]
+
+
+def classify_pdf_bytes(pdf_bytes: bytes) -> Tuple[bool, PdfIssue, str]:
+    """Classify raw bytes into PDF validity buckets.
+
+    Contract:
+    - Returns (ok, issue, message)
+    - ok=True implies issue == "ok"
+    - Designed for UI/automation: message is user-friendly, issue is stable for code.
+    """
+    if not pdf_bytes:
+        return False, "empty", "Empty file"
+
+    # IMPORTANT: Do not hard-reject solely because %PDF- is not at the start.
+    # Some real-world PDFs contain preamble bytes but are still perfectly readable.
+    # Our product constraint is: must be parseable AND not image-only.
+    if not is_valid_pdf(pdf_bytes):
+        # We keep a soft header hint only for more helpful messaging.
+        stripped = pdf_bytes.lstrip(b'\x00\x09\x0a\x0c\x0d\x20')
+        if not stripped.startswith(b"%PDF-"):
+            return False, "not_pdf", "This file does not appear to be a PDF"
+        return False, "corrupt", "Invalid or corrupted PDF"
+
+    # Detect scan / image-only quickly using existing extraction heuristic.
+    # We accept that this is a little heavier than header checks, but it prevents
+    # the current bad UX: 'processed successfully' with meaningless output.
+    try:
+        text = extract_text_from_bytes(pdf_bytes)
+        if isinstance(text, str) and text.startswith("[SCANNED_PDF]"):
+            return False, "scanned_or_image_only", "This PDF appears to be scanned / image-only (no selectable text)"
+    except Exception:
+        # If extraction fails despite structural validity, treat as corrupt.
+        return False, "corrupt", "PDF could not be parsed"
+
+    return True, "ok", "OK"
+
+
 def is_valid_pdf(pdf_bytes: bytes) -> bool:
     """Return True if bytes look like a PDF and (if PyMuPDF installed) can be opened."""
     if not pdf_bytes or len(pdf_bytes) < 10:
         logger.warning("PDF validation failed: empty or too-short bytes")
         return False
 
+    # Soft check only - do NOT block solely on missing header.
     stripped = pdf_bytes.lstrip(b'\x00\x09\x0a\x0c\x0d\x20')
     if not stripped.startswith(b"%PDF-"):
-        logger.warning("PDF validation failed: missing %PDF- header")
-        return False
+        logger.info("PDF header not at start; attempting to open anyway")
 
     # optional EOF quick check (helps catch truncated files)
     if b"%%EOF" not in pdf_bytes[-1024:]:
@@ -42,8 +80,14 @@ def is_valid_pdf(pdf_bytes: bytes) -> bool:
             logger.warning("PDF validation failed: zero pages")
             return False
     except ImportError:
-        logger.info("PyMuPDF not installed — falling back to header-based validation")
-        return True
+        # Without PyMuPDF, try pdfplumber as a secondary validator.
+        try:
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                return len(pdf.pages) > 0
+        except Exception:
+            # Last resort heuristic: look for %PDF anywhere near the beginning.
+            return b"%PDF-" in pdf_bytes[:4096]
     except Exception as e:
         # unexpected parsing errors -> invalid PDF
         logger.error(f"PDF validation exception: {type(e).__name__}: {e}")
@@ -67,12 +111,15 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
             total_pages = len(pdf.pages)
             text_chunks = []
             low_text_pages = 0
+            tables_detected = 0
             
             for i in range(total_pages):
                 page = pdf.pages[i]
                 
                 # Check if page has tables
                 tables = page.extract_tables()
+                if tables:
+                    tables_detected += len([t for t in tables if t])
                 
                 if tables:
                     # Table-structured content: convert tables to text format
@@ -107,7 +154,7 @@ def extract_text_from_bytes(pdf_bytes: bytes) -> str:
                 return "[SCANNED_PDF] This PDF appears to be a scan or image. Please use digitally-generated PDFs with selectable text."
             
             if len(combined) >= 20:
-                logger.info(f"pdfplumber extraction successful ({len(combined)} chars, {len(tables) if tables else 0} tables detected)")
+                logger.info(f"pdfplumber extraction successful ({len(combined)} chars, {tables_detected} tables detected)")
                 return combined
                 
     except Exception as e:

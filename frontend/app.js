@@ -1096,6 +1096,94 @@
       window.dispatchEvent(new CustomEvent('filesUploaded', {
         detail: { files: selectedFiles }
       }));
+
+      // FAANG-level UX: if exactly one PDF was uploaded, verify it's actually valid
+      // BEFORE letting the user proceed.
+      try {
+        preflightSinglePdfIfNeeded(selectedFiles);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    async function preflightSinglePdfIfNeeded(filesArr) {
+      // Only gate the user when they upload a single PDF (Step 1 messaging).
+      if (!Array.isArray(filesArr) || filesArr.length !== 1) {
+        return;
+      }
+
+      const f = filesArr[0];
+      if (!f || !f.name || !f.name.toLowerCase().endsWith('.pdf')) {
+        return;
+      }
+
+      // Optimistic UI: keep continue enabled while we verify; if invalid we will block.
+      const continueBtn = document.getElementById('continueToRules');
+      if (continueBtn) {
+        continueBtn.dataset.preflight = 'running';
+      }
+
+      const fd = new FormData();
+      fd.append('file', f);
+
+      try {
+        const res = await fetch('/api/v1/upload', { method: 'POST', body: fd });
+        if (!res.ok) {
+          let payload = null;
+          try { payload = await res.json(); } catch (e) { /* ignore */ }
+
+          // Default human-friendly message
+          let msg = 'This PDF cannot be processed. Please upload a digitally-generated PDF with selectable text.';
+          let reason = null;
+
+          // FastAPI may return { detail: { error, reason, message } }
+          if (payload && payload.detail) {
+            if (typeof payload.detail === 'string') {
+              msg = payload.detail;
+            } else if (payload.detail && typeof payload.detail === 'object') {
+              reason = payload.detail.reason;
+              msg = payload.detail.message || msg;
+            }
+          }
+
+          // Block progression
+          if (continueBtn) {
+            continueBtn.disabled = true;
+            continueBtn.classList.remove('btn-enabled');
+            continueBtn.dataset.preflight = 'failed';
+          }
+
+          // Very clear user message
+          if (window.toast && window.toast.error) {
+            window.toast.error(msg);
+          } else {
+            alert(msg);
+          }
+
+          // Telemetry: invalid upload
+          try {
+            fetch('/api/v1/telemetry', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'step1_upload_invalid', details: { reason: reason || 'unknown' } })
+            }).catch(() => {});
+          } catch (e) {}
+
+          return;
+        }
+
+        // Valid -> allow progress
+        if (continueBtn) {
+          continueBtn.disabled = false;
+          if (selectedFiles.length > 0) continueBtn.classList.add('btn-enabled');
+          continueBtn.dataset.preflight = 'ok';
+        }
+      } catch (e) {
+        // Network/server down: don't block the user, but warn.
+        if (continueBtn) {
+          continueBtn.dataset.preflight = 'unknown';
+        }
+      }
     }
     
     function renderFilesList() {
@@ -1646,21 +1734,26 @@
         }
       } catch (e) { /* ignore */ }
 
-      // Check for partial processing (limit reached)
-      const resultInfo = (taskResult && taskResult.info) || {};
-      const status = resultInfo.status || 'completed';
-      const message = resultInfo.message;
-      const filesSkipped = resultInfo.files_skipped || 0;
-      const filesSucceeded = resultInfo.files_succeeded || 0;
-      const totalFiles = resultInfo.total || 0;
+  // Check for partial processing (limit reached OR invalid files)
+  const resultInfo = (taskResult && taskResult.info) || {};
+  const status = resultInfo.status || 'completed';
+  const message = resultInfo.message;
+  const filesSkipped = resultInfo.files_skipped || 0;
+  const filesSucceeded = resultInfo.files_succeeded || 0;
+  const totalFiles = resultInfo.total || 0;
+  const filesFailed = resultInfo.files_failed || 0;
       
       let titleText, messageText, isPartial = false;
       
-      if (status === 'partial' && filesSkipped > 0) {
-        // Partial processing due to limit
+      if ((status === 'partial' && filesSkipped > 0) || filesFailed > 0) {
+        // Partial processing due to limit OR invalid/corrupt files.
         isPartial = true;
-        titleText = 'Partial Processing';
-        messageText = message || `Processed ${filesSucceeded} of ${totalFiles} files. ${filesSkipped} files skipped due to free tier limit.`;
+        titleText = 'Processing Complete (with warnings)';
+        if (filesFailed > 0) {
+          messageText = `Processed ${filesSucceeded} of ${totalFiles} documents. ${filesFailed} file(s) were invalid/corrupted or image-only and were skipped.`;
+        } else {
+          messageText = message || `Processed ${filesSucceeded} of ${totalFiles} files. ${filesSkipped} files skipped due to free tier limit.`;
+        }
       } else {
         // Normal completion
         titleText = hasFields ? 'Extraction Complete!' : 'Validation Complete!';
@@ -1674,6 +1767,8 @@
         
         // Add upgrade CTA if partial
         if (isPartial) {
+          // Always tell the user where to see the detailed reasons
+          successMessageEl.innerHTML += `<br><br><span style="color:#334155;">Download the results to see a detailed list of skipped files and human-friendly reasons.</span>`;
           successMessageEl.innerHTML += `<br><br><strong style="color: #d97706;">📈 Upgrade to process unlimited PDFs!</strong>`;
           successMessageEl.style.color = '#92400e';
         } else {
@@ -1899,29 +1994,26 @@
       if (!firstRunGuideModal) return;
       firstRunGuideModal.style.display = 'none';
 
-      // Only start the guided tooltip tour AFTER the user acknowledges the modal.
-      // This avoids stacking modals/tooltips and keeps the flow calm.
+      // Start the guided tour - now passive/observational with post-tour CTA
       try {
         if (window.ValidoTour && typeof window.ValidoTour.maybeStart === 'function') {
           window.ValidoTour.maybeStart([
             {
               selector: '#uploadArea',
               title: 'Step 1: Upload 1 PDF',
-              body: 'Start with a single PDF so you can see results quickly. Click here to browse or drag a PDF in.',
-              placement: 'bottom',
-              advanceOn: { event: 'click' }
+              body: 'Start with a single PDF so you can see results quickly. Click "Next" when ready.',
+              placement: 'bottom'
             },
             {
               selector: '#continueToRules',
-              title: 'Next: Continue to Rules',
-              body: 'After selecting a file, click here to move to Step 2 and choose what to validate/extract.',
-              placement: 'top',
-              advanceOn: { event: 'click' }
+              title: 'Step 2: Continue to Rules',
+              body: 'After uploading, click this button to choose what to validate/extract.',
+              placement: 'top'
             },
             {
               getTarget: () => document.querySelector('[data-step="2"]') || document.querySelector('.step[data-step="2"]'),
-              title: 'Step 2: Choose Rules',
-              body: 'Pick a couple of checks first (signature/date/text). Keep it simple for the first run.',
+              title: 'Step 3: Pick Validation Rules',
+              body: 'Choose checks like signature verification, date validation, or text extraction.',
               placement: 'bottom'
             },
             {
@@ -1933,16 +2025,56 @@
             },
             {
               selector: '#submitBtn',
-              title: 'Run Validation',
-              body: 'Click to validate and generate your results. Then download the report/CSV/ZIP.',
-              placement: 'top',
-              advanceOn: { event: 'click' }
+              title: 'Step 5: Run Validation',
+              body: 'Click to validate and generate your report. That\'s it!',
+              placement: 'top'
             }
-          ], { key: 'valido.tour.upload.validate.v1', startDelayMs: 250 });
+          ], { key: 'valido.tour.upload.validate.v2', startDelayMs: 250, onComplete: showPostTourCTA });
         }
       } catch (e) {
         console.debug('[tour] failed to start after Quick Start modal', e);
       }
+    }
+
+    function showPostTourCTA() {
+      const uploadArea = document.getElementById('uploadArea');
+      if (!uploadArea) return;
+
+      fetch('/api/v1/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'tour_complete_cta_shown', details: { source: 'post_tour_cta' } })
+      }).catch(() => {});
+
+      const ctaOverlay = document.createElement('div');
+      ctaOverlay.id = 'postTourCTA';
+      ctaOverlay.style.cssText = `position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s ease-out;`;
+
+      ctaOverlay.innerHTML = `<div style="background: white; border-radius: 16px; padding: 40px; max-width: 500px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.4s ease-out;"><div style="font-size: 48px; margin-bottom: 16px;">🎉</div><h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px;">Tour Complete!</h2><p style="margin: 0 0 32px 0; color: #666; font-size: 16px; line-height: 1.6;">Ready to validate your first PDF?<br>Click below to upload and get started.</p><button id="postTourCTABtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4); transition: transform 0.2s, box-shadow 0.2s;">Upload My First PDF</button></div>`;
+
+      if (!document.getElementById('postTourCTAStyle')) {
+        const style = document.createElement('style');
+        style.id = 'postTourCTAStyle';
+        style.textContent = `@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } #postTourCTABtn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5); }`;
+        document.head.appendChild(style);
+      }
+
+      document.body.appendChild(ctaOverlay);
+
+      document.getElementById('postTourCTABtn').addEventListener('click', () => {
+        fetch('/api/v1/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'post_tour_cta_clicked', details: { source: 'post_tour_cta' } }) }).catch(() => {});
+        ctaOverlay.remove();
+        uploadArea.click();
+      });
+
+      ctaOverlay.addEventListener('click', (e) => {
+        if (e.target === ctaOverlay) {
+          fetch('/api/v1/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'post_tour_cta_dismissed', details: { source: 'post_tour_cta' } }) }).catch(() => {});
+          ctaOverlay.remove();
+        }
+      });
+
+      setTimeout(() => { if (document.getElementById('postTourCTA')) ctaOverlay.remove(); }, 15000);
     }
 
   if (firstRunGuideClose) firstRunGuideClose.addEventListener('click', closeFirstRunGuide);

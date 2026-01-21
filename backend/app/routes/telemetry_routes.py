@@ -8,7 +8,7 @@ They forward to CloudLicenseManager.ping_usage(action=...).
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from typing import Any, Dict, Optional
 
@@ -24,12 +24,14 @@ class TelemetryEvent(BaseModel):
 
 
 @router.post("/telemetry")
-async def post_telemetry(event: TelemetryEvent):
+async def post_telemetry(event: TelemetryEvent, request: Request):
     # Best-effort only; never fail the caller.
     try:
+        # Get app version from the FastAPI app instance
+        app_version = getattr(request.app, 'version', None)
         # We currently only support the action dimension in the cloud ping.
         # details is accepted so we can expand later without breaking clients.
-        telemetry_ping(event.action)
+        telemetry_ping(event.action, app_version=app_version, details=event.details)
     except Exception:
         pass
 
