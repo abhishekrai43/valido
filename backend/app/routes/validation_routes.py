@@ -221,6 +221,18 @@ async def submit_files(
     parsed_rules = None
     if rules:
         parsed_rules = _parse_rules(rules)
+        try:
+            if isinstance(parsed_rules, dict):
+                fields = parsed_rules.get('fields')
+                if isinstance(fields, list) and fields:
+                    first = fields[0] if isinstance(fields[0], dict) else None
+                    logger.info(
+                        "📌 Parsed rules: fields=%s first_has_selectionTarget=%s",
+                        len(fields),
+                        bool(isinstance(first, dict) and first.get('selectionTarget')),
+                    )
+        except Exception:
+            pass
 
     # Read file bytes
     payload = []

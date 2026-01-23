@@ -239,7 +239,9 @@ def process_pdfs_sync(
         # Use provided results_dir and extract task_id from it
         results_dir = os.path.abspath(results_dir)
         task_id = os.path.basename(results_dir.rstrip("/\\"))
-        # Don't create directory here - it's already created by the caller
+        # Caller *usually* creates this, but in some code paths (scripted/test runs
+        # or buggy callers) it may not exist yet.
+        os.makedirs(results_dir, exist_ok=True)
         logger.info(f"✓ Worker using existing results directory: {results_dir}")
 
     def detect_signed(t: str) -> Tuple[str, str]:
@@ -444,12 +446,22 @@ def process_pdfs_sync(
             for field in fields:
                 if isinstance(field, dict):
                     field_dict = {
-                        'name': field.get('name', ''), 
+                        # Keep both a display name and the actual search text.
+                        # validator.validate_text() prefers lookFor/look_for for matching.
+                        'name': field.get('name', ''),
                         'strategy': field.get('strategy', 'first')
                     }
+                    look_for = field.get('lookFor') or field.get('look_for')
+                    if look_for:
+                        field_dict['lookFor'] = look_for
                     # Include column if specified
                     if field.get('column'):
                         field_dict['column'] = field.get('column')
+
+                    # Deterministic ambiguity resolution (from picker)
+                    if isinstance(field.get('selectionTarget'), dict):
+                        field_dict['selectionTarget'] = field.get('selectionTarget')
+
                     extraction_fields.append(field_dict)
                 elif isinstance(field, str):
                     extraction_fields.append({'name': field, 'strategy': 'first'})

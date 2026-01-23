@@ -16,6 +16,7 @@
   let currentPdfFile = null;
   let selectedText = '';
   let currentPdfText = ''; // Store full PDF text for analysis
+  let pendingSelectionTarget = null; // Used for ambiguity picker -> wizard
 
   // Canvas for PDF rendering
   let canvas = null;
@@ -55,6 +56,10 @@
     }
 
     currentPdfFile = firstPdf;
+    // Expose for other modules (e.g., field wizard ambiguity resolver)
+    window.currentPdfFile = firstPdf;
+    // Back-compat alias (some modules look for this)
+    window.currentPdfFileForWizard = firstPdf;
   }
 
   /**
@@ -716,14 +721,160 @@
     }
 
 
-    // Close PDF viewer
+    // If we have the PDF file, try an ambiguity check BEFORE closing viewer.
+    // This keeps the user in-context (they can still see the PDF while choosing).
+    const pdfFile = window.currentPdfFile || window.currentPdfFileForWizard || currentPdfFile;
+    if (pdfFile) {
+      runAmbiguityPickerInViewer({
+        anchorText: selectedText,
+        valueHint: isTable ? columnName : null
+      }).then((pickedTarget) => {
+        // If user cancelled, do nothing.
+        if (pickedTarget === '__cancel__') {
+          return;
+        }
+
+        pendingSelectionTarget = pickedTarget;
+        window.pendingSelectionTarget = pickedTarget;
+
+        // Close PDF viewer
+        const modal = document.getElementById('pdfViewerModal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
+
+        // Open wizard modal with pre-filled data
+        openWizardWithData(selectedText, isTable, columnName);
+      });
+      return;
+    }
+
+    // No PDF file available (should be rare): proceed without picker.
     const modal = document.getElementById('pdfViewerModal');
     if (modal) {
       modal.style.display = 'none';
     }
-
-    // Open wizard modal with pre-filled data
     openWizardWithData(selectedText, isTable, columnName);
+  }
+
+  async function runAmbiguityPickerInViewer({ anchorText, valueHint } = {}) {
+    try {
+      const pdfFile = window.currentPdfFile || window.currentPdfFileForWizard || currentPdfFile;
+      if (!pdfFile || !anchorText) {
+        return null;
+      }
+
+      const form = new FormData();
+      form.append('file', pdfFile);
+      form.append('anchor_text', String(anchorText || ''));
+      form.append('max_pages', '3');
+      if (valueHint) form.append('value_hint', String(valueHint));
+
+      const res = await fetch('/api/v1/pdf-anchor-candidates', {
+        method: 'POST',
+        body: form
+      });
+      const data = await res.json().catch(() => ({}));
+      const candidates = data?.candidates || [];
+
+      if (!res.ok || !Array.isArray(candidates)) {
+        return null;
+      }
+
+      if (candidates.length <= 1) {
+        return null;
+      }
+
+      const picked = await openCandidatePickerModal(candidates, anchorText);
+      if (!picked) {
+        return '__cancel__';
+      }
+
+      return {
+        page: picked.page,
+        occurrenceIndexOnPage: picked.occurrenceIndexOnPage,
+        anchorBBox: picked.anchorBBox
+      };
+    } catch (e) {
+      console.warn('Ambiguity picker failed', e);
+      return null;
+    }
+  }
+
+  function openCandidatePickerModal(candidates = [], anchorText = '') {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10020;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      `;
+
+      const safe = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+      const itemsHtml = candidates.map((c, idx) => {
+        const ctx = safe(c.context);
+        const val = safe(c.previewValueRight);
+        const page = c.page;
+        return `
+          <div data-idx="${idx}" style="background: white; border-radius: 12px; padding: 12px; border: 1px solid #e5e7eb; cursor: pointer;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <div style="font-weight:800; color:#111827;">Option ${idx + 1} • Page ${page}</div>
+              <div style="font-size:12px; color:#6b7280;">score ${Number(c.score || 0).toFixed(2)}</div>
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:#374151;">
+              <div style="color:#6b7280; font-weight:700;">Context</div>
+              <div style="margin-top:4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; background:#f9fafb; padding:8px; border-radius:10px;">${ctx}</div>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:#374151;">
+              <div style="color:#6b7280; font-weight:700;">What will be extracted</div>
+              <div style="margin-top:4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; background:#f0f9ff; padding:8px; border-radius:10px; border:1px solid #bae6fd;">${val || '<empty>'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      modal.innerHTML = `
+        <div style="width: 980px; max-width: 100%; max-height: 90vh; background: white; border-radius: 16px; overflow: hidden; display:flex; flex-direction:column; box-shadow: 0 20px 70px rgba(0,0,0,0.45);">
+          <div style="padding: 14px 16px; border-bottom: 1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+            <div>
+              <div style="font-size: 16px; font-weight: 900; color:#111827;">Multiple matches for “${safe(anchorText)}”</div>
+              <div style="font-size: 13px; color:#6b7280; margin-top: 2px;">Pick the correct one while you can still see the PDF.</div>
+            </div>
+            <button id="candidatePickerCancel" style="border:none; background:#f3f4f6; color:#111827; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800;">Cancel</button>
+          </div>
+          <div style="padding: 14px 16px; overflow:auto; background:#f9fafb; display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      const cleanup = () => modal.remove();
+
+      modal.querySelector('#candidatePickerCancel')?.addEventListener('click', () => {
+        cleanup();
+        resolve(null);
+      });
+
+      modal.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-idx]');
+        if (!card) return;
+        const idx = parseInt(card.getAttribute('data-idx'), 10);
+        const picked = candidates[idx] || null;
+        cleanup();
+        resolve(picked);
+      });
+    });
   }
 
   /**
@@ -750,6 +901,12 @@
       if (fieldLookForInput) {
         fieldLookForInput.value = text;
         fieldLookForInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // If an ambiguity selection was made in the viewer, expose it for the wizard.
+      // The wizard save handler will read it and persist into the field.
+      if (pendingSelectionTarget) {
+        window.pendingSelectionTarget = pendingSelectionTarget;
       }
 
       // Pre-fill table checkbox and column name

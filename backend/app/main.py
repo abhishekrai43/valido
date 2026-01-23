@@ -208,6 +208,14 @@ except Exception as e:
 from app.routes.preview_routes import router as preview_router
 app.include_router(preview_router, prefix="/api", tags=["preview"])
 
+# PDF anchor candidates (ambiguity resolver)
+try:
+    from app.routes.pdf_candidates_routes import router as pdf_candidates_router
+    app.include_router(pdf_candidates_router)
+    logger.info("✓ PDF candidates routes registered")
+except Exception as e:
+    logger.error(f"✗ Failed to register PDF candidates routes: {e}", exc_info=True)
+
 # Rules routes (if exists)
 try:
     from app.routes.rules import router as rules_router

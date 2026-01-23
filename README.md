@@ -60,8 +60,17 @@ The application includes a comprehensive **"How To Use"** section with:
 - All processing happens locally on your network
 - PDFs and extracted data never leave your infrastructure
 - No login, account, or user registration required
-- Works 100% offline (except for initial license activation)
-- No external API calls during PDF processing
+- Works 100% offline for PDF processing (except for initial license activation)
+- No external API calls are required during PDF processing
+
+### Anonymous usage telemetry (optional)
+
+Valido may send **anonymous, best-effort** usage events (e.g. app opened, step navigation) to help improve the product.
+
+- Telemetry never includes PDFs or extracted values.
+- Telemetry is **fire-and-forget** and never blocks validation.
+- If the device is offline, telemetry is simply skipped.
+- You can disable telemetry entirely by setting the environment variable `VALIDO_TELEMETRY_DISABLED=1`.
 
 ---
 

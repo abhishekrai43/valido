@@ -389,6 +389,16 @@
       else {
         field.lookFor = f.lookFor;
       }
+
+      // Deterministic ambiguity resolution (picked occurrence)
+      if (f && typeof f === 'object' && f.selectionTarget) {
+        field.selectionTarget = f.selectionTarget;
+      }
+
+      // Deterministic ambiguity resolution (picked occurrence)
+      if (f && typeof f === 'object' && f.selectionTarget) {
+        field.selectionTarget = f.selectionTarget;
+      }
       
       // Add column if present
       if (f.column) {
@@ -541,7 +551,8 @@
         const field = typeof f === 'string' ? {name: f, strategy: 'first'} : f;
         const strat = field.strategy === 'first' ? 'first' : 
                      field.strategy === 'last' ? 'last' : 'all';
-        return `${field.name} (${strat})`;
+        const hasSel = field && typeof field === 'object' && field.selectionTarget ? ' ✓selected' : '';
+        return `${field.name} (${strat})${hasSel}`;
       });
       textSummary.push('Extract: ' + fieldNames.join(', '));
     }

@@ -89,6 +89,11 @@ def ping(
     """
 
     try:
+        # Respect explicit opt-out. This keeps the "offline validator" promise intact.
+        # Default: enabled (best-effort, fire-and-forget).
+        if (os.environ.get("VALIDO_TELEMETRY_DISABLED") or "").strip().lower() in ("1", "true", "yes"):
+            return
+
         version = app_version or get_app_version()
 
         # Optional de-dupe

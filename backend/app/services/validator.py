@@ -8,6 +8,16 @@ from app.services.extractor import (
     extract_column_from_value
 )
 
+# Optional: border-aware disambiguation helpers
+try:
+    from app.services.pdf_layout.border_aware_extraction import extract_border_aware_values
+    from app.services.pdf_layout.candidate_finder import find_anchor_candidates
+    from app.services.pdf_layout.models import BBox
+except Exception:  # pragma: no cover
+    extract_border_aware_values = None
+    find_anchor_candidates = None
+    BBox = None
+
 logger = get_logger("ValidoValidator")
 
 # ------ DATE REGEX (broad) ------
@@ -362,7 +372,8 @@ def _extract_field(
     look_for: Optional[str] = None,
     column: Optional[str] = None,
     start_marker: Optional[str] = None,
-    end_marker: Optional[str] = None
+    end_marker: Optional[str] = None,
+    pdf_bytes: Optional[bytes] = None,
 ) -> str:
     """
     Extract field value from text with multiple extraction strategies.
@@ -424,10 +435,42 @@ def _extract_field(
     logger.info(f"DEBUG _extract_field: field='{field_name}', column='{column}', selected_value BEFORE column filter='{selected_value}'")
     
     # If column is specified, extract from multi-column value
+    #
+    # Enhancement: if we have original PDF bytes, prefer a border-aware
+    # extraction for key/value tables (label cell -> value cell) rather than
+    # using whitespace splitting.
     if column and selected_value:
-        logger.info(f"DEBUG _extract_field: Calling extract_column_from_value with value='{selected_value}', column='{column}'")
-        selected_value = extract_column_from_value(selected_value, column, text)
-        logger.info(f"DEBUG _extract_field: selected_value AFTER column filter='{selected_value}'")
+        border_aware_used = False
+        if pdf_bytes:
+            try:
+                from app.services.pdf_layout.border_aware_extraction import extract_border_aware_values
+
+                # If the user provided a column name that suggests a numeric/currency column,
+                # use it as a hint to disambiguate anchors (e.g., "Basic" in a header vs row label).
+                hint = None
+                if isinstance(column, str):
+                    col_norm = column.strip().lower()
+                    if col_norm in {"current period", "amount", "per month", "per annum", "value"}:
+                        hint = "amount"
+
+                border_val = extract_border_aware_values(
+                    pdf_bytes=pdf_bytes,
+                    anchor_text=search_term,
+                    occurrence=strategy,
+                    value_hint=hint,
+                )
+                if border_val:
+                    selected_value = border_val
+                    border_aware_used = True
+            except Exception as e:
+                logger.info(f"Border-aware extraction failed (fallback to whitespace): {e}")
+
+        if not border_aware_used:
+            logger.info(
+                f"DEBUG _extract_field: Calling extract_column_from_value with value='{selected_value}', column='{column}'"
+            )
+            selected_value = extract_column_from_value(selected_value, column, text)
+            logger.info(f"DEBUG _extract_field: selected_value AFTER column filter='{selected_value}'")
     
     return selected_value
 
@@ -679,6 +722,92 @@ def validate_text(text: str, rules: Optional[dict] = None, pdf_bytes: Optional[b
                 # Normal extraction field
                 # Extract column if specified
                 col = f.get("column") if isinstance(f, dict) else None
+
+                # Deterministic selection support: if the field was created from the ambiguity
+                # picker, it will include selectionTarget describing which occurrence to use.
+                selection_target = f.get("selectionTarget") if isinstance(f, dict) else None
+                if (
+                    selection_target
+                    and pdf_bytes
+                    and look_for
+                    and extract_border_aware_values
+                    and find_anchor_candidates
+                    and BBox
+                ):
+                    try:
+                        sel_page = selection_target.get("page")
+                        sel_occ = selection_target.get("occurrenceIndexOnPage")
+                        sel_bbox = selection_target.get("anchorBBox")
+
+                        bbox_obj = None
+                        if isinstance(sel_bbox, dict):
+                            try:
+                                bbox_obj = BBox(
+                                    x0=float(sel_bbox.get("x0")),
+                                    top=float(sel_bbox.get("top")),
+                                    x1=float(sel_bbox.get("x1")),
+                                    bottom=float(sel_bbox.get("bottom")),
+                                )
+                            except Exception:
+                                bbox_obj = None
+
+                        # Ask the candidate finder to boost the selected occurrence, then grab
+                        # the highest-ranked candidate and extract from that.
+                        candidates = find_anchor_candidates(
+                            pdf_bytes=pdf_bytes,
+                            anchor_text=str(look_for),
+                            max_pages=None,
+                            value_hint=col,
+                            selection_page=int(sel_page) if sel_page is not None else None,
+                            selection_occurrence_index_on_page=int(sel_occ) if sel_occ is not None else None,
+                            selection_bbox=bbox_obj,
+                            limit=5,
+                        )
+
+                        if candidates:
+                            picked = candidates[0]
+                            # If candidate preview is non-empty, use it directly.
+                            if picked.extracted_value:
+                                value = picked.extracted_value
+                            else:
+                                # Fallback: do a normal border-aware extraction but limit to that page via max_pages.
+                                # (We don't yet support exact per-page filtering in the extractor; this is best-effort.)
+                                value = extract_border_aware_values(
+                                    pdf_bytes=pdf_bytes,
+                                    anchor_text=str(look_for),
+                                    occurrence="first",
+                                    max_pages=None,
+                                    value_hint=col,
+                                )
+
+                            display = name.replace("_", " ").title()
+                            report["extractions"][display] = value
+
+                            validation_result = _validate_field_value(value, field_config)
+                            log_entry = {
+                                "field_name": name,
+                                "look_for_text": look_for or name,
+                                "strategy": strat,
+                                "extracted_value": value,
+                                "found": value is not None and value != "",
+                                "validation": validation_result,
+                                "selectionTarget": selection_target,
+                            }
+                            report["extraction_log"].append(log_entry)
+                            continue
+                    except Exception as e:
+                        logger.warning(f"selectionTarget extraction failed for field '{name}': {e}")
+
+                # Back-compat helper:
+                # Many users build "key/value" table rules by selecting just the label text (e.g., "PAN")
+                # but forget to tick "in table" or include a column. If we have PDF bytes, and the field
+                # name essentially IS the anchor label, treat it as a key/value table and enable border-aware
+                # extraction by default.
+                if not col and pdf_bytes and isinstance(name, str) and isinstance(look_for, str):
+                    if name.strip().lower() == look_for.strip().lower():
+                        # Any non-empty value triggers the "column" code path in _extract_field; the
+                        # border-aware extractor ignores the column string and uses the right-adjacent cell.
+                        col = "__kv_right__"
                 
                 # Get markers for "between" strategy
                 start_marker = f.get("startMarker") if isinstance(f, dict) else None
@@ -689,13 +818,14 @@ def validate_text(text: str, rules: Optional[dict] = None, pdf_bytes: Optional[b
                 
                 # Extract value
                 value = _extract_field(
-                    text, 
-                    name, 
-                    extraction_strategy, 
-                    look_for, 
+                    text,
+                    name,
+                    extraction_strategy,
+                    look_for,
                     col,
                     start_marker,
-                    end_marker
+                    end_marker,
+                    pdf_bytes=pdf_bytes,
                 )
                 display = name.replace("_", " ").title()
                 report["extractions"][display] = value

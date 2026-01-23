@@ -8,6 +8,123 @@ let fields = window.fields;
 // Flag to prevent duplicate initialization
 let isFieldWizardInitialized = false;
 
+async function _fetchAnchorCandidates({ anchorText, valueHint, maxPages = 3 } = {}) {
+  try {
+    const pdfFile = window.currentPdfFile || window.currentPdfFileForWizard || null;
+    if (!pdfFile) {
+      return { success: false, candidates: [], message: 'No PDF loaded' };
+    }
+
+    const form = new FormData();
+    form.append('file', pdfFile);
+    form.append('anchor_text', String(anchorText || ''));
+    form.append('max_pages', String(maxPages));
+    if (valueHint) form.append('value_hint', String(valueHint));
+
+    const res = await fetch('/api/v1/pdf-anchor-candidates', {
+      method: 'POST',
+      body: form
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn('Candidate fetch failed', e);
+    return null;
+  }
+}
+
+function _deriveValueHintFromFieldType(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'number') return 'number';
+  if (t === 'date') return 're:\\b\\d{1,2}[/\\-]\\d{1,2}[/\\-]\\d{2,4}\\b';
+  return null;
+}
+
+function _openCandidatePickerModal(candidates = [], anchorText = '') {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'candidate-picker-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10050;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+
+    const safe = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const itemsHtml = candidates.map((c, idx) => {
+      const page = c.page;
+      const ctx = safe(c.context);
+      const val = safe(c.previewValueRight);
+      const reasons = Array.isArray(c.reasons) ? c.reasons.slice(0, 4).join(', ') : '';
+      return `
+        <div data-idx="${idx}" style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; cursor: pointer; background: white; transition: box-shadow .15s;">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+            <div style="font-weight:700; color:#111827;">Page ${page}</div>
+            <div style="font-size:12px; color:#6b7280;">score ${Number(c.score || 0).toFixed(2)}</div>
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:#374151; line-height:1.4;">
+            <div style="color:#6b7280; font-weight:600;">Context</div>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; background:#f9fafb; padding:8px; border-radius:8px;">${ctx}</div>
+          </div>
+          <div style="margin-top:10px; font-size:12px; color:#374151; line-height:1.4;">
+            <div style="color:#6b7280; font-weight:600;">Right-cell preview</div>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; background:#f0f9ff; padding:8px; border-radius:8px; border:1px solid #bae6fd;">${val || '<empty>'}</div>
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:#9ca3af;">${safe(reasons)}</div>
+        </div>
+      `;
+    }).join('');
+
+    modal.innerHTML = `
+      <div style="background: white; width: 920px; max-width: 100%; max-height: 90vh; border-radius: 14px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.35); display:flex; flex-direction:column;">
+        <div style="padding: 16px 18px; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color:#111827;">Multiple matches for “${safe(anchorText)}”</div>
+            <div style="font-size: 13px; color:#6b7280; margin-top: 2px;">Pick the correct occurrence so extractions never flip again.</div>
+          </div>
+          <button id="candidatePickerCancel" style="border:none; background:#f3f4f6; color:#111827; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:700;">Cancel</button>
+        </div>
+        <div style="padding: 16px 18px; overflow:auto; display:grid; grid-template-columns: 1fr 1fr; gap: 12px; background:#f9fafb;">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const cleanup = () => {
+      modal.remove();
+    };
+
+    modal.querySelector('#candidatePickerCancel')?.addEventListener('click', () => {
+      cleanup();
+      resolve(null);
+    });
+
+    modal.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-idx]');
+      if (!card) return;
+      const idx = parseInt(card.getAttribute('data-idx'), 10);
+      const picked = candidates[idx] || null;
+      cleanup();
+      resolve(picked);
+    });
+  });
+}
+
 function _normalizeFieldName(name) {
   return String(name || '')
     .trim()
@@ -124,7 +241,7 @@ function initFieldWizard() {
 
   // Save field
   if (fieldWizardSave) {
-    fieldWizardSave.addEventListener('click', () => {
+    fieldWizardSave.addEventListener('click', async () => {
       // Ensure we always validate against the current global fields array
       _getFieldsArray();
 
@@ -206,11 +323,63 @@ function initFieldWizard() {
         validations,
         strategy
       };
+
+      // If a selectionTarget was chosen in the PDF viewer (pre-wizard), persist it.
+      try {
+        if (window.pendingSelectionTarget && typeof window.pendingSelectionTarget === 'object') {
+          newField.selectionTarget = window.pendingSelectionTarget;
+          // consume it so it doesn't leak to the next field
+          window.pendingSelectionTarget = null;
+        }
+      } catch (e) {
+        // ignore
+      }
       
       // Add column if specified
       if (column) {
         newField.column = column;
       } else {
+      }
+
+      // Ambiguity elimination: if the same lookFor exists multiple times in the PDF,
+      // ask the user to choose which occurrence they meant.
+      // Only applies when a PDF is loaded for the wizard.
+      try {
+        // If we already have a selectionTarget from the viewer, don't prompt again.
+        if (newField.selectionTarget) {
+          throw new Error('skip-picker');
+        }
+        const typeHint = _deriveValueHintFromFieldType(type);
+        const candidateResponse = await _fetchAnchorCandidates({
+          anchorText: lookFor,
+          // For table fields, the column name helps ranking; for non-table fields,
+          // use a lightweight hint derived from field type.
+          valueHint: column || typeHint,
+          maxPages: 3
+        });
+
+        const candidates = candidateResponse?.candidates || [];
+
+        if (candidateResponse?.success === false && candidateResponse?.message === 'No PDF loaded') {
+          // No PDF = no disambiguation available; continue normally.
+        }
+
+        // If multiple candidates, show picker.
+        if (Array.isArray(candidates) && candidates.length > 1) {
+          const picked = await _openCandidatePickerModal(candidates, lookFor);
+          if (!picked) {
+            // User cancelled: don't create the field.
+            return;
+          }
+
+          newField.selectionTarget = {
+            page: picked.page,
+            occurrenceIndexOnPage: picked.occurrenceIndexOnPage,
+            anchorBBox: picked.anchorBBox
+          };
+        }
+      } catch (e) {
+        // Best-effort only; never block field creation.
       }
       
   _getFieldsArray().push(newField);

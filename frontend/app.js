@@ -1165,7 +1165,7 @@
             fetch('/api/v1/telemetry', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'step1_upload_invalid', details: { reason: reason || 'unknown' } })
+              body: JSON.stringify({ action: 'step1_upload_invalid', details: { session_id: window.__validoSessionId, reason: reason || 'unknown' } })
             }).catch(() => {});
           } catch (e) {}
 
@@ -1273,6 +1273,19 @@
       });
       
       filesInput.addEventListener('change', (e) => {
+        // Telemetry: user selected files (intent signal). Best-effort only.
+        try {
+          fetch('/api/v1/telemetry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'step1_files_selected',
+              details: { session_id: window.__validoSessionId, count: (e.target.files || []).length }
+            })
+          }).catch(() => {});
+        } catch (err) {
+          // ignore
+        }
         handleFiles(e.target.files);
       });
     }
@@ -1337,7 +1350,7 @@
           fetch('/api/v1/telemetry', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'step2_enter' })
+            body: JSON.stringify({ action: 'step2_enter', details: { session_id: window.__validoSessionId } })
           }).catch(() => {});
         } catch (e) {
           // ignore
@@ -1358,7 +1371,7 @@
         fetch('/api/v1/telemetry', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'step3_enter' })
+          body: JSON.stringify({ action: 'step3_enter', details: { session_id: window.__validoSessionId } })
         }).catch(() => {});
       } catch (e) {
         // ignore
@@ -1447,6 +1460,28 @@
     document.addEventListener('rulesUpdated', () => updateSubmitButtonLabel());
   // Run once at startup to ensure correct label
   updateSubmitButtonLabel();
+
+    // --- Telemetry (privacy-first, best-effort) ---
+    // This app works offline; telemetry must never block or be required.
+    // session_id is per-tab/session and contains no PII.
+    if (!window.__validoSessionId) {
+      try {
+        window.__validoSessionId = `s_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      } catch (e) {
+        window.__validoSessionId = null;
+      }
+    }
+
+    // Step 1 impression: distinguishes "app opened" vs "user actually saw Step 1".
+    try {
+      fetch('/api/v1/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'step1_enter', details: { session_id: window.__validoSessionId } })
+      }).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
     
     // Form submission with user-friendly status
     // Use window-level flag to prevent duplicates AND to ensure we only attach
@@ -1552,6 +1587,36 @@
       for (let i = 0; i < files.length; i++) {
         fd.append('files', files[i]);
       }
+
+        // If the user just resolved an ambiguity in the PDF viewer but didn't save a ruleset yet,
+        // apply that choice to the current one-off run by injecting selectionTarget into rules.
+        // (This keeps the behavior deterministic for the immediate validation result.)
+        try {
+          if (rules) {
+            const rulesObj = typeof rules === 'string' ? JSON.parse(rules) : rules;
+
+            // If the user just resolved an ambiguity in the PDF viewer but didn't persist it yet,
+            // apply it to this submission.
+            if (window.pendingSelectionTarget && rulesObj && Array.isArray(rulesObj.fields) && rulesObj.fields.length > 0) {
+              const pending = window.pendingSelectionTarget;
+
+              // Best-effort: apply to the most recently created/edited field (last field).
+              const last = rulesObj.fields[rulesObj.fields.length - 1];
+              if (last && typeof last === 'object') {
+                last.selectionTarget = pending;
+              }
+
+              // Clear after consumption to avoid leaking into future submissions
+              window.pendingSelectionTarget = null;
+            }
+
+            rules = JSON.stringify(rulesObj);
+            console.log('📤 Submitting rules JSON (truncated):', rules.slice(0, 500));
+          }
+        } catch (e) {
+          // Never block submission
+          console.warn('Could not normalize/apply selectionTarget to rules:', e);
+        }
       if (rules) fd.append('rules', rules);
       
       // Show processing UI BEFORE fetch
