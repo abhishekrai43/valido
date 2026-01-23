@@ -1,5 +1,5 @@
 #define MyAppName "Valido"
-#define MyAppVersion "1.10.5"
+#define MyAppVersion "1.10.7"
 #define MyAppPublisher "Abhishek Rai"
 #define MyAppURL "https://github.com/abhishekrai43/valido"
 #define MyAppExeName "valido-app.exe"
