@@ -2,15 +2,69 @@
 Cloud License Manager - Validates licenses against Vercel API
 Keeps Supabase credentials secure (never in desktop app)
 """
-import requests
 import hashlib
+import json
 import platform
 import uuid
 import os
 from typing import Optional, Dict, Any
+from urllib import error as urllib_error
+from urllib import parse as urllib_parse
+from urllib import request as urllib_request
+
+try:
+    import requests  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    requests = None
 
 # Your secure license API endpoint - stable production URL
 LICENSE_API_URL = "https://license-api-three-delta.vercel.app"
+
+
+def _http_request(method: str, url: str, *, json_body: Optional[Dict[str, Any]] = None,
+                  params: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Dict[str, Any]:
+    """Small fallback HTTP client used when requests is unavailable."""
+    if params:
+        url = f"{url}?{urllib_parse.urlencode(params)}"
+
+    data = None
+    headers = {"Accept": "application/json"}
+    if json_body is not None:
+        data = json.dumps(json_body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    req = urllib_request.Request(url, data=data, headers=headers, method=method.upper())
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as response:
+            payload = response.read().decode("utf-8") or "{}"
+            return {
+                "status_code": response.getcode(),
+                "json": json.loads(payload),
+            }
+    except urllib_error.HTTPError as exc:
+        payload = exc.read().decode("utf-8") or "{}"
+        try:
+            parsed = json.loads(payload)
+        except Exception:
+            parsed = {}
+        return {
+            "status_code": exc.code,
+            "json": parsed,
+        }
+
+
+def _post_json(url: str, payload: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+    if requests is not None:
+        response = requests.post(url, json=payload, timeout=timeout)
+        return {"status_code": response.status_code, "json": response.json() if response.text else {}}
+    return _http_request("POST", url, json_body=payload, timeout=timeout)
+
+
+def _get_json(url: str, params: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+    if requests is not None:
+        response = requests.get(url, params=params, timeout=timeout)
+        return {"status_code": response.status_code, "json": response.json() if response.text else {}}
+    return _http_request("GET", url, params=params, timeout=timeout)
 
 
 class CloudLicenseManager:
@@ -54,12 +108,12 @@ class CloudLicenseManager:
             if details is not None:
                 payload["details"] = details
 
-            response = requests.post(
+            response = _post_json(
                 f"{LICENSE_API_URL}/api/ping",
-                json=payload,
-                timeout=5  # Short timeout, non-blocking
+                payload,
+                timeout=5,  # Short timeout, non-blocking
             )
-            return response.status_code == 200
+            return response["status_code"] == 200
         except:
             # Silently fail - usage tracking should never break the app
             return False
@@ -83,45 +137,47 @@ class CloudLicenseManager:
         device_id = CloudLicenseManager.get_device_id()
         
         try:
-            response = requests.get(
+            response = _get_json(
                 f"{LICENSE_API_URL}/api/validate",
-                params={
+                {
                     "license_key": license_key,
                     "device_id": device_id
                 },
-                timeout=timeout
+                timeout=timeout,
             )
             
-            if response.status_code == 200:
-                return response.json()
+            status_code = response["status_code"]
+            if status_code == 200:
+                return response["json"]
 
             # Treat server-side failures differently from user/input failures.
             # The desktop app should not blame the user for a server outage.
-            if 500 <= response.status_code <= 599:
+            if 500 <= status_code <= 599:
                 return {
                     "valid": False,
                     "transient": True,
-                    "status_code": response.status_code,
+                    "status_code": status_code,
                     "message": "License server error (temporary). Please try again in a minute."
                 }
 
             return {
                 "valid": False,
-                "status_code": response.status_code,
-                "message": f"API error: {response.status_code}"
+                "status_code": status_code,
+                "message": f"API error: {status_code}"
             }
                 
-        except requests.Timeout:
-            return {
-                "valid": False,
-                "message": "Connection timeout - please check your internet connection"
-            }
-        except requests.ConnectionError:
-            return {
-                "valid": False,
-                "message": "Cannot connect to license server - check internet connection"
-            }
         except Exception as e:
+            err_name = type(e).__name__
+            if err_name == "Timeout":
+                return {
+                    "valid": False,
+                    "message": "Connection timeout - please check your internet connection"
+                }
+            if err_name == "ConnectionError":
+                return {
+                    "valid": False,
+                    "message": "Cannot connect to license server - check internet connection"
+                }
             return {
                 "valid": False,
                 "message": f"Validation error: {str(e)}"
@@ -145,13 +201,14 @@ class CloudLicenseManager:
             } or None if no update available
         """
         try:
-            response = requests.get(
+            response = _get_json(
                 f"{LICENSE_API_URL}/api/version",
-                timeout=timeout
+                {},
+                timeout=timeout,
             )
             
-            if response.status_code == 200:
-                data = response.json()
+            if response["status_code"] == 200:
+                data = response["json"]
                 
                 # Check if update is available
                 if data.get("latest_version") and data["latest_version"] != current_version:

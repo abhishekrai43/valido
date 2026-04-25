@@ -308,7 +308,7 @@ def version():
         
         if not result:
             return jsonify({
-                "latest_version": "1.0.0",
+                "latest_version": "3.0.0",
                 "message": "No updates available"
             })
         

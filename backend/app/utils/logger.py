@@ -48,6 +48,32 @@ class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
                     sys.stderr.write(f"[WARNING] Log rotation skipped (file in use). Continuing with current file.\n")
 
 
+class SafeConsoleStream:
+    """Wrap stdout/stderr so logging never crashes on narrow Windows encodings."""
+
+    def __init__(self, stream):
+        self.stream = stream
+
+    def write(self, data):
+        if self.stream is None:
+            return
+        try:
+            self.stream.write(data)
+        except UnicodeEncodeError:
+            encoding = getattr(self.stream, "encoding", None) or "utf-8"
+            safe_data = data.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            self.stream.write(safe_data)
+
+    def flush(self):
+        if self.stream is not None and hasattr(self.stream, "flush"):
+            self.stream.flush()
+
+    def isatty(self):
+        if self.stream is not None and hasattr(self.stream, "isatty"):
+            return self.stream.isatty()
+        return False
+
+
 # Global log directory - handle PyInstaller frozen app
 if getattr(sys, 'frozen', False):
     # Running as compiled executable
@@ -96,7 +122,7 @@ class ValidoLogger:
         
         # Console handler - colorized for development (only if stdout is available)
         if sys.stdout is not None:
-            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler = logging.StreamHandler(SafeConsoleStream(sys.stdout))
             console_handler.setLevel(logging.INFO)
             console_formatter = StructuredFormatter(
                 fmt='%(asctime)s [%(levelname)s] %(name)s - %(message)s %(context_str)s',

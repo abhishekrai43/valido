@@ -18,7 +18,7 @@ const UpdateChecker = {
     }
     
     // Fallback to hardcoded version if backend fails
-    this.CURRENT_VERSION = '1.10.0';
+    this.CURRENT_VERSION = '3.0.0';
     return this.CURRENT_VERSION;
   },
   

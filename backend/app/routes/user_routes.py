@@ -1,5 +1,8 @@
 from typing import List, Optional
 from datetime import datetime
+import json
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -14,6 +17,11 @@ from app.utils.trial_manager import (
     validate_license_key,
     check_access
 )
+
+try:
+    import requests  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    requests = None
 
 logger = get_logger("UserRoutes")
 
@@ -125,43 +133,63 @@ class EmailLicenseActivation(BaseModel):
     license_type: str = "monthly"
 
 
+def _post_json(url: str, payload: dict, timeout: int = 10) -> tuple[int, dict]:
+    if requests is not None:
+        response = requests.post(url, json=payload, timeout=timeout)
+        data = response.json() if response.text else {}
+        return response.status_code, data
+
+    req = urllib_request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as response:
+            body = response.read().decode("utf-8") or "{}"
+            return response.getcode(), json.loads(body)
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8") or "{}"
+        try:
+            data = json.loads(body)
+        except Exception:
+            data = {}
+        return exc.code, data
+
+
 @router.post("/activate-license-email")
 def activate_license_email(payload: EmailLicenseActivation):
     """Activate license using email (looks up license from Vercel API)."""
-    import requests
     from app.utils.cloud_license_manager import LICENSE_API_URL
     
     logger.info(f"Activating license via email: {payload.purchase_email}")
     
     try:
         # Call Vercel API to get license key
-        response = requests.post(
+        status_code, data = _post_json(
             f"{LICENSE_API_URL}/api/activate",
-            json={
+            {
                 "email": payload.purchase_email,
                 "license_type": payload.license_type
             },
-            timeout=10
+            timeout=10,
         )
         
-        if response.status_code != 200:
-            try:
-                error_msg = response.json().get('message', 'License not found')
-            except Exception:
-                error_msg = 'License lookup failed'
+        if status_code != 200:
+            error_msg = data.get('message', 'License lookup failed')
 
             logger.warning(f"License lookup failed: {error_msg}")
 
             # If the license server is down (5xx), surface as 503 so the UI can show a retry message.
-            if 500 <= response.status_code <= 599:
+            if 500 <= status_code <= 599:
                 raise HTTPException(
                     status_code=503,
                     detail="License server error (temporary). Please try again in a minute."
                 )
 
-            raise HTTPException(status_code=response.status_code, detail=error_msg)
+            raise HTTPException(status_code=status_code, detail=error_msg)
         
-        data = response.json()
         license_key = data.get('license_key')
         
         if not license_key:
@@ -206,7 +234,7 @@ def activate_license_email(payload: EmailLicenseActivation):
                 'activated_at': user.license_activated_at.isoformat()
             }
     
-    except requests.RequestException as e:
+    except Exception as e:
         logger.error(f"Failed to contact license API: {e}")
         raise HTTPException(
             status_code=503,

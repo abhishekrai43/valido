@@ -3,9 +3,18 @@ Table Extraction Service
 Modular service for extracting tables from PDFs with structured output.
 Supports extraction by index, range, and all tables.
 """
-import pdfplumber
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
+
+try:
+    import pdfplumber
+except ImportError:  # pragma: no cover - optional dependency
+    pdfplumber = None
+
+try:
+    import fitz  # PyMuPDF
+except ImportError:  # pragma: no cover - PyMuPDF is a core dependency, but keep the import safe
+    fitz = None
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +31,55 @@ class TableExtractor:
         """
         self.pdf_path = pdf_path
         self.pdf = None
+        self.doc = None
+        self.backend = None
     
     def __enter__(self):
         """Context manager entry."""
-        self.pdf = pdfplumber.open(self.pdf_path)
+        if pdfplumber is not None:
+            self.pdf = pdfplumber.open(self.pdf_path)
+            self.backend = "pdfplumber"
+        elif fitz is not None:
+            self.doc = fitz.open(self.pdf_path)
+            self.backend = "fitz"
+        else:
+            raise ImportError("Neither pdfplumber nor PyMuPDF is available for table extraction")
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         if self.pdf:
             self.pdf.close()
+        if self.doc:
+            self.doc.close()
+
+    def _page_count(self) -> int:
+        if self.backend == "pdfplumber" and self.pdf is not None:
+            return len(self.pdf.pages)
+        if self.backend == "fitz" and self.doc is not None:
+            return len(self.doc)
+        return 0
+
+    def _extract_tables_from_page(self, page_num: int) -> List[List[List[str]]]:
+        if self.backend == "pdfplumber" and self.pdf is not None:
+            page = self.pdf.pages[page_num - 1]
+            return page.extract_tables() or []
+
+        if self.backend == "fitz" and self.doc is not None:
+            page = self.doc[page_num - 1]
+            try:
+                table_finder = page.find_tables()
+                tables = []
+                for table in getattr(table_finder, "tables", []) or []:
+                    extracted = table.extract()
+                    if extracted:
+                        tables.append(extracted)
+                return tables
+            except Exception as e:
+                logger.info(f"PyMuPDF table extraction failed on page {page_num}: {type(e).__name__}: {e}")
+                return []
+
+        return []
     
     def extract_by_index(self, page_num: int, table_index: int) -> Optional[Dict[str, Any]]:
         """
@@ -54,12 +102,10 @@ class TableExtractor:
             }
         """
         try:
-            if page_num < 1 or page_num > len(self.pdf.pages):
+            if page_num < 1 or page_num > self._page_count():
                 logger.warning(f"Invalid page number: {page_num}")
                 return None
-            
-            page = self.pdf.pages[page_num - 1]
-            tables = page.extract_tables()
+            tables = self._extract_tables_from_page(page_num)
             
             if not tables:
                 logger.info(f"No tables found on page {page_num}")
@@ -91,12 +137,10 @@ class TableExtractor:
             List of table dictionaries, empty list if none found
         """
         try:
-            if page_num < 1 or page_num > len(self.pdf.pages):
+            if page_num < 1 or page_num > self._page_count():
                 logger.warning(f"Invalid page number: {page_num}")
                 return []
-            
-            page = self.pdf.pages[page_num - 1]
-            tables = page.extract_tables()
+            tables = self._extract_tables_from_page(page_num)
             
             if not tables:
                 logger.info(f"No tables found on page {page_num}")
@@ -124,12 +168,10 @@ class TableExtractor:
             List of table dictionaries
         """
         try:
-            if page_num < 1 or page_num > len(self.pdf.pages):
+            if page_num < 1 or page_num > self._page_count():
                 logger.warning(f"Invalid page number: {page_num}")
                 return []
-            
-            page = self.pdf.pages[page_num - 1]
-            tables = page.extract_tables()
+            tables = self._extract_tables_from_page(page_num)
             
             if not tables:
                 logger.info(f"No tables found on page {page_num}")
@@ -171,11 +213,9 @@ class TableExtractor:
             Number of tables found
         """
         try:
-            if page_num < 1 or page_num > len(self.pdf.pages):
+            if page_num < 1 or page_num > self._page_count():
                 return 0
-            
-            page = self.pdf.pages[page_num - 1]
-            tables = page.extract_tables()
+            tables = self._extract_tables_from_page(page_num)
             return len(tables) if tables else 0
         
         except Exception as e:
@@ -192,7 +232,7 @@ class TableExtractor:
         """
         summary = {}
         try:
-            for page_num in range(1, len(self.pdf.pages) + 1):
+            for page_num in range(1, self._page_count() + 1):
                 count = self.count_tables(page_num)
                 if count > 0:
                     summary[page_num] = count

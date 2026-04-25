@@ -12,10 +12,14 @@ import time
 import socket
 import uvicorn
 import webbrowser
-from threading import Thread
+from threading import Lock, Thread
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+_server = None
+_shutdown_requested = False
+_shutdown_lock = Lock()
 
 
 def get_local_ip():
@@ -33,10 +37,31 @@ def get_local_ip():
 
 def signal_handler(signum, frame):
     """Handle shutdown signals."""
-    logger.info(f"Received signal {signum}, shutting down...")
+    request_shutdown(f"signal {signum}")
+
+
+def request_shutdown(source: str = "unknown"):
+    """Request a graceful shutdown for the local desktop app."""
+    global _shutdown_requested
+
+    with _shutdown_lock:
+        if _shutdown_requested:
+            logger.info(f"Shutdown already in progress (source: {source})")
+            return
+        _shutdown_requested = True
+
+    logger.info(f"Shutdown requested via {source}")
+
     from local_worker import shutdown_worker
-    shutdown_worker()
-    sys.exit(0)
+    try:
+        shutdown_worker()
+    except Exception as exc:
+        logger.error(f"Failed to stop local worker during shutdown: {exc}", exc_info=True)
+
+    if _server is not None:
+        _server.should_exit = True
+    else:
+        sys.exit(0)
 
 
 def start_worker():
@@ -60,7 +85,10 @@ def open_browser(url):
 
 def main():
     """Main entry point."""
+    global _server, _shutdown_requested
+
     logger.info("Starting Valido launcher in single-process mode")
+    _shutdown_requested = False
 
     # Get network info
     local_ip = get_local_ip()
@@ -95,6 +123,7 @@ def main():
 
     # Import FastAPI app after worker is ready
     from app.main import app
+    app.state.request_shutdown = lambda: request_shutdown("frontend")
 
     # Start FastAPI server
     logger.info("Starting FastAPI server on 0.0.0.0:8000")
@@ -123,7 +152,7 @@ def main():
         },
     }
     
-    uvicorn.run(
+    config = uvicorn.Config(
         app,
         host="127.0.0.1",  # Localhost only
         port=8000,
@@ -131,6 +160,9 @@ def main():
         access_log=True,
         log_config=logging_config
     )
+    _server = uvicorn.Server(config)
+    _server.run()
+    _server = None
 
 
 if __name__ == "__main__":

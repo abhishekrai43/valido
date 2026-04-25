@@ -51,7 +51,14 @@ function getDocumentValidations() {
 }
 
 function setDocumentValidations(validations) {
-  if (!validations) return;
+  validations = validations || {};
+
+  const normalizeTextValidation = (value) => {
+    if (Array.isArray(value)) {
+      return value[0] || null;
+    }
+    return value || null;
+  };
   
   const chkSigned = document.getElementById('chkSigned');
   if (chkSigned) chkSigned.checked = !!validations.signed;
@@ -59,29 +66,25 @@ function setDocumentValidations(validations) {
   const chkMustContain = document.getElementById('chkMustContain');
   const mustContainText = document.getElementById('mustContainText');
   const mustContainCaseSensitive = document.getElementById('mustContainCaseSensitive');
-  if (validations.must_contain) {
-    if (chkMustContain) chkMustContain.checked = true;
-    if (mustContainText) mustContainText.value = validations.must_contain.text || '';
-    if (mustContainCaseSensitive) mustContainCaseSensitive.checked = !!validations.must_contain.case_sensitive;
-  }
+  const mustContain = normalizeTextValidation(validations.must_contain);
+  if (chkMustContain) chkMustContain.checked = !!mustContain;
+  if (mustContainText) mustContainText.value = mustContain ? (mustContain.text || '') : '';
+  if (mustContainCaseSensitive) mustContainCaseSensitive.checked = !!(mustContain && mustContain.case_sensitive);
   
   const chkMustNotContain = document.getElementById('chkMustNotContain');
   const mustNotContainText = document.getElementById('mustNotContainText');
   const mustNotContainCaseSensitive = document.getElementById('mustNotContainCaseSensitive');
-  if (validations.must_not_contain) {
-    if (chkMustNotContain) chkMustNotContain.checked = true;
-    if (mustNotContainText) mustNotContainText.value = validations.must_not_contain.text || '';
-    if (mustNotContainCaseSensitive) mustNotContainCaseSensitive.checked = !!validations.must_not_contain.case_sensitive;
-  }
+  const mustNotContain = normalizeTextValidation(validations.must_not_contain);
+  if (chkMustNotContain) chkMustNotContain.checked = !!mustNotContain;
+  if (mustNotContainText) mustNotContainText.value = mustNotContain ? (mustNotContain.text || '') : '';
+  if (mustNotContainCaseSensitive) mustNotContainCaseSensitive.checked = !!(mustNotContain && mustNotContain.case_sensitive);
   
   const chkPageCount = document.getElementById('chkPageCount');
   const pageCountOperator = document.getElementById('pageCountOperator');
   const pageCountValue = document.getElementById('pageCountValue');
-  if (validations.page_count) {
-    if (chkPageCount) chkPageCount.checked = true;
-    if (pageCountOperator) pageCountOperator.value = validations.page_count.operator || '>=';
-    if (pageCountValue) pageCountValue.value = validations.page_count.value || 1;
-  }
+  if (chkPageCount) chkPageCount.checked = !!validations.page_count;
+  if (pageCountOperator) pageCountOperator.value = validations.page_count ? (validations.page_count.operator || '>=') : '>=';
+  if (pageCountValue) pageCountValue.value = validations.page_count ? (validations.page_count.value || 1) : '';
 }
 
 // Export functions

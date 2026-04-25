@@ -136,14 +136,14 @@
           </div>
           <div class="modal-body">
             <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
-              Your 7-day trial has ended. Thank you for trying Valido!
+              Your 90-day trial has ended. Thank you for trying Valido!
             </p>
             <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
               To continue using Valido, please purchase a license:
             </p>
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
               <div style="margin-bottom: 10px;">
-                <strong>💳 Monthly:</strong> $14.99/month
+                <strong>💳 Monthly:</strong> $14.20/month
               </div>
               <div>
                 <strong>🎁 Annual:</strong> $150/year <span style="color: #10b981;">(Save 17%!)</span>
@@ -207,7 +207,7 @@
                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
                   required
                 >
-                  <option value="monthly">Monthly ($14.99/month)</option>
+                  <option value="monthly">Monthly ($14.20/month)</option>
                   <option value="annual">Annual ($150/year)</option>
                 </select>
               </div>
@@ -220,7 +220,7 @@
             </form>
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
               <p style="font-size: 13px; color: #999;">
-                Don't have a license yet? <a href="https://rai89.gumroad.com/l/bdspjn" target="_blank" style="color: #3b82f6;">Monthly ($14.99)</a> or <a href="https://rai89.gumroad.com/l/eyuiy" target="_blank" style="color: #3b82f6;">Annual ($150)</a>
+                Don't have a license yet? <a href="https://rai89.gumroad.com/l/bdspjn" target="_blank" style="color: #3b82f6;">Monthly ($14.20)</a> or <a href="https://rai89.gumroad.com/l/eyuiy" target="_blank" style="color: #3b82f6;">Annual ($150)</a>
               </p>
             </div>
           </div>
@@ -569,6 +569,171 @@
     if (checkUpdatesBtn) {
       checkUpdatesBtn.addEventListener('click', () => {
         UpdateChecker.checkForUpdates();
+      });
+    }
+
+    // In-app demo video modal
+    const demoVideoModal = document.getElementById('demoVideoModal');
+    const demoVideoOverlay = document.getElementById('demoVideoOverlay');
+    const demoVideoClose = document.getElementById('demoVideoClose');
+    const demoVideoOpenExternal = document.getElementById('demoVideoOpenExternal');
+    const demoVideoFrame = document.getElementById('demoVideoFrame');
+    const demoVideoEmbedUrl = 'https://www.youtube.com/embed/M16EYjNUK5U?start=4&autoplay=1&rel=0&modestbranding=1&playsinline=1';
+
+    function closeDemoVideoModal() {
+      if (demoVideoModal) {
+        demoVideoModal.style.display = 'none';
+      }
+      if (demoVideoFrame) {
+        demoVideoFrame.src = '';
+      }
+    }
+
+    function openDemoVideoModal() {
+      if (!demoVideoModal || !demoVideoFrame) {
+        window.open('https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s', '_blank');
+        return;
+      }
+
+      // Keep the player above any transient overlays/modals.
+      demoVideoModal.style.zIndex = '12000';
+      demoVideoModal.style.display = 'flex';
+      demoVideoFrame.src = demoVideoEmbedUrl;
+
+      // Fallback for environments where embedded YouTube is blocked.
+      window.clearTimeout(window._validoDemoVideoFallbackTimer);
+      window._validoDemoVideoFallbackTimer = window.setTimeout(() => {
+        if (demoVideoModal.style.display === 'flex' && !demoVideoFrame.src) {
+          window.open('https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s', '_blank');
+        }
+      }, 1500);
+    }
+
+    function openDemoVideoExternal() {
+      window.open('https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s', '_blank');
+    }
+
+    // Handle all current and future demo links (including content rendered later).
+    document.addEventListener('click', (event) => {
+      const demoLink = event.target.closest('[data-open-demo-video="true"]');
+      if (!demoLink) return;
+
+      event.preventDefault();
+      openDemoVideoExternal();
+    });
+
+    if (demoVideoOverlay) {
+      demoVideoOverlay.addEventListener('click', closeDemoVideoModal);
+    }
+
+    if (demoVideoClose) {
+      demoVideoClose.addEventListener('click', closeDemoVideoModal);
+    }
+
+    if (demoVideoOpenExternal) {
+      demoVideoOpenExternal.addEventListener('click', () => {
+        closeDemoVideoModal();
+      });
+    }
+
+    // Audience fit gate (shown on app launch)
+    const fitGateModal = document.getElementById('fitGateModal');
+    const fitGateContinue = document.getElementById('fitGateContinue');
+    const fitGateExit = document.getElementById('fitGateExit');
+    const fitGateWatchDemo = document.getElementById('fitGateWatchDemo');
+    const fitGateOverlay = document.getElementById('fitGateOverlay');
+
+    function closeFitGate() {
+      if (!fitGateModal) return;
+      fitGateModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function showFitGate() {
+      if (!fitGateModal) return;
+      fitGateModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    async function tryExitAppFromGate() {
+      try {
+        await fetch('/api/v1/app/quit', { method: 'POST' });
+      } catch (e) {
+        // Ignore network-level failures and still try to close.
+      }
+      try {
+        window.close();
+      } catch (e) {
+        // Ignore if host disallows close.
+      }
+    }
+
+    if (fitGateContinue) {
+      fitGateContinue.addEventListener('click', closeFitGate);
+    }
+
+    if (fitGateWatchDemo) {
+      fitGateWatchDemo.addEventListener('click', () => {
+        // Let anchor open in browser, then close app intentfully.
+        setTimeout(() => {
+          tryExitAppFromGate();
+        }, 250);
+      });
+    }
+
+    if (fitGateExit) {
+      fitGateExit.addEventListener('click', () => {
+        tryExitAppFromGate();
+      });
+    }
+
+    if (fitGateOverlay) {
+      fitGateOverlay.addEventListener('click', closeFitGate);
+    }
+
+    // Exit app button
+    const exitAppBtn = document.getElementById('exitAppBtn');
+    if (exitAppBtn) {
+      exitAppBtn.addEventListener('click', async () => {
+        const isBusy = !!(window._validoSubmissionState && window._validoSubmissionState.isSubmitting);
+        const confirmed = window.confirm(
+          isBusy
+            ? 'A validation run is still in progress. Close Valido anyway?'
+            : 'Close Valido now?'
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        const originalHtml = exitAppBtn.innerHTML;
+        exitAppBtn.disabled = true;
+        exitAppBtn.innerHTML = 'Closing...';
+
+        try {
+          const response = await fetch('/api/v1/app/quit', { method: 'POST' });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.detail || payload.message || 'Could not close Valido.');
+          }
+
+          if (window.toast && typeof window.toast.info === 'function') {
+            window.toast.info(payload.message || 'Closing Valido...');
+          }
+
+          setTimeout(() => {
+            window.close();
+          }, 300);
+        } catch (error) {
+          console.error('Failed to close app:', error);
+          if (window.toast && typeof window.toast.error === 'function') {
+            window.toast.error(error.message || 'Could not close Valido.');
+          } else {
+            alert(error.message || 'Could not close Valido.');
+          }
+          exitAppBtn.disabled = false;
+          exitAppBtn.innerHTML = originalHtml;
+        }
       });
     }
     
@@ -1106,6 +1271,38 @@
       }
     }
 
+    function loadFilesIntoFlow(files) {
+      if (!filesInput) return;
+      const dt = new DataTransfer();
+      (files || []).forEach(file => dt.items.add(file));
+      filesInput.files = dt.files;
+      handleFiles(dt.files);
+    }
+
+    function showUploadSectionView({ step = 1, showGuide = true, forceReset = true } = {}) {
+      if (!navUpload || !navAutomation || !navHowTo || !navFeatures || !uploadSection || !automationSection || !howToSection || !featuresSection) {
+        return;
+      }
+
+      uploadSection.style.display = 'block';
+      automationSection.style.display = 'none';
+      howToSection.style.display = 'none';
+      featuresSection.style.display = 'none';
+
+      navUpload.classList.add('active');
+      navFeatures.classList.remove('active');
+      navAutomation.classList.remove('active');
+      navHowTo.classList.remove('active');
+
+      navigateToStep(step, forceReset);
+
+      if (showGuide) {
+        showFirstRunGuideOnce();
+      }
+
+      if (window.stopAutomationPolling) window.stopAutomationPolling();
+    }
+
     async function preflightSinglePdfIfNeeded(filesArr) {
       // Only gate the user when they upload a single PDF (Step 1 messaging).
       if (!Array.isArray(filesArr) || filesArr.length !== 1) {
@@ -1482,6 +1679,36 @@
     } catch (e) {
       // ignore
     }
+
+    function buildFeedbackContext(taskResultInfo) {
+      let rulesComplexity = 'simple';
+      try {
+        const rulesEl = document.getElementById('rules');
+        if (rulesEl && rulesEl.dataset && rulesEl.dataset.json) {
+          const parsed = JSON.parse(rulesEl.dataset.json || '{}');
+          const fieldCount = Array.isArray(parsed.fields) ? parsed.fields.length : 0;
+          const validationCount = parsed.validations ? Object.keys(parsed.validations).length : 0;
+          if (fieldCount + validationCount >= 6) {
+            rulesComplexity = 'advanced';
+          } else if (fieldCount + validationCount >= 3) {
+            rulesComplexity = 'moderate';
+          }
+        }
+      } catch (e) {
+        // ignore parse issues
+      }
+
+      const sourceTypeSelect = document.getElementById('inputSourceType');
+      const sourceType = (sourceTypeSelect && sourceTypeSelect.value && sourceTypeSelect.value.startsWith('cloud')) ? 'cloud' : 'local';
+
+      return {
+        run_stage: 'post_result_download',
+        success_path: 'success',
+        source_type: sourceType,
+        rules_complexity: rulesComplexity,
+        total_files: taskResultInfo && taskResultInfo.total ? taskResultInfo.total : selectedFiles.length
+      };
+    }
     
     // Form submission with user-friendly status
     // Use window-level flag to prevent duplicates AND to ensure we only attach
@@ -1515,6 +1742,15 @@
         const now = Date.now();
         console.log(`🔍 [${listenerId}] Submit event fired at ${new Date().toISOString()}. isSubmitting: ${window._validoSubmissionState.isSubmitting}, lastSubmit: ${now - window._validoSubmissionState.lastSubmitTime}ms ago`);
         console.trace('Submit event call stack:');
+
+        if (window.ValidoFeedbackCheckpoint && typeof window.ValidoFeedbackCheckpoint.isRunStartBlocked === 'function') {
+          if (window.ValidoFeedbackCheckpoint.isRunStartBlocked()) {
+            if (typeof window.ValidoFeedbackCheckpoint.showBlockingModal === 'function') {
+              window.ValidoFeedbackCheckpoint.showBlockingModal();
+            }
+            return;
+          }
+        }
 
         // Hard lock: don't allow another submission once a run has completed
         // until the user explicitly starts a new run.
@@ -1807,6 +2043,11 @@
   const filesSucceeded = resultInfo.files_succeeded || 0;
   const totalFiles = resultInfo.total || 0;
   const filesFailed = resultInfo.files_failed || 0;
+
+      const feedbackContext = buildFeedbackContext(resultInfo);
+      if (window.ValidoFeedbackCheckpoint && typeof window.ValidoFeedbackCheckpoint.recordRunContext === 'function') {
+        window.ValidoFeedbackCheckpoint.recordRunContext(feedbackContext);
+      }
       
       let titleText, messageText, isPartial = false;
       
@@ -1857,6 +2098,21 @@
       }
       if (!zipFromResult) zipFromResult = `/api/v1/tasks/${taskId}/results.zip`;
 
+      function attachDownloadFeedbackHook() {
+        const downloadBtn = document.getElementById('downloadResultsBtn');
+        if (!downloadBtn) return;
+        if (downloadBtn.dataset.feedbackHooked === '1') return;
+        downloadBtn.dataset.feedbackHooked = '1';
+        downloadBtn.addEventListener('click', () => {
+          localStorage.setItem('validationCompleted', 'true');
+          if (window.ValidoFeedbackCheckpoint && typeof window.ValidoFeedbackCheckpoint.markSuccessfulDownload === 'function') {
+            window.setTimeout(() => {
+              window.ValidoFeedbackCheckpoint.markSuccessfulDownload(feedbackContext);
+            }, 250);
+          }
+        });
+      }
+
       // Show download button for ZIP only
       if (zipFromResult) {
         // Fetch results path to show local directory
@@ -1883,7 +2139,7 @@
             ` : '';
             
             downloadLink.innerHTML = `
-              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn" onclick="localStorage.setItem('validationCompleted', 'true');">
+              <a id="downloadResultsBtn" href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 14V16C2 17.1046 2.89543 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1892,11 +2148,12 @@
               </a>
               ${locationInfo}
             `;
+            attachDownloadFeedbackHook();
           })
           .catch(error => {
             console.warn('Failed to fetch results path:', error);
             downloadLink.innerHTML = `
-              <a href="${zipFromResult}" download class="btn btn-primary btn-large download-btn" onclick="localStorage.setItem('validationCompleted', 'true');">
+              <a id="downloadResultsBtn" href="${zipFromResult}" download class="btn btn-primary btn-large download-btn">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M10 2V14M10 14L6 10M10 14L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 14V16C2 17.1046 18 4 18H16C17.1046 18 18 17.1046 18 16V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1904,6 +2161,7 @@
                 Download Results
               </a>
             `;
+            attachDownloadFeedbackHook();
           });
       } else {
         downloadLink.innerHTML = '<p class="helper">Results are ready but download link is not available.</p>';
@@ -2030,8 +2288,10 @@
     
     // Navigation between sections
     const navAutomation = document.getElementById('navAutomation');
+    const navCloudSources = document.getElementById('navCloudSources');
     const navHowTo = document.getElementById('navHowTo');
     const navFeatures = document.getElementById('navFeatures');
+    const primaryStartWorkflow = document.getElementById('primaryStartWorkflow');
     const automationSection = document.getElementById('automationSection');
     const howToSection = document.getElementById('howToSection');
     const featuresSection = document.getElementById('featuresSection');
@@ -2064,34 +2324,46 @@
         if (window.ValidoTour && typeof window.ValidoTour.maybeStart === 'function') {
           window.ValidoTour.maybeStart([
             {
+              selector: '#uploadValueCallout',
+              title: 'What Valido is best at',
+              body: 'Valido works best on recurring PDFs with the same layout. You test one sample, build the rules once, then reuse them for the rest of the batch.',
+              placement: 'bottom'
+            },
+            {
               selector: '#uploadArea',
               title: 'Step 1: Upload 1 PDF',
-              body: 'Start with a single PDF so you can see results quickly. Click "Next" when ready.',
+              body: 'Start with one text-based PDF you expect to repeat. This lets you confirm the file is a good fit before you scale up.',
               placement: 'bottom'
             },
             {
               selector: '#continueToRules',
               title: 'Step 2: Continue to Rules',
-              body: 'After uploading, click this button to choose what to validate/extract.',
+              body: 'Once the sample file is loaded, continue to the rules step. That is where Valido becomes powerful.',
               placement: 'top'
             },
             {
               getTarget: () => document.querySelector('[data-step="2"]') || document.querySelector('.step[data-step="2"]'),
-              title: 'Step 3: Pick Validation Rules',
-              body: 'Choose checks like signature verification, date validation, or text extraction.',
+              title: 'Rules are the superpower',
+              body: 'Rules can extract fields, check text, dates, signatures, page counts, and even compare totals. If the layout stays the same, you can reuse the same ruleset again and again.',
               placement: 'bottom'
             },
             {
               selector: '#continueToValidate',
-              title: 'Step 3: Validate',
-              body: 'When you’re ready, continue to Step 3 and run the validation.',
+              title: 'Validate the sample first',
+              body: 'Run the sample first, check the output, then save the ruleset only when the results look right.',
               placement: 'top',
               advanceOn: { event: 'click' }
             },
             {
+              selector: '#navAutomation',
+              title: 'Scale it in Automation',
+              body: 'After the sample works, go to Automation to reuse the same ruleset on watched folders or cloud sources like Azure, AWS S3, and Google Cloud Storage.',
+              placement: 'bottom'
+            },
+            {
               selector: '#submitBtn',
-              title: 'Step 5: Run Validation',
-              body: 'Click to validate and generate your report. That\'s it!',
+              title: 'Run validation and export results',
+              body: 'Click to validate and generate Excel, PDF, CSV, and JSON outputs for the files that match your chosen structure and rules.',
               placement: 'top'
             }
           ], { key: 'valido.tour.upload.validate.v2', startDelayMs: 250, onComplete: showPostTourCTA });
@@ -2147,6 +2419,12 @@
   if (firstRunGuideOverlay) firstRunGuideOverlay.addEventListener('click', closeFirstRunGuide);
 
     if (navUpload && navAutomation && navHowTo && navFeatures && uploadSection && automationSection && howToSection && featuresSection) {
+      if (primaryStartWorkflow) {
+        primaryStartWorkflow.addEventListener('click', () => {
+          navUpload.click();
+        });
+      }
+
       // Overview tab (Features)
       navFeatures.addEventListener('click', () => {
         uploadSection.style.display = 'none';
@@ -2156,6 +2434,7 @@
         navFeatures.classList.add('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
+        if (navCloudSources) navCloudSources.classList.remove('active');
         navHowTo.classList.remove('active');
         featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         // Stop automation polling
@@ -2164,22 +2443,7 @@
 
       // Try It Now tab (upload section)
       navUpload.addEventListener('click', () => {
-        uploadSection.style.display = 'block';
-        automationSection.style.display = 'none';
-        howToSection.style.display = 'none';
-        featuresSection.style.display = 'none';
-        navUpload.classList.add('active');
-        navFeatures.classList.remove('active');
-        navAutomation.classList.remove('active');
-        navHowTo.classList.remove('active');
-        
-        // Reset to Step 1 (force reset)
-        navigateToStep(1, true);
-
-        // First-run guidance is most useful right here
-        showFirstRunGuideOnce();
-        // Stop automation polling
-        if (window.stopAutomationPolling) window.stopAutomationPolling();
+        showUploadSectionView({ step: 1, showGuide: true, forceReset: true });
       });
 
       // Automation tab
@@ -2191,12 +2455,35 @@
         navAutomation.classList.add('active');
         navFeatures.classList.remove('active');
         navUpload.classList.remove('active');
+        if (navCloudSources) navCloudSources.classList.remove('active');
         navHowTo.classList.remove('active');
         // Load automation jobs using automation.js
         if (typeof loadWatchFolders === 'function') {
           loadWatchFolders();
         }
       });
+
+      if (navCloudSources) {
+        navCloudSources.addEventListener('click', () => {
+          uploadSection.style.display = 'none';
+          automationSection.style.display = 'block';
+          howToSection.style.display = 'none';
+          featuresSection.style.display = 'none';
+
+          navCloudSources.classList.add('active');
+          navAutomation.classList.remove('active');
+          navFeatures.classList.remove('active');
+          navUpload.classList.remove('active');
+          navHowTo.classList.remove('active');
+
+          if (typeof loadWatchFolders === 'function') {
+            loadWatchFolders();
+          }
+          if (typeof openCloudStorageModal === 'function') {
+            openCloudStorageModal();
+          }
+        });
+      }
 
       // How To tab
       navHowTo.addEventListener('click', () => {
@@ -2209,6 +2496,7 @@
         navFeatures.classList.remove('active');
         navUpload.classList.remove('active');
         navAutomation.classList.remove('active');
+        if (navCloudSources) navCloudSources.classList.remove('active');
         // Stop automation polling
         if (window.stopAutomationPolling) window.stopAutomationPolling();
       });
@@ -2238,20 +2526,27 @@
         });
       });
 
-      // Set default view to Upload & Validate (straight to value)
-      featuresSection.style.display = 'none';
-      uploadSection.style.display = 'block';
+      // Set default view to Overview with one clear start CTA.
+      featuresSection.style.display = 'block';
+      uploadSection.style.display = 'none';
       automationSection.style.display = 'none';
       howToSection.style.display = 'none';
       pricingSection.style.display = 'none';
-      navUpload.classList.add('active');
-      navFeatures.classList.remove('active');
+      navUpload.classList.remove('active');
+      navFeatures.classList.add('active');
       navAutomation.classList.remove('active');
+      if (navCloudSources) navCloudSources.classList.remove('active');
       navHowTo.classList.remove('active');
 
-      // Show first-run guide when landing directly in Upload
-      showFirstRunGuideOnce();
+      // Show audience gate at launch so users can self-select quickly.
+      showFitGate();
     }
+
+    window.ValidoApp = {
+      navigateToStep,
+      loadFilesIntoFlow,
+      showUploadSection: showUploadSectionView
+    };
 
     
     // Initialize on step 1

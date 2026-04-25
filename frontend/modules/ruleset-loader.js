@@ -6,7 +6,7 @@ function loadRuleset(ruleset) {
   
   // Load document validations
   if (typeof setDocumentValidations === 'function') {
-    setDocumentValidations(rules.validations);
+    setDocumentValidations(rules.validations || {});
   }
   
   // Load fields - preserve all properties
@@ -49,9 +49,9 @@ function loadRuleset(ruleset) {
     setFields(fields);
   }
   
-  // Load calculations if present
-  if (rules.calculations && typeof setCalculations === 'function') {
-    setCalculations(rules.calculations);
+  // Load calculations and clear any stale ones from the previously loaded ruleset
+  if (typeof setCalculations === 'function') {
+    setCalculations(rules.calculations || []);
   }
   
   // Refresh preview

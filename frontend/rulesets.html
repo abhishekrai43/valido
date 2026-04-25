@@ -2,31 +2,260 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Ruleset Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Valido Ruleset Manager</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 20px; }
-      .ruleset { padding: 8px; border: 1px solid #ccc; margin-bottom: 6px; }
-      .active { background: #e6ffe6; }
+      @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&display=swap');
+
+      :root {
+        --ink: #10233d;
+        --muted: #4d607a;
+        --primary: #0a56d8;
+        --primary-dark: #093d98;
+        --surface: #ffffff;
+        --border: #cfdbeb;
+        --active-bg: #edf5ff;
+        --active-border: #93b8f3;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 28px;
+        font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(900px 380px at 0% -15%, rgba(22, 108, 224, 0.14), transparent 70%),
+          linear-gradient(180deg, #f4f7fb 0%, #e9eff7 100%);
+      }
+
+      .shell {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        padding: 22px;
+        border-radius: 16px;
+        border: 1px solid #bed0e9;
+        background: linear-gradient(160deg, #ffffff 0%, #f6faff 100%);
+        box-shadow: 0 14px 30px rgba(16, 35, 61, 0.1);
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-family: 'Sora', 'Manrope', system-ui, sans-serif;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(16, 35, 61, 0.08);
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-family: 'Sora', 'Manrope', system-ui, sans-serif;
+        font-size: 20px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      label {
+        font-weight: 700;
+        font-size: 13px;
+        color: #274666;
+      }
+
+      input, textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-family: inherit;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 130px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(10, 86, 216, 0.3);
+      }
+
+      .btn-ghost {
+        background: #f4f8ff;
+        border: 1px solid #c9d9ef;
+        color: #184478;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .ruleset {
+        border: 1px solid #d7e2f0;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+        display: grid;
+        gap: 10px;
+      }
+
+      .ruleset.active {
+        border-color: var(--active-border);
+        background: linear-gradient(180deg, #ffffff 0%, var(--active-bg) 100%);
+      }
+
+      .ruleset-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .ruleset-title {
+        font-weight: 800;
+        color: #0f2745;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        border: 1px solid #d0dbec;
+        color: #446181;
+      }
+
+      .status-pill.active {
+        color: #0f5b2d;
+        border-color: #9cd3b0;
+        background: #edf9f1;
+      }
+
+      details {
+        border: 1px solid #d7e1ef;
+        border-radius: 10px;
+        background: #f9fbff;
+        overflow: hidden;
+      }
+
+      summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 10px 12px;
+        font-weight: 700;
+        color: #274666;
+      }
+
+      summary::-webkit-details-marker { display: none; }
+
+      pre {
+        margin: 0;
+        padding: 0 12px 12px;
+        font-size: 12px;
+        color: #1e3a5f;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 16px;
+        border: 1px dashed #cfdcec;
+        border-radius: 10px;
+      }
+
+      @media (max-width: 720px) {
+        body { padding: 16px; }
+      }
     </style>
   </head>
   <body>
-    <h1>Ruleset Manager</h1>
+    <main class="shell">
+      <section class="hero">
+        <h1>Ruleset Manager</h1>
+        <p>Create reusable, deterministic validation policies and activate one ruleset for consistent workflow execution.</p>
+      </section>
 
-    <section>
-      <h2>Create ruleset</h2>
-      <input id="rs-name" placeholder="Name" />
-      <br /><br />
-      <textarea id="rs-json" rows="6" cols="60" placeholder='{"rules": [...]}'></textarea>
-      <br />
-      <button id="create">Create</button>
-    </section>
+      <div class="grid">
+        <section class="card">
+          <h2>Create Ruleset</h2>
+          <div class="field">
+            <label for="rs-name">Ruleset Name</label>
+            <input id="rs-name" placeholder="e.g. Invoice Header Validation v1" />
+          </div>
+          <div class="field">
+            <label for="rs-json">Rules JSON</label>
+            <textarea id="rs-json" placeholder='{"rules": [...]}'></textarea>
+          </div>
+          <p class="hint">This editor is designed for policy maintenance. Use the main app wizard for guided rule creation.</p>
+          <div class="actions">
+            <button id="create" class="btn btn-primary">Create Ruleset</button>
+          </div>
+        </section>
 
-    <hr />
-
-    <section>
-      <h2>Available rulesets</h2>
-      <div id="list"></div>
-    </section>
+        <section class="card">
+          <h2>Available Rulesets</h2>
+          <div id="list" class="empty">Loading rulesets...</div>
+        </section>
+      </div>
+    </main>
 
     <script src="./rulesets.js"></script>
   </body>

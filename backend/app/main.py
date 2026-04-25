@@ -14,7 +14,7 @@ if sys.stderr is None:
     sys.stderr = io.StringIO()
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Valido PDF Validator",
     description="Professional PDF validation and data extraction service",
-    version="1.10.7",  # Release
+    version="3.0.0",  # Release
     lifespan=lifespan
 )
 
@@ -130,6 +130,27 @@ def list_routes():
 def get_version():
     """Return the current application version."""
     return {"version": app.version}
+
+
+def _is_loopback_request(request: Request) -> bool:
+    """Only allow sensitive desktop-only actions from the local machine."""
+    client_host = request.client.host if request.client else ""
+    return client_host in {"127.0.0.1", "::1", "localhost"}
+
+
+@app.post("/api/v1/app/quit")
+async def quit_app(request: Request, background_tasks: BackgroundTasks):
+    """Close the packaged desktop app gracefully."""
+    if not _is_loopback_request(request):
+        raise HTTPException(status_code=403, detail="Quit is only available from the local app")
+
+    shutdown_callback = getattr(app.state, "request_shutdown", None)
+    if not callable(shutdown_callback):
+        raise HTTPException(status_code=503, detail="Quit is not available in this runtime")
+
+    logger.info("Frontend requested application shutdown")
+    background_tasks.add_task(shutdown_callback)
+    return {"status": "shutting_down", "message": "Valido is closing."}
 
 
 # --- Register Route Modules ---

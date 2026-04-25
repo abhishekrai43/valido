@@ -1,6 +1,6 @@
 """
 Test Script: Expire Trial for Testing License Purchase Flow
-This script sets the trial start date to 8 days ago (expired).
+This script sets the trial start date far enough in the past to expire the trial.
 """
 import sys
 import os
@@ -15,15 +15,15 @@ from app.utils.trial_manager import set_trial_start_in_registry
 from sqlmodel import select
 
 def expire_trial():
-    """Set trial to expired (8 days ago)."""
+    """Set trial to expired (trial start far enough in the past)."""
     print("\n" + "="*60)
     print("EXPIRING TRIAL FOR TESTING")
     print("="*60)
     
-    # Calculate expired date (8 days ago)
-    expired_date = datetime.utcnow() - timedelta(days=8)
+    # Calculate expired date (91 days ago -> expired for a 90-day trial)
+    expired_date = datetime.utcnow() - timedelta(days=91)
     print(f"Setting trial start to: {expired_date}")
-    print(f"This is 8 days ago (trial is 7 days)")
+    print(f"This is 91 days ago (trial is 90 days)")
     
     # Update Registry
     print("\n1. Updating Windows Registry...")

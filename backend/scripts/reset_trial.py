@@ -1,6 +1,6 @@
 """
 Test Script: Reset Trial to Active State
-This script resets the trial to start now (full 7 days remaining).
+This script resets the trial to start now (full 90 days remaining).
 """
 import sys
 import os

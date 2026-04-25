@@ -19,7 +19,7 @@ from datetime import datetime
 from app.services.parser import extract_text_from_bytes, is_valid_pdf, classify_pdf_bytes
 from app.services.validator import validate_text
 from app.utils.logger import get_logger
-from PyPDF2 import PdfReader
+import fitz
 
 # Import modularized report and packaging functions
 from app.tasks.report_generator import generate_excel_report, generate_pdf_summary
@@ -258,34 +258,30 @@ def process_pdfs_sync(
 
     def detect_digital_signature(pdf_bytes: bytes) -> Tuple[str, str]:
         try:
-            reader = PdfReader(io.BytesIO(pdf_bytes))
-            # Check for AcroForm signature fields
-            root = reader.trailer.get('/Root', {})
-            acroform = root.get('/AcroForm', {}) if isinstance(root, dict) else {}
-            fields = acroform.get('/Fields', []) if isinstance(acroform, dict) else []
-            for field in fields:
-                try:
-                    field_obj = field.get_object()
-                    if field_obj.get('/FT') == '/Sig':
-                        return 'Yes', 'Digital signature field found'
-                except Exception:
-                    continue
-            # Check for /Sig annotation in pages
-            for page in reader.pages:
-                annots = page.get('/Annots', [])
-                # Resolve IndirectObject if needed
-                if hasattr(annots, 'get_object'):
-                    annots = annots.get_object()
-                # Ensure annots is a list
-                if not isinstance(annots, list):
-                    continue
-                for annot_ref in annots:
-                    try:
-                        annot = annot_ref.get_object() if hasattr(annot_ref, 'get_object') else annot_ref
-                        if annot.get('/Subtype') == '/Widget' and annot.get('/FT') == '/Sig':
+            with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                if hasattr(doc, "get_sigflags"):
+                    sigflags = doc.get_sigflags()
+                    if sigflags:
+                        return 'Yes', 'Digital signature flags found'
+
+                for page in doc:
+                    widgets = page.widgets() or []
+                    for widget in widgets:
+                        field_type = getattr(widget, "field_type_string", "") or ""
+                        if field_type.lower() == "signature":
+                            return 'Yes', 'Digital signature field found'
+
+                    annot = page.first_annot
+                    while annot:
+                        annot_type = annot.type[1] if isinstance(annot.type, tuple) and len(annot.type) > 1 else str(annot.type)
+                        if "signature" in annot_type.lower():
                             return 'Yes', 'Digital signature annotation found'
-                    except Exception:
-                        continue
+                        annot = annot.next
+
+            # Some signed PDFs expose signature dictionaries even when widgets are absent.
+            if b"/Sig" in pdf_bytes or b"/ByteRange" in pdf_bytes:
+                return 'Yes', 'Digital signature markers found'
+
             return 'No', ''
         except Exception as e:
             return 'Error', str(e)
@@ -318,12 +314,14 @@ def process_pdfs_sync(
             if found:
                 idx = t.find(search_text)
                 snippet = t[max(0, idx-20):min(len(t), idx+len(search_text)+20)].strip()
+                snippet = re.sub(r'\s+', ' ', snippet).strip()
                 return 'Yes', snippet[:100]
         else:
             found = search_text.lower() in t.lower()
             if found:
                 idx = t.lower().find(search_text.lower())
                 snippet = t[max(0, idx-20):min(len(t), idx+len(search_text)+20)].strip()
+                snippet = re.sub(r'\s+', ' ', snippet).strip()
                 return 'Yes', snippet[:100]
         return 'No', ''
 
@@ -339,12 +337,14 @@ def process_pdfs_sync(
             if found:
                 idx = t.find(search_text)
                 snippet = t[max(0, idx-20):min(len(t), idx+len(search_text)+20)].strip()
+                snippet = re.sub(r'\s+', ' ', snippet).strip()
                 return 'Fail', snippet[:100]
         else:
             found = search_text.lower() in t.lower()
             if found:
                 idx = t.lower().find(search_text.lower())
                 snippet = t[max(0, idx-20):min(len(t), idx+len(search_text)+20)].strip()
+                snippet = re.sub(r'\s+', ' ', snippet).strip()
                 return 'Fail', snippet[:100]
         return 'Pass', ''
 
@@ -586,32 +586,49 @@ def process_pdfs_sync(
 
         csv_rows.append(row)
 
+    # Get list of extraction fields that can legitimately expand into multiple rows.
+    # Only explicit "all" strategies should create one output row per extracted value.
+    expandable_field_names = set()
+
     # Get list of table extraction field names to exclude from row expansion
     table_field_names = set()
     if extraction_fields:
         for field in extraction_fields:
-            if isinstance(field, dict) and field.get('strategy') == 'table_extraction':
-                field_name = field.get('name', '')
-                # Match the display name transformation used in validator
-                display_name = field_name.replace("_", " ").title()
+            if not isinstance(field, dict):
+                continue
+
+            field_name = field.get('name', '')
+            if not field_name:
+                continue
+
+            # Match the display name transformation used in validator
+            display_name = field_name.replace("_", " ").title()
+            strategy = field.get('strategy', 'first')
+
+            if strategy == 'table_extraction':
                 table_field_names.add(display_name)
                 logger.info(f"DEBUG: Excluding table field '{display_name}' from row expansion")
+            elif strategy == 'all':
+                expandable_field_names.add(display_name)
+                logger.info(f"DEBUG: Field '{display_name}' can expand into multiple rows")
 
     logger.info(f"DEBUG: Table fields to exclude: {table_field_names}")
+    logger.info(f"DEBUG: Fields allowed to expand: {expandable_field_names}")
 
-    # Expand rows with multiple values (newline-separated) into separate rows
-    # BUT exclude table extraction fields from expansion
+    # Expand rows with multiple values only for extraction fields that explicitly
+    # requested the "all" strategy. This avoids duplicate rows caused by normal
+    # multiline text snippets in validation results.
     expanded_rows = []
     for row in csv_rows:
-        # Check if any field has multiple values (contains newlines)
-        # Exclude table extraction fields
         multi_value_fields = {}
         for key, value in row.items():
-            if key not in table_field_names and isinstance(value, str) and '\n' in value:
-                logger.info(f"DEBUG: Field '{key}' has newlines, will expand")
-                multi_value_fields[key] = value.split('\n')
-            elif key in table_field_names:
+            if key in table_field_names:
                 logger.info(f"DEBUG: Field '{key}' is table field, SKIPPING expansion")
+                continue
+
+            if key in expandable_field_names and isinstance(value, str) and '\n' in value:
+                logger.info(f"DEBUG: Field '{key}' has newlines, will expand")
+                multi_value_fields[key] = [part.strip() for part in value.split('\n')]
         
         # If no multi-value fields, keep the row as is
         if not multi_value_fields:

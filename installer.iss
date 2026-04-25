@@ -1,5 +1,5 @@
 #define MyAppName "Valido"
-#define MyAppVersion "1.10.7"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "Abhishek Rai"
 #define MyAppURL "https://github.com/abhishekrai43/valido"
 #define MyAppExeName "valido-app.exe"
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=installer
-OutputBaseFilename=Valido-Setup-1.10.5
+OutputBaseFilename=Valido-v{#MyAppVersion}-Setup
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -25,7 +25,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Valido PDF Validator Installer
-VersionInfoCopyright=Copyright (C) 2025 {#MyAppPublisher}
+VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

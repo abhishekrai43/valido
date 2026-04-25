@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Valido — Document Validation Made Simple</title>
+    <title>Valido — Reliable Document Validation Workflows</title>
     
     <!-- Favicons for browser tabs -->
     <link rel="icon" type="image/png" sizes="32x32" href="/valido-icon.png">
@@ -13,7 +13,7 @@
     <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/valido-icon.png">
     
-    <link rel="stylesheet" href="/styles.css?v=1.1">
+    <link rel="stylesheet" href="/styles.css?v=20260425b">
     <link rel="stylesheet" href="/modules/automation/automation.css">
     <link rel="stylesheet" href="/modules/toast.css">
     <link rel="stylesheet" href="/modules/table-wizard.css">
@@ -31,6 +31,42 @@
           <a href="#" id="betaBannerLink" class="beta-banner-link" target="_blank"></a>
         </div>
       </div>
+
+      <!-- Audience Fit Gate -->
+      <div id="fitGateModal" class="modal fit-gate-modal" style="display:none">
+        <div class="modal-overlay" id="fitGateOverlay"></div>
+        <div class="modal-content fit-gate-content">
+          <div class="modal-header">
+            <h3>Is Valido The Right Tool For You?</h3>
+          </div>
+          <div class="modal-body fit-gate-body">
+            <p class="fit-gate-intro">Valido is rule-based software, not AI. It does not guess: it applies your exact rules on each matching document layout.</p>
+            <div class="fit-gate-grid">
+              <div class="fit-gate-column fit-gate-good">
+                <h4>Great Fit</h4>
+                <ul>
+                  <li>Recurring, text-based PDFs with stable layouts.</li>
+                  <li>Teams needing predictable validation + audit trail outputs.</li>
+                  <li>Operations workflows with repeatable rulesets.</li>
+                </ul>
+              </div>
+              <div class="fit-gate-column fit-gate-bad">
+                <h4>Not A Fit</h4>
+                <ul>
+                  <li>Complex row-by-row line-item extraction.</li>
+                  <li>One-off documents with changing layouts.</li>
+                  <li>Image-only scans without reliable OCR text.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer fit-gate-actions">
+            <button type="button" id="fitGateContinue" class="btn btn-primary">Yes, Continue</button>
+            <a id="fitGateWatchDemo" class="btn btn-ghost" href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener">Not For Me, Watch Demo</a>
+            <button type="button" id="fitGateExit" class="btn btn-ghost">Exit App</button>
+          </div>
+        </div>
+      </div>
   
       <!-- Header -->
       <div class="header">
@@ -39,7 +75,7 @@
             <img src="/valido-icon.png" alt="Valido" class="logo-icon" width="32" height="32">
             Valido
           </div>
-          <div class="subtitle">Professional PDF validation and automation</div>
+          <div class="subtitle">Audit-ready validation workflows for recurring documents</div>
         </div>
         <div class="header-actions">
           <!-- Trial/License Status -->
@@ -59,32 +95,47 @@
             Activate License
           </button>
           
-          <!-- Feedback Button -->
-          <button id="feedbackBtn" class="btn btn-feedback" type="button" title="Report Issues or Request Features">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Feedback
-          </button>
-          
-          <!-- Check Updates Button -->
-          <button id="checkUpdatesBtn" class="btn btn-feedback" type="button" title="Check for Updates">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Updates
-          </button>
-          
-          <!-- Share Button -->
-          <button id="shareBtn" class="btn btn-share" type="button" title="Share Valido">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-              <path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            Share
-          </button>
+          <details class="header-utility-menu">
+            <summary class="btn btn-ghost" title="Open app utilities">More</summary>
+            <div class="header-utility-menu-items">
+              <!-- Feedback Button -->
+              <button id="feedbackBtn" class="btn btn-feedback" type="button" title="Report Issues or Request Features">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Feedback
+              </button>
+
+              <!-- Check Updates Button -->
+              <button id="checkUpdatesBtn" class="btn btn-feedback" type="button" title="Check for Updates">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Updates
+              </button>
+
+              <!-- Share Button -->
+              <button id="shareBtn" class="btn btn-share" type="button" title="Share Valido">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Share
+              </button>
+
+              <!-- Exit App Button -->
+              <button id="exitAppBtn" class="btn btn-exit" type="button" title="Close Valido">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Exit App
+              </button>
+            </div>
+          </details>
         </div>
         <div class="nav-buttons">
           <button id="navFeatures" class="btn btn-nav" type="button">
@@ -93,17 +144,23 @@
             </svg>
             Overview
           </button>
-          <button id="navUpload" class="btn btn-nav" type="button">
+          <button id="navUpload" class="btn btn-nav btn-nav-primary" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 4V16M10 4L6 8M10 4L14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Upload & Validate
+            Start First Workflow
           </button>
           <button id="navAutomation" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             Automation
+          </button>
+          <button id="navCloudSources" class="btn btn-nav" type="button">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M6 15h8a3 3 0 0 0 .4-5.98A4.5 4.5 0 0 0 5.7 10.3 2.5 2.5 0 0 0 6 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Cloud Sources
           </button>
           <button id="navHowTo" class="btn btn-nav" type="button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -117,98 +174,103 @@
 
       <!-- Features Section (First Thing User Sees) -->
       <section id="featuresSection">
-        <!-- Simple Intro -->
-        <div class="intro-section">
-          <h1 class="page-title">PDF Validations. Simplified.</h1>
-          <p class="page-subtitle">Upload PDFs, define validation rules, and export professional reports.</p>
-          <div style="margin-top: 10px;">
-            <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600; text-decoration:none;">
-              Watch demo (2 min)
-            </a>
-            <span style="color:#94a3b8; font-size: 13px; margin-left: 8px;">(opens in browser)</span>
+        <div class="overview-shell">
+          <div class="intro-section premium-intro">
+            <div class="overview-kicker">Audit-Ready Document Validation Platform</div>
+            <h1 class="page-title">Reliable checks for high-volume recurring documents.</h1>
+            <p class="page-subtitle">Define exact rules once, then run them across manual uploads, automation schedules, and cloud-connected intake for repeatable, non-guessing results.</p>
+            <div class="hero-primary-cta-wrap">
+              <button id="primaryStartWorkflow" type="button" class="btn btn-primary btn-large">Start First Workflow</button>
+              <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" data-open-demo-video="true" class="hero-demo-link">Watch demo (2 min)</a>
+            </div>
+            <div class="hero-signals">
+              <span class="hero-signal-chip">Rule-based engine (no AI guessing)</span>
+              <span class="hero-signal-chip">Audit trails and exception visibility</span>
+              <span class="hero-signal-chip">Local-first with optional cloud sources</span>
+            </div>
           </div>
-          <div style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 8px; display: inline-block;">
-            <span style="font-weight: 600; color: #0c4a6e;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                <rect x="2" y="3" width="20" height="14" rx="2"/>
-                <path d="M8 21h8M12 17v4"/>
-              </svg>
-              For Windows 10/11
-            </span>
 
+          <div class="overview-architecture card capability-map">
+            <div class="overview-header-row">
+              <h2>Capability Architecture</h2>
+              <p>How a single workflow executes from intake to export.</p>
+            </div>
+            <div class="capability-track capability-track-premium">
+              <article class="capability-node capability-node-ingest">
+                <h3>Batch Ingest</h3>
+                <p>Direct upload, ZIP intake, watch folders, and cloud pull.</p>
+                <div class="capability-meta">Use one ruleset across every intake path</div>
+              </article>
+              <article class="capability-node capability-node-validate">
+                <h3>Validation + Extraction</h3>
+                <p>Field capture, rule checks, dates, signatures, and anchored text.</p>
+                <div class="capability-meta">Best for stable, recurring layouts</div>
+              </article>
+              <article class="capability-node capability-node-calc">
+                <h3>Calculations</h3>
+                <p>Cross-field formulas, thresholds, and tolerance guards.</p>
+                <div class="capability-meta">Catch totals drift before handoff</div>
+              </article>
+              <article class="capability-node capability-node-automation">
+                <h3>Automation</h3>
+                <p>Scheduled runs with repeatable jobs and queue-style control.</p>
+                <div class="capability-meta">Hourly, daily, weekly, or custom cadence</div>
+              </article>
+              <article class="capability-node capability-node-cloud">
+                <h3>Cloud Connections</h3>
+                <p>Connect cloud sources while keeping validation policy in your control.</p>
+                <div class="cloud-provider-row">
+                  <span>AWS</span>
+                  <span>Azure</span>
+                  <span>GCP</span>
+                </div>
+              </article>
+            </div>
           </div>
-        </div>
 
-        <!-- Features Grid -->
-        <div class="features-section">
-          <h2 class="section-title">What Valido Does</h2>
-          <div class="features-grid">
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <h3>Smart Validation Rules</h3>
-              <p>Create powerful validation rules with simple checkboxes. Extract fields, check signatures, validate calculations - no coding needed.</p>
-              <div class="feature-example">Example: Check if invoice is signed and verify the total matches line items</div>
+          <div class="overview-demos card">
+            <div class="overview-header-row">
+              <h2>Launch A Starter Demo</h2>
+              <p>Use realistic starter packs to test extraction, validation, and calculations in minutes.</p>
             </div>
+            <div class="starter-grid">
+              <article class="starter-item">
+                <h3>Invoice Header QA</h3>
+                <p>Invoice number, dates, totals, and balance checks. No line-item extraction.</p>
+                <button type="button" class="btn btn-primary" data-starter-example="invoice">Load Invoice Demo</button>
+              </article>
+              <article class="starter-item">
+                <h3>Purchase Order QA</h3>
+                <p>PO fields, supplier validation, and approval logic checks.</p>
+                <button type="button" class="btn btn-primary" data-starter-example="purchaseOrder">Load PO Demo</button>
+              </article>
+              <article class="starter-item">
+                <h3>Vendor Compliance Pack</h3>
+                <p>Tax IDs, classifications, and compliance field verification.</p>
+                <button type="button" class="btn btn-primary" data-starter-example="vendorTax">Load Tax Demo</button>
+              </article>
+            </div>
+          </div>
 
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <rect x="6" y="4" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-                  <rect x="6" y="10" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-                  <rect x="6" y="16" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-                </svg>
+          <div class="card fit-card" id="uploadValueCallout">
+            <div class="fit-grid">
+              <div>
+                <h2>Best Fit</h2>
+                <ul class="fit-list">
+                  <li>Recurring text-based PDFs with stable structure.</li>
+                  <li>Teams needing repeatable extraction, validation, and export.</li>
+                </ul>
               </div>
-              <h3>Batch Processing</h3>
-              <p>Small batch? Upload PDFs or ZIP files directly (up to 2000 pages). Large batch? Set a folder to watch and schedule validation.</p>
-            </div>
-
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L4 6V12C4 17 7 21 12 23C17 21 20 17 20 12V6L12 2Z" stroke="#0066ff" stroke-width="2" stroke-linejoin="round"/>
-                  <circle cx="12" cy="12" r="3" fill="#0066ff"/>
-                </svg>
+              <div>
+                <h2>Not Ideal</h2>
+                <ul class="fit-list fit-list-negative">
+                  <li>Image-only scans without selectable text.</li>
+                  <li>One-off document designs that change every time.</li>
+                  <li>Table row or line-item extraction-heavy workflows.</li>
+                </ul>
               </div>
-              <h3>100% Private</h3>
-              <p>Your documents NEVER leave your computer. Everything processes locally. Zero cloud upload, zero data retention.</p>
             </div>
-
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 12L11 14L15 10" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="#0066ff" stroke-width="2"/>
-                </svg>
-              </div>
-              <h3>Smart Validation</h3>
-              <p>Check for signatures, dates, specific text, page count. Extract data like invoice numbers, amounts, names.</p>
-            </div>
-
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
-                  <path d="M8 2V6M16 2V6M4 10H20" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <h3>Folder Automation</h3>
-              <p>Automatically validate new PDFs in watched folders on a schedule (hourly, daily, weekly).</p>
-            </div>
-
-            <div class="feature-card">
-              <div class="feature-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2Z" stroke="#0066ff" stroke-width="2"/>
-                  <path d="M14 2V8H20" stroke="#0066ff" stroke-width="2"/>
-                </svg>
-              </div>
-              <h3>Professional Reports</h3>
-              <p>Export results as CSV, Excel, PDF, or JSON. Clean formatting, ready to share.</p>
-            </div>
+            <p class="fit-note">If your process depends on row-level extraction, position Valido as a validation layer or pair it with a dedicated table extractor.</p>
           </div>
         </div>
       </section>
@@ -217,13 +279,13 @@
       <section id="pricingSection" style="display:none">
         <div class="pricing-simple">
           <h2 class="section-title">Simple Pricing</h2>
-          <p class="section-subtitle">Try free for 3 days. No credit card required. Trial starts when you upload your first file.</p>
+          <p class="section-subtitle">Try free for 90 days. No credit card required. Trial starts when you upload your first file.</p>
           
           <div class="pricing-card-single">
             <div class="pricing-after-trial">
               <h3>After Your Trial</h3>
               <div class="pricing-price">
-                <span class="price-amount">$15</span>
+                <span class="price-amount">$14.20</span>
                 <span class="price-period">/month</span>
               </div>
               <ul class="pricing-features">
@@ -235,7 +297,7 @@
                 <li>Email support</li>
                 <li>Cancel anytime</li>
               </ul>
-              <button class="btn btn-primary btn-large" onclick="window.open('https://rai89.gumroad.com/l/bdspjn', '_blank');">Buy Monthly ($14.99)</button>
+              <button class="btn btn-primary btn-large" onclick="window.open('https://rai89.gumroad.com/l/bdspjn', '_blank');">Buy Monthly ($14.20)</button>
               <button class="btn btn-ghost btn-large" onclick="window.open('https://rai89.gumroad.com/l/eyuiy', '_blank');" style="margin-top: 10px;">Buy Annual ($150)</button>
               <div class="pricing-note">Instant activation. Cancel anytime.</div>
             </div>
@@ -278,15 +340,20 @@
               Start simple: upload <strong>one</strong> PDF so you can see how the rules work.
               (You can always validate multiple PDFs later.)
             </p>
-            
-            <div class="helper-text" style="margin-bottom: 16px; padding: 12px; background-color: #e8f4fd; border-left: 3px solid #0078d4; border-radius: 4px;">
+
+            <div class="helper-text upload-guidance-box">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: middle; margin-right: 6px;">
                 <circle cx="8" cy="8" r="7" stroke="#0078d4" stroke-width="1.5" fill="none"/>
                 <path d="M8 11V8M8 5H8.01" stroke="#0078d4" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
               <strong>Perfect for testing and tweaking:</strong> Use this manual upload to validate your rules and make adjustments. Once you're satisfied with the results, head to the Automation tab to set up recurring batch processing for your documents.
             </div>
-            
+
+            <div class="upload-starter-box">
+              <div class="upload-starter-title">Starter examples are in Overview</div>
+              <div class="upload-starter-body">Use the curated starter demos in Overview, then come back here to run production files.</div>
+            </div>
+
             <!-- Note: Local processing is already explained on the Features screen; avoid repeating it here. -->
             
             <div class="upload-area" id="uploadArea">
@@ -314,21 +381,21 @@
                 </div>
                 <div class="modal-body" style="color:#444; line-height:1.6;">
                   <p style="margin-top:0;">
-                    <strong>Perfect for testing and tweaking:</strong> Use manual upload to validate your rules and make adjustments.
-                    Once you're satisfied with the results, head to the <strong>Automation</strong> tab to set up recurring batch processing.
+                    <strong>Fastest path to value:</strong> start with <strong>one text-based PDF that has a repeatable layout</strong>, or click one of the bundled starter examples above.
+                    Valido works best when the next PDFs look like the first one.
                   </p>
                   <div style="margin: 8px 0 0 0;">
-                    <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600; text-decoration:none;">
+                    <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" data-open-demo-video="true" style="color:#2563eb; font-weight:600; text-decoration:none;">
                       Watch the demo video
                     </a>
-                    <span style="color:#94a3b8; font-size: 13px; margin-left: 8px;">(opens in browser)</span>
+                    <span style="color:#94a3b8; font-size: 13px; margin-left: 8px;">(opens inside the app)</span>
                   </div>
                   <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin:14px 0;">
-                    <div style="font-weight:600; margin-bottom:6px;">Why start with manual upload?</div>
+                    <div style="font-weight:600; margin-bottom:6px;">Best way to learn the app</div>
                     <ul style="margin:0; padding-left:18px;">
-                      <li>Fast feedback while you tune rules</li>
-                      <li>See exactly what gets extracted and why a validation fails</li>
-                      <li>Save a ruleset when you're happy, then automate it</li>
+                      <li>Load one sample PDF</li>
+                      <li>Follow the guided walkthrough</li>
+                      <li>Then save the ruleset and automate later</li>
                     </ul>
                   </div>
                   <p style="margin-bottom:0; color:#666; font-size:13px;">
@@ -340,8 +407,44 @@
                 </div>
               </div>
             </div>
+
+            <div id="demoVideoModal" class="modal demo-video-modal" style="display:none">
+              <div class="modal-overlay" id="demoVideoOverlay"></div>
+              <div class="modal-content demo-video-content" style="max-width: 960px; width: 96%; overflow: hidden;">
+                <div class="modal-header">
+                  <h3>Valido Demo</h3>
+                  <div class="demo-video-header-actions">
+                    <a
+                      id="demoVideoOpenExternal"
+                      class="btn btn-ghost"
+                      href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s"
+                      target="_blank"
+                      rel="noopener"
+                    >Open in Browser</a>
+                    <button class="modal-close" id="demoVideoClose" type="button">×</button>
+                  </div>
+                </div>
+                <div class="modal-body demo-video-body" style="padding: 0; background: #000;">
+                  <div class="demo-video-player-wrap" style="position: relative; width: 100%; padding-top: 56.25%;">
+                    <iframe
+                      id="demoVideoFrame"
+                      src=""
+                      title="Valido demo video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000;"
+                    ></iframe>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <div id="filesList" class="files-list"></div>
+            <div id="starterDemoActions" style="display:none; margin-top: 14px; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="previewStarterPdfBtn">Preview Current PDF</button>
+              <span id="starterDemoHint" style="color:#64748b; font-size: 13px;">A quick guided walkthrough will explain the sample file and starter rules.</span>
+            </div>
             
             <div class="card-actions">
               <button type="button" class="btn btn-primary btn-large" id="continueToRules" disabled>
@@ -1175,494 +1278,128 @@
 
       <!-- How To Section -->
       <section id="howToSection" style="display:none">
-        <div class="card">
+        <div class="card howto-hero-card">
           <h2>How To Use Valido</h2>
-          <p class="card-description">Everything you need to know to validate your documents efficiently</p>
-          
-          <!-- Tab Navigation -->
+          <p class="card-description">Pick a path, complete 3-4 actions, and ship a reliable ruleset fast.</p>
+
           <div class="howto-tabs">
-            <button class="howto-tab active" data-tab="guides">Guides</button>
+            <button class="howto-tab active" data-tab="guides">Quick Guides</button>
             <button class="howto-tab" data-tab="troubleshooting">Troubleshooting</button>
           </div>
         </div>
 
-        <!-- Guides Tab Content -->
         <div class="howto-tab-content active" id="guidesTab">
-        <div class="how-to-grid">
-          <!-- Getting Started -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M5 13L9 17L19 7" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3>Quick Start</h3>
-            <ol class="how-to-steps">
-              <li><strong>Upload PDFs:</strong> Click "Choose Files" or drag PDFs into the upload area</li>
-              <li><strong>Build Rules:</strong> Use the guided wizard to define what to check and extract</li>
-              <li><strong>Configure Validations:</strong> Check for signatures, specific text, page count, etc.</li>
-              <li><strong>Extract Data:</strong> Pull out information like names, dates, amounts</li>
-              <li><strong>Run Validation:</strong> Click "Validate Documents" and wait for results</li>
-              <li><strong>Download Results:</strong> Get a ZIP file with CSV, Excel, PDF reports</li>
-            </ol>
+          <div class="howto-quick-actions card">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('navUpload').click();">Start First Workflow</button>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('navAutomation').click();">Open Automation</button>
+            <a href="https://www.youtube.com/watch?v=M16EYjNUK5U&t=4s" target="_blank" rel="noopener" data-open-demo-video="true" class="hero-demo-link">Watch Demo</a>
           </div>
 
-          <!-- Document Validations -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
-                <path d="M8 12H16M12 8V16" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3>Document Validations</h3>
-            <p class="how-to-desc">Check document properties:</p>
-            <ul class="how-to-list">
-              <li><strong>Signature Check:</strong> Detects if document is digitally signed</li>
-              <li><strong>Must Contain Text:</strong> Ensures specific text is present (e.g., "PAID", "Approved")</li>
-              <li><strong>Must NOT Contain Text:</strong> Rejects documents with unwanted text (e.g., "DRAFT", "VOID")</li>
-              <li><strong>Page Count:</strong> Validates number of pages (at least, at most, exactly)</li>
-              <li><strong>Case Sensitivity:</strong> Choose whether text matching should be exact or flexible</li>
-            </ul>
+          <div class="howto-lanes">
+            <article class="howto-lane-card">
+              <h3>Manual Validation (Best First Step)</h3>
+              <ol class="how-to-steps compact">
+                <li>Upload 1 text-based PDF sample.</li>
+                <li>Create extraction + validation rules.</li>
+                <li>Run validation and check PASS/FAIL output.</li>
+                <li>Save the ruleset after results look correct.</li>
+              </ol>
+            </article>
+
+            <article class="howto-lane-card">
+              <h3>Recurring Automation</h3>
+              <ol class="how-to-steps compact">
+                <li>Go to Automation and create a watch job.</li>
+                <li>Select input/output folders or cloud source.</li>
+                <li>Attach your saved ruleset.</li>
+                <li>Set schedule and monitor job runs.</li>
+              </ol>
+            </article>
+
+            <article class="howto-lane-card">
+              <h3>Result Outputs</h3>
+              <ul class="how-to-list compact">
+                <li><strong>summary.csv:</strong> fast spreadsheet review.</li>
+                <li><strong>results.xlsx:</strong> richer analysis sheets.</li>
+                <li><strong>summary.pdf:</strong> stakeholder-ready report.</li>
+                <li><strong>results.json:</strong> integration-ready payload.</li>
+              </ul>
+            </article>
           </div>
 
-          <!-- Extract Information -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="#0066ff" stroke-width="2"/>
-                <path d="M12 2V5M12 19V22M22 12H19M5 12H2" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-                <path d="M19.07 4.93L16.95 7.05M7.05 16.95L4.93 19.07M19.07 19.07L16.95 16.95M7.05 7.05L4.93 4.93" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3>Extract Information</h3>
-            <p class="how-to-desc">Pull data from your documents:</p>
-            <ul class="how-to-list">
-              <li><strong>Add Field:</strong> Extract text, numbers, or dates by searching for labels</li>
-              <li><strong>Extract Between Words:</strong> Get text between two markers (e.g., "Invoice #" to "Date")</li>
-              <li><strong>Field Types:</strong> Text, Number, Date with automatic type detection</li>
-              <li><strong>Validations:</strong> Set rules like min/max length, number ranges, date boundaries</li>
-              <li><strong>Multi-Column Tables:</strong> Extract from specific table columns</li>
-              <li><strong>Strategies:</strong> Choose first, last, or all occurrences when text appears multiple times</li>
-            </ul>
-          </div>
-
-          <!-- Calculations -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <rect x="4" y="4" width="16" height="16" rx="2" stroke="#0066ff" stroke-width="2"/>
-                <path d="M8 8h8M8 12h8M8 16h4" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3>Calculations</h3>
-            <p class="how-to-desc">Perform math on extracted values:</p>
-            <ul class="how-to-list">
-              <li><strong>Simple Formulas:</strong> Gross Salary - PF - Income Tax</li>
-              <li><strong>Percentages:</strong> Basic Salary * 15% calculates 15%</li>
-              <li><strong>Field Names:</strong> Use plain field names, no special syntax needed</li>
-              <li><strong>Validation:</strong> Verify calculations match expected values</li>
-            </ul>
-            <div class="helper" style="margin-top: 8px; font-size: 13px;">
-              Example: "Net Salary = Gross Salary - PF - Professional Tax"
-            </div>
-          </div>
-
-          <!-- Batch Processing -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <rect x="6" y="4" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-                <rect x="6" y="10" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-                <rect x="6" y="16" width="12" height="4" stroke="#0066ff" stroke-width="2" rx="1"/>
-              </svg>
-            </div>
-            <h3>Batch Processing</h3>
-            <ul class="how-to-list">
-              <li><strong>Small Batches (Browser Upload):</strong> Select multiple files at once (Ctrl+Click or Cmd+Click). Maximum 2000 pages total.</li>
-              <li><strong>Upload ZIP Files:</strong> Package all PDFs in a ZIP for easier upload</li>
-              <li><strong>Large Batches (Watch Folders):</strong> Need to process more than 2000 pages? Set a folder to watch and schedule validation. No page limit.</li>
-              <li><strong>Results:</strong> Get individual results for each document in CSV, Excel, and PDF format</li>
-              <li><strong>Pass/Fail Summary:</strong> See which documents passed and which failed at a glance</li>
-            </ul>
-          </div>
-
-          <!-- Automation -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M4 7h3m10 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0ZM4 13h10m3 0h-3m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3>Watch Folders (Automation)</h3>
-            <p class="how-to-desc">Set up automatic validation for folders:</p>
-            <ol class="how-to-steps">
-              <li>Go to "Automation" tab</li>
-              <li>Click "Create Watch Folder"</li>
-              <li>Select folder to monitor</li>
-              <li>Choose saved ruleset</li>
-              <li>Set schedule (e.g., every hour, daily at 9 AM)</li>
-              <li>Valido automatically validates new PDFs and saves results</li>
-            </ol>
-            <div class="helper" style="margin-top: 8px; font-size: 13px;">
-              Perfect for recurring document validation (daily reports, invoices, etc.)
-            </div>
-          </div>
-
-          <!-- Understanding Results -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M9 12L11 14L15 10" stroke="#0066ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="#0066ff" stroke-width="2"/>
-              </svg>
-            </div>
-            <h3>Understanding Results</h3>
-            <p class="how-to-desc">Your results ZIP file contains:</p>
-            <ul class="how-to-list">
-              <li><strong>summary.csv:</strong> Plain text results, opens in any spreadsheet app</li>
-              <li><strong>results.xlsx:</strong> Formatted Excel with summary and detailed sheets</li>
-              <li><strong>summary.pdf:</strong> Beautiful PDF report with branding</li>
-              <li><strong>results.json:</strong> Raw data for developers/integrations</li>
-              <li><strong>PASS/FAIL:</strong> Clear status for each document</li>
-              <li><strong>Extracted Data:</strong> All fields you requested from your documents</li>
-              <li><strong>Validation Details:</strong> Which checks passed/failed with reasons</li>
-            </ul>
-          </div>
-
-          <!-- Tips & Best Practices -->
-          <div class="how-to-card">
-            <div class="how-to-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M9 11L12 14L22 4" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3>✅ Tips & Best Practices</h3>
-            <ul class="how-to-list">
-              <li><strong>Save Rulesets:</strong> Create and save rules you use frequently</li>
-              <li><strong>Test First:</strong> Try with 1-2 documents before batch processing hundreds</li>
-              <li><strong>Text-Based PDFs Only:</strong> For reliable automation, Valido supports text-based PDFs (selectable text) only.</li>
-              <li><strong>Clear Field Names:</strong> Use descriptive names when extracting data</li>
-              <li><strong>Check Results:</strong> Always review the summary before relying on automated results</li>
-              <li><strong>Your Data Stays Local:</strong> All processing happens on your computer - nothing uploaded to the cloud</li>
-            </ul>
+          <div class="howto-notes card">
+            <h3>Need Details?</h3>
+            <details class="howto-detail" open>
+              <summary>What Valido handles best</summary>
+              <p>Recurring, text-based PDFs with stable layouts where deterministic validation and auditability matter.</p>
+            </details>
+            <details class="howto-detail">
+              <summary>Extraction and validations in plain terms</summary>
+              <p>Use labels to extract values, then add checks like must-contain, must-not-contain, signature, page count, and data type constraints.</p>
+            </details>
+            <details class="howto-detail">
+              <summary>Calculations and tolerance checks</summary>
+              <p>Combine extracted fields with formulas and compare expected versus actual values using threshold/tolerance logic.</p>
+            </details>
+            <details class="howto-detail">
+              <summary>Current limitation to keep in mind</summary>
+              <p>Valido is not optimized for complex row-by-row table extraction or full invoice line-item capture.</p>
+            </details>
           </div>
         </div>
-        </div>
 
-        <!-- Troubleshooting Tab Content -->
         <div class="howto-tab-content" id="troubleshootingTab" style="display:none;">
-          <div class="troubleshooting-intro card" style="background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%); border-left: 4px solid #dc2626;">
-            <h3 style="color: #dc2626; margin: 0 0 12px 0;">🔧 Common Issues & Solutions</h3>
-            <p style="margin: 0; color: #555; line-height: 1.6;">
-              Having trouble extracting data or getting unexpected results? This guide covers the most common issues and how to fix them.
-            </p>
+          <div class="card howto-troubleshooting-head">
+            <h3>Fix Most Issues In Under 5 Minutes</h3>
+            <p>Start with file quality and exact label matching. Most failures come from image PDFs or mismatched search text.</p>
           </div>
 
-          <div class="how-to-grid">
-            <!-- Issue 1: No Text Extracted -->
-            <div class="how-to-card" style="border-left: 4px solid #dc2626;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(185, 28, 28, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/>
-                  <path d="M12 8V12M12 16H12.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <h3>No Text Extracted / Field Not Found</h3>
-              <p class="how-to-desc"><strong>Most Common Cause:</strong> Leading or trailing spaces, or the PDF is image-based</p>
-              
-              <div style="margin: 16px 0; padding: 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #856404;">⚠️ #1 Rule: Copy-Paste from PDF</h4>
-                <p style="margin: 0; color: #856404; line-height: 1.6; font-size: 14px;">
-                  <strong>ALWAYS</strong> copy the exact text you want to extract directly from the PDF and paste it into the "Text to Look For" field. 
-                  This ensures you match exactly what's in the document.
-                </p>
-              </div>
-
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Step-by-Step Fix:</h4>
-              <ol class="how-to-steps">
-                <li>
-                  <strong>Open your PDF in a viewer</strong> (Adobe Reader, browser, etc.)
-                </li>
-                <li>
-                  <strong>Select the text label</strong> (e.g., "Employee Name:", "Invoice Total:")
-                </li>
-                <li>
-                  <strong>Copy it</strong> (Ctrl+C or Cmd+C)
-                </li>
-                <li>
-                  <strong>Paste into "Text to Look For" field</strong> in Valido
-                </li>
-                <li>
-                  <strong>CRITICAL:</strong> Check for leading/trailing spaces
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Put cursor at start of text - is there a gap before first character?</li>
-                    <li>Put cursor at end of text - is there a gap after last character?</li>
-                    <li><strong>Remove any extra spaces</strong> you find</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Check the colon:</strong> Does the PDF have "Employee Name:" or "Employee Name" without colon? Match it exactly.
-                </li>
-              </ol>
-
-              <div style="margin: 16px 0; padding: 12px; background: #e8f4fd; border-left: 3px solid #0066ff; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #004085;">✓ Example</h4>
-                <p style="margin: 0 0 8px 0; color: #004085; font-size: 13px;"><strong>Wrong:</strong> "Invoice Number: " (has space after colon)</p>
-                <p style="margin: 0; color: #004085; font-size: 13px;"><strong>Right:</strong> "Invoice Number:" (exact match from PDF)</p>
-              </div>
-
-              <div style="margin: 16px 0; padding: 12px; background: #fff4e6; border-left: 3px solid #f59e0b; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #92400e;">💡 Still Not Working? Try Variations!</h4>
-                <p style="margin: 0 0 8px 0; color: #92400e; font-size: 14px;">Every PDF is structured differently. If the exact text doesn't work, try these variations:</p>
-                <ul style="margin: 8px 0 0 20px; padding: 0; color: #92400e; font-size: 14px;">
-                  <li><strong>With/without punctuation:</strong> "Total" vs "Total:" vs "Total Amount"</li>
-                  <li><strong>Shorter text:</strong> Instead of "Total Amount Due:", try just "Total"</li>
-                  <li><strong>Different nearby text:</strong> Try text that appears just before or after the value</li>
-                  <li><strong>More unique words:</strong> If "Date" appears multiple times, try "Invoice Date" or "Issue Date"</li>
-                </ul>
-                <p style="margin: 8px 0 0 0; color: #92400e; font-size: 13px; font-style: italic;">Finding the right search term might take 2-3 tries - that's completely normal!</p>
-              </div>
-            </div>
-
-            <!-- Issue 2: Scanned/Image PDFs -->
-            <div class="how-to-card" style="border-left: 4px solid #f59e0b;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#f59e0b" stroke-width="2"/>
-                  <path d="M4 15L8 11L11 14L16 9L20 13" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="#f59e0b"/>
-                </svg>
-              </div>
-              <h3>Is Your PDF Actually an Image?</h3>
-              <p class="how-to-desc"><strong>Problem:</strong> Scanned documents or image-based PDFs cannot be processed</p>
-              
-              <h4 style="margin: 16px 0 8px 0; color: #333;">How to Test:</h4>
-              <ol class="how-to-steps">
-                <li>
-                  <strong>Open the PDF in any viewer</strong> (Adobe Reader, Chrome, etc.)
-                </li>
-                <li>
-                  <strong>Try to select text</strong> with your mouse
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>If you can select individual words → <span style="color: #10b981; font-weight: bold;">✓ Text-based PDF (works with Valido)</span></li>
-                    <li>If you can only select/highlight entire page or nothing → <span style="color: #dc2626; font-weight: bold;">✗ Image-based PDF (won't work)</span></li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Try copying text:</strong> Select and copy (Ctrl+C), then paste into Notepad
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>If actual text pastes → <span style="color: #10b981; font-weight: bold;">✓ Works</span></li>
-                    <li>If nothing pastes or garbled text → <span style="color: #dc2626; font-weight: bold;">✗ Won't work</span></li>
-                  </ul>
-                </li>
-              </ol>
-
-              <div style="margin: 16px 0; padding: 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #856404;">⚠️ Tricky Case</h4>
-                <p style="margin: 0; color: #856404; line-height: 1.6; font-size: 14px;">
-                  Sometimes you CAN copy text from a scanned PDF (if it has OCR layer), but the text position doesn't match the visual layout. 
-                  This causes extraction to fail. If your PDF is a scan, even with OCR, results may be unreliable.
-                </p>
-              </div>
-
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Solution for Scanned PDFs:</h4>
-              <ul class="how-to-list">
-                <li><strong>Use OCR software first:</strong> Adobe Acrobat, ABBYY FineReader, or free tools like Tesseract</li>
-                <li><strong>Re-export from source:</strong> If possible, export the original document as PDF (not scan)</li>
-                <li><strong>Request digital copies:</strong> Ask for native digital PDFs instead of scanned copies</li>
+          <div class="howto-troubleshooting-grid">
+            <article class="howto-issue-card">
+              <h4>Field not found</h4>
+              <ul class="how-to-list compact">
+                <li>Copy label text directly from PDF.</li>
+                <li>Remove leading/trailing spaces.</li>
+                <li>Match punctuation exactly (for example <strong>:</strong>).</li>
               </ul>
-            </div>
+            </article>
 
-            <!-- Issue 3: Wrong Data Extracted -->
-            <div class="how-to-card" style="border-left: 4px solid #8b5cf6;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 11L12 14L22 4" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M21 12V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <h3>Wrong Value Extracted</h3>
-              <p class="how-to-desc"><strong>Problem:</strong> Valido finds the field but extracts the wrong value</p>
-              
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Common Causes & Fixes:</h4>
-              <ul class="how-to-list">
-                <li>
-                  <strong>Label appears multiple times:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Example: "Total" appears 3 times in document</li>
-                    <li><strong>Fix:</strong> Use more specific text like "Invoice Total:" or "Grand Total:"</li>
-                    <li><strong>Or:</strong> Change strategy to "Last" if you want the final occurrence</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Multi-column table confusion:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Example: Extracting "Amount" but PDF has columns "Quantity", "Unit Price", "Amount"</li>
-                    <li><strong>Fix:</strong> Enable "Is this field in a multi-column table?" checkbox</li>
-                    <li><strong>Specify column:</strong> Enter "Amount" or "last" or "3" to get the right column</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Inconsistent formatting:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Some PDFs have "Invoice #: 1234", others "Invoice Number: 1234"</li>
-                    <li><strong>Fix:</strong> Use shortest common text like "Invoice" then use "Extract Between Words" feature</li>
-                  </ul>
-                </li>
+            <article class="howto-issue-card">
+              <h4>Scanned or image PDF</h4>
+              <ul class="how-to-list compact">
+                <li>Try selecting text in your viewer.</li>
+                <li>If selection fails, run OCR first.</li>
+                <li>Prefer native digital PDFs for automation.</li>
               </ul>
-            </div>
+            </article>
 
-            <!-- Issue 4: Date/Number Format Issues -->
-            <div class="how-to-card" style="border-left: 4px solid #06b6d4;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(8, 145, 178, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#06b6d4" stroke-width="2"/>
-                  <path d="M16 2V6M8 2V6M3 10H21" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <h3>Date or Number Not Recognized</h3>
-              <p class="how-to-desc"><strong>Problem:</strong> Extracted text isn't recognized as date/number</p>
-              
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Solutions:</h4>
-              <ul class="how-to-list">
-                <li>
-                  <strong>Numbers with currency symbols:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Valido automatically removes: $, €, £, ₹, commas</li>
-                    <li>If still not working, check if PDF has hidden characters</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Date formats:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Supported: MM/DD/YYYY, DD-MM-YYYY, YYYY-MM-DD, Month DD, YYYY</li>
-                    <li>Example: "Jan 15, 2024", "15/01/2024", "2024-01-15" all work</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>When in doubt:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Use "Text" type instead of "Number" or "Date"</li>
-                    <li>Extract as text first, verify it's working</li>
-                    <li>Then change type to Number/Date if needed for calculations</li>
-                  </ul>
-                </li>
+            <article class="howto-issue-card">
+              <h4>Wrong value captured</h4>
+              <ul class="how-to-list compact">
+                <li>Use more specific anchor text.</li>
+                <li>Change extraction strategy (first/last/all).</li>
+                <li>For table contexts, define the column target.</li>
               </ul>
-            </div>
+            </article>
 
-            <!-- Issue 5: Calculations Not Working -->
-            <div class="how-to-card" style="border-left: 4px solid #10b981;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="#10b981" stroke-width="2"/>
-                  <path d="M8 8h8M8 12h8M8 16h4" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <h3>Calculations Failing</h3>
-              <p class="how-to-desc"><strong>Problem:</strong> Formula gives error or unexpected result</p>
-              
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Common Issues:</h4>
-              <ul class="how-to-list">
-                <li>
-                  <strong>Field names with spaces:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>✓ Correct: "Gross Salary - Income Tax" (use exact field name)</li>
-                    <li>✗ Wrong: Don't use quotes, brackets, or special syntax</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Missing field data:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>If any field in formula is empty/not found, calculation fails</li>
-                    <li><strong>Fix:</strong> Verify all fields extract successfully first</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Field extracted as text:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Calculation needs numbers, not text</li>
-                    <li><strong>Fix:</strong> Change field type to "Number" when adding field</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Percentages:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Use: "Basic Salary * 0.15" for 15%</li>
-                    <li>Or: "Basic Salary * 15%" - both work</li>
-                  </ul>
-                </li>
+            <article class="howto-issue-card">
+              <h4>Calculation fails</h4>
+              <ul class="how-to-list compact">
+                <li>Confirm all formula fields extracted.</li>
+                <li>Use exact field names from output.</li>
+                <li>Set numeric fields to Number type.</li>
               </ul>
-            </div>
+            </article>
+          </div>
 
-            <!-- Issue 6: Performance/Timeout -->
-            <div class="how-to-card" style="border-left: 4px solid #64748b;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(100, 116, 139, 0.1), rgba(71, 85, 105, 0.1));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="#64748b" stroke-width="2"/>
-                  <path d="M12 6V12L16 14" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <h3>Slow Performance / Timeouts</h3>
-              <p class="how-to-desc"><strong>Problem:</strong> Processing takes too long or times out</p>
-              
-              <h4 style="margin: 16px 0 8px 0; color: #333;">Solutions:</h4>
-              <ul class="how-to-list">
-                <li>
-                  <strong>Batch size:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Process 50-100 documents at a time</li>
-                    <li>For larger batches (>2000 pages), use Watch Folders instead of browser upload</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>PDF size:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Very large PDFs (100+ pages each) take longer</li>
-                    <li>Consider splitting large PDFs if possible</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Complex rules:</strong>
-                  <ul style="margin-top: 8px; padding-left: 20px;">
-                    <li>Extracting 20+ fields takes longer than extracting 5</li>
-                    <li>Start simple, add fields as needed</li>
-                  </ul>
-                </li>
-              </ul>
-            </div>
-
-            <!-- Best Practices Summary -->
-            <div class="how-to-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981;">
-              <div class="how-to-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 12L11 14L15 10" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2"/>
-                </svg>
-              </div>
-              <h3>Troubleshooting Checklist</h3>
-              <p class="how-to-desc"><strong>Before reporting a bug, try these steps:</strong></p>
-              
-              <ol class="how-to-steps">
-                <li><strong>Open the PDF</strong> in a viewer and verify you can copy-paste text successfully</li>
-                <li><strong>Copy exact text</strong> from PDF and paste into "Text to Look For" - don't type it manually</li>
-                <li><strong>Remove leading/trailing spaces</strong> from the pasted text</li>
-                <li><strong>Check for special characters</strong> (colons, dashes, periods) and match them exactly</li>
-                <li><strong>Test with 1-2 PDFs first</strong> before batch processing</li>
-                <li><strong>Verify field types</strong> (Text/Number/Date) match the data you're extracting</li>
-                <li><strong>Use simple field names</strong> without special characters</li>
-                <li><strong>Check the results</strong> - sometimes "wrong" data is actually correct from Valido's perspective</li>
-              </ol>
-
-              <div style="margin: 16px 0; padding: 12px; background: white; border-left: 3px solid #10b981; border-radius: 4px;">
-                <h4 style="margin: 0 0 8px 0; color: #065f46;">💡 Pro Tip</h4>
-                <p style="margin: 0; color: #065f46; line-height: 1.6; font-size: 14px;">
-                  Save time by testing your ruleset on 1-2 sample documents first. Verify all fields extract correctly before processing hundreds of documents. 
-                  Once you have a working ruleset, save it for reuse!
-                </p>
-              </div>
-            </div>
+          <div class="card howto-checklist">
+            <h3>Pre-Support Checklist</h3>
+            <ol class="how-to-steps compact">
+              <li>Test with 1-2 representative PDFs first.</li>
+              <li>Verify text is selectable in source files.</li>
+              <li>Copy exact labels from PDF into rules.</li>
+              <li>Check output once, then scale batch size.</li>
+            </ol>
           </div>
         </div>
       </section>
@@ -1729,7 +1466,7 @@
               </div>
             </div>
             <div class="footer-copyright">
-              © 2025 Valido. All rights reserved. Made with care for your privacy.
+              © 2026 Valido. All rights reserved. Made with care for your privacy.
             </div>
           </div>
         </div>
@@ -1752,7 +1489,8 @@
   <script src="/modules/table-wizard.js"></script>
   <script src="/calculations.js?v=20251115165200"></script>
   <script src="/modules/rules-preview.js"></script>
-  <script src="/modules/ruleset-loader.js"></script>
+  <script src="/modules/ruleset-loader.js?v=20260423"></script>
+  <script src="/modules/starter-kits.js?v=20260423"></script>
   
   <!-- Load rules builder -->
   <script src="/rules-builder.js?v=20251115180500"></script>
@@ -1866,7 +1604,8 @@
   
   <!-- Load other main files -->
   <script src="/modules/tour.js"></script>
-  <script src="/app.js?v=20251220"></script>
+  <script src="/modules/feedback-checkpoint.js"></script>
+  <script src="/app.js?v=20260425d"></script>
   </body>
 </html>
 

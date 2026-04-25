@@ -1,8 +1,8 @@
-"""
-Trial and License Management for Valido
-Handles 7-day trial period and Cloud API license validation
-Uses Registry + DB for persistence (survives DB deletion)
-Device-level enforcement via secure cloud API
+"""app.utils.trial_manager
+
+Trial and License Management for Valido.
+
+Trial duration is controlled via :data:`TRIAL_DAYS`.
 """
 import winreg
 import hashlib
@@ -17,7 +17,8 @@ logger = get_logger('trial_manager')
 
 # Configuration
 TEST_MODE = False  # Set to False for production
-TRIAL_DAYS = 1 if TEST_MODE else 7  # 1 day for testing, 7 for production
+# ~3 months trial in production (kept as days for simplicity/compat)
+TRIAL_DAYS = 1 if TEST_MODE else 90  # 1 day for testing, 90 for production (~3 months)
 
 # Registry paths
 REGISTRY_PATH = r"Software\Valido\License"
